@@ -1,0 +1,42 @@
+data/
+dist/
+nb/
+Dockerfile
+.pytype/
+env/
+profiles/
+.git/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+.ipynb_checkpoints/
+nb/.ipynb_checkpoints/
+.idea/
+.vscode/
+
+.DS_Store

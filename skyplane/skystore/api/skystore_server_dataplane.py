@@ -16,7 +16,7 @@ from skyplane.utils import logger
 from skyplane.utils.definitions import gateway_docker_image
 from skyplane.utils.fn import PathLike, do_parallel
 
-from skyplane.skystore.api.skystore_server_config import SkyStoreConfig
+from skyplane.skystore.api.skystore_gateway_config import SkyStoreConfig
 from skyplane.skystore.utils.definitions import tmp_log_dir
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class SkyStoreDataplane:
     """A Dataplane for SkyStore used for launching the storage server VM."""
 
-    def __init__(self, clientid: str, region: str, provisioner: "Provisioner", server_config: SkyStoreConfig, debug: bool = False):
+    def __init__(self, clientid: str, region: str, provisioner: "Provisioner", gateway_config: SkyStoreConfig, debug: bool = False):
         """
         :param clientid: the uuid of the local host to create the dataplane
         :type clientid: str
@@ -34,22 +34,20 @@ class SkyStoreDataplane:
         :type region: str
         :param provisioner: the provisioner to launch the VMs
         :type provisioner: Provisioner
-        :param server_config: the configuration of the server to be launched
-        :type server_config: SkyStoreConfig
+        :param gateway_config: the configuration of the server to be launched
+        :type gateway_config: SkyStoreConfig
         :param debug: whether to enable debug mode, defaults to False
         :type debug: bool, optional
         """
         self.clientid = clientid
         self.region = region
         self.provisioner = provisioner
-        self.server_config = server_config
+        self.gateway_config = gateway_config 
 
         self.http_pool = urllib3.PoolManager(retries=urllib3.Retry(total=3))
         self.provisioning_lock = threading.Lock()
         self.provisioned = False
-        self.skystore_server_dir = tmp_log_dir / "server_logs" / datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.skystore_server_dir.mkdir(exist_ok=True, parents=True)
-
+        
         # transfer logs
         self.skystore_server_dir = tmp_log_dir / "server_logs" / datetime.now().strftime("%Y%m%d_%H%M%S")
         self.skystore_server_dir.mkdir(exist_ok=True, parents=True)
@@ -117,9 +115,9 @@ class SkyStoreDataplane:
             self.provisioner.add_task(
                 cloud_provider=cloud_provider,
                 region=region,
-                vm_type=getattr(self.server_config, f"{cloud_provider}_instance_class"),
-                spot=getattr(self.server_config, f"{cloud_provider}_use_spot_instances"),
-                autoterminate_minutes=self.server_config.autoterminate_minutes,
+                vm_type=getattr(self.gateway_config, f"{cloud_provider}_instance_class"),
+                spot=getattr(self.gateway_config, f"{cloud_provider}_use_spot_instances"),
+                autoterminate_minutes=self.gateway_config.autoterminate_minutes,
             )
 
             # initialize clouds

@@ -89,15 +89,21 @@ class SkyObjectStore:
 
     def download_object(self, bucket_name: str, key: str, filename: str):
         # NOTE: V1 - strong consistency (download from primary replica)
+            # also read-after-write consistency as write is directed to primary replica in local region 
         # TODO: V2 - eventual consistency (download from any replica + retries)
-        # TODO: Also need to enforce strong read-after-write consistency? i.e. always get from local region if its available
 
+        # V1 - strong consistency
         replica_info = self.get_replica_info(bucket_name, key)["Item"]
         primary_url = replica_info["primary_url"]
-        secondary_urls = replica_info["secondary_urls"]
-
+        
         obj_store = self.get_obj_store_interface(primary_url)
         obj_store.download_object(key, filename)
+        
+        # V2 - eventual consistency
+        # secondary_urls = replica_info["secondary_urls"]
+        # self.get_obj_store_interface(random.choice(secondary_urls)).download_object(key, filename)
+        
+        # log event
         requested_region = obj_store.region_tag()
         self.log_event("DOWNLOAD_OBJECT", f"{bucket_name}/{key}", self.get_file_size_MB(filename), requested_region)
 
