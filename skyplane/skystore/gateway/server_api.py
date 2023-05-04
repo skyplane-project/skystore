@@ -64,16 +64,6 @@ class SkyStoreServerAPI(threading.Thread):
         self.error_list: List[TracebackException] = []
         self.error_list_lock = threading.Lock()
 
-        # write directory
-        self.file_dir = Path("/tmp/skyplane/chunks")
-        self.file_dir.mkdir(parents=True, exist_ok=True)
-        # delete existing chunks
-        for chunk_file in self.file_dir.glob("*"):
-            chunk_file.unlink()
-
-        # part size for multipart upload / download
-        self.part_size = 320 * MB
-
         # load routes
         self.register_global_routes(self.app)
         self.register_request_routes(self.app)
@@ -84,20 +74,11 @@ class SkyStoreServerAPI(threading.Thread):
         self.port = port
         self.url = "http://{}:{}".format(host, port)
 
-        logging.getLogger("werkzeug").setLevel(logging.WARNING)
         self.config = uvicorn.Config(self.app, host=self.host, port=self.port)
         self.server = uvicorn.Server(self.config)
 
         self.cleanup_thread = threading.Thread(target=self.cleanup_expired_prepared_objects)
         self.cleanup_thread.start()
-
-    def scan_table(self):
-        # TEST: scanning table
-        print("Scanning table....")
-        response = self.object_table.scan()
-        items = response["Items"]
-        for item in items:
-            print(item)
 
     def cleanup_expired_prepared_objects(self, expiration_time: Optional[float] = 60):
         EXPIRATION_PERIOD = timedelta(minutes=expiration_time / 60)
