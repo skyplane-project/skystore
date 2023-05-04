@@ -6,6 +6,7 @@ from contextlib import closing
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
+import requests
 
 import urllib3
 from typing import Dict, Optional, Tuple
@@ -270,7 +271,7 @@ class Server:
 
     def start_skystore_gateway(self, region: str, gateway_docker_image: str, log_viewer_port=8888):
         desc_prefix = f"Starting gateway {self.uuid()}, host: {self.public_ip()}"
-        print(f"{desc_prefix}...")
+        # print(f"{desc_prefix}...")
         retry_backoff(self.install_docker, exception_class=RuntimeError)
 
         # start log viewer
@@ -283,9 +284,9 @@ class Server:
             docker_envs["SKYPLANE_CONFIG"] = f"/pkg/data/{config_path.name}"
 
         # fix issue 312, retry boto3 credential calls to instance metadata service
-        if self.provider == "aws":
-            docker_envs["AWS_METADATA_SERVICE_NUM_ATTEMPTS"] = "4"
-            docker_envs["AWS_METADATA_SERVICE_TIMEOUT"] = "10"
+        # if self.provider == "aws":
+        docker_envs["AWS_METADATA_SERVICE_NUM_ATTEMPTS"] = "4"
+        docker_envs["AWS_METADATA_SERVICE_TIMEOUT"] = "10"
 
         # pull docker image and start container
         with Timer() as t:
@@ -297,12 +298,16 @@ class Server:
         docker_run_flags += f" -v /tmp/{config_path.name}:/pkg/data/{config_path.name}"
 
         # copy service account files
-        if self.provider == "gcp":
-            service_key_path = compute.GCPAuthentication().get_service_account_key_path()
-            service_key_file = os.path.basename(service_key_path)
-            self.upload_file(service_key_path, f"/tmp/{service_key_file}")
-            docker_envs["GCP_SERVICE_ACCOUNT_FILE"] = f"/pkg/data/{service_key_file}"
-            docker_run_flags += f" -v /tmp/{service_key_file}:/pkg/data/{service_key_file}"
+        # if self.provider == "gcp":
+        service_key_path = compute.GCPAuthentication().get_service_account_key_path()
+        service_key_file = os.path.basename(service_key_path)
+        self.upload_file(service_key_path, f"/tmp/{service_key_file}")
+        docker_envs["GCP_SERVICE_ACCOUNT_FILE"] = f"/pkg/data/{service_key_file}"
+        docker_run_flags += f" -v /tmp/{service_key_file}:/pkg/data/{service_key_file}"
+
+        # TODO: setup AWS credentials here?
+        access_key, secret_key = compute.AWSAuthentication().get_credentials()
+        self.run_command(f"aws configure set aws_access_key_id {access_key}; aws configure set aws_secret_access_key {secret_key}")
 
         # set default region for boto3 on AWS
         if self.provider == "aws":
@@ -326,13 +331,13 @@ class Server:
         logger.fs.debug(f"{self.uuid()} gateway_api_url = {self.gateway_api_url}")
 
         # wait for gateways to start (check status API)
-        http_pool = urllib3.PoolManager()
+        req_client = requests.Session()
 
         def is_api_ready():
             try:
                 api_url = f"{self.gateway_api_url}/api/v1/status"
-                status_val = json.loads(http_pool.request("GET", api_url).data.decode("utf-8"))
-                is_up = status_val.get("status") == "ok"
+                response = req_client.get(api_url)
+                is_up = response.status_code == 200
                 return is_up
             except Exception:
                 return False

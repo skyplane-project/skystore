@@ -176,34 +176,26 @@ class S3Interface(ObjectStoreInterface):
     def upload_object(
         botocore_exceptions, self, src_file_path, dst_object_name, part_number=None, upload_id=None, check_md5=None, mime_type=None
     ):
-        # TODO: need the same semantics for src_file_path for the other object stores
-        dst_object_name = str(dst_object_name)
+        dst_object_name, src_file_path = str(dst_object_name), str(src_file_path)
         s3_client = self._s3_client()
         assert len(dst_object_name) > 0, f"Destination object name must be non-empty: '{dst_object_name}'"
         b64_md5sum = base64.b64encode(check_md5).decode("utf-8") if check_md5 else None
         checksum_args = dict(ContentMD5=b64_md5sum) if b64_md5sum else dict()
 
         try:
-            # NOTE: either pass in the actual data or the src_file_path
-            if isinstance(src_file_path, str):
-                with open(src_file_path, "rb") as f:
-                    Body = f
-            else:
-                Body = src_file_path
-
-            if upload_id:
-                s3_client.upload_part(
-                    Body=Body,
-                    Key=dst_object_name,
-                    Bucket=self.bucket_name,
-                    PartNumber=part_number,
-                    UploadId=upload_id.strip(),  # TODO: figure out why whitespace gets added,
-                    **checksum_args,
-                )
-            else:
-                mime_args = dict(ContentType=mime_type) if mime_type else dict()
-                s3_client.put_object(Body=Body, Key=dst_object_name, Bucket=self.bucket_name, **checksum_args, **mime_args)
-
+            with open(src_file_path, "rb") as f:
+                if upload_id:
+                    s3_client.upload_part(
+                        Body=f,
+                        Key=dst_object_name,
+                        Bucket=self.bucket_name,
+                        PartNumber=part_number,
+                        UploadId=upload_id.strip(),  # TODO: figure out why whitespace gets added,
+                        **checksum_args,
+                    )
+                else:
+                    mime_args = dict(ContentType=mime_type) if mime_type else dict()
+                    s3_client.put_object(Body=f, Key=dst_object_name, Bucket=self.bucket_name, **checksum_args, **mime_args)
         except botocore_exceptions.ClientError as e:
             # catch MD5 mismatch error and raise appropriate exception
             if "Error" in e.response and "Code" in e.response["Error"] and e.response["Error"]["Code"] == "InvalidDigest":

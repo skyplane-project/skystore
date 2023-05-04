@@ -29,12 +29,12 @@ RUN (echo 'net.ipv4.ip_local_port_range = 12000 65535' >> /etc/sysctl.conf) \
     && (echo 'root             soft    nofile          1048576' >> /etc/security/limits.conf) \
     && (echo 'root             hard    nofile          1048576' >> /etc/security/limits.conf)
 
-# install gateway
+# install gateway 
 COPY scripts/requirements-skystore-gateway.txt /tmp/requirements-gateway.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install --no-cache-dir -r /tmp/requirements-gateway.txt && rm -r /tmp/requirements-gateway.txt
 
 WORKDIR /pkg
-COPY . .
+COPY . . 
 RUN pip3 install --no-dependencies -e ".[aws,azure,gcp,gateway]"
 
 CMD /etc/init.d/stunnel4 start; python3 /pkg/skyplane/skystore/gateway/server_daemon.py --region local

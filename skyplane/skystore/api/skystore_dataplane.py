@@ -16,7 +16,7 @@ from skyplane.utils import logger
 from skyplane.utils.definitions import gateway_docker_image
 from skyplane.utils.fn import PathLike, do_parallel
 
-from skyplane.skystore.api.skystore_gateway_config import SkyStoreConfig
+from skyplane.skystore.api.skystore_gateway_config import SkyStoreGatewayConfig
 from skyplane.skystore.utils.definitions import tmp_log_dir
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class SkyStoreDataplane:
     """A Dataplane for SkyStore used for launching the storage server VM."""
 
-    def __init__(self, clientid: str, region: str, provisioner: "Provisioner", gateway_config: SkyStoreConfig, debug: bool = False):
+    def __init__(self, clientid: str, region: str, provisioner: "Provisioner", gateway_config: SkyStoreGatewayConfig, debug: bool = False):
         """
         :param clientid: the uuid of the local host to create the dataplane
         :type clientid: str
@@ -42,14 +42,14 @@ class SkyStoreDataplane:
         self.clientid = clientid
         self.region = region
         self.provisioner = provisioner
-        self.gateway_config = gateway_config 
+        self.gateway_config = gateway_config
 
         self.http_pool = urllib3.PoolManager(retries=urllib3.Retry(total=3))
         self.provisioning_lock = threading.Lock()
         self.provisioned = False
-        
+
         # transfer logs
-        self.skystore_server_dir = tmp_log_dir / "server_logs" / datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.skystore_server_dir = tmp_log_dir / "client_server_logs" / datetime.now().strftime("%Y%m%d_%H%M%S")
         self.skystore_server_dir.mkdir(exist_ok=True, parents=True)
         self.bound_nodes: Dict[ReplicationTopologyGateway, compute.Server] = {}
         self.node: ReplicationTopologyGateway = None
@@ -80,7 +80,7 @@ class SkyStoreDataplane:
         spinner: bool = False,
     ):
         """
-        Provision the transfer gateways.
+        Provision the skystore gateways.
 
         :param allow_firewall: whether to apply firewall rules in the gatweway network (default: True)
         :type allow_firewall: bool

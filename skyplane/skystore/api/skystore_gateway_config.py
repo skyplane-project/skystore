@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class SkyStoreConfig:
+class SkyStoreGatewayConfig:
     autoterminate_minutes: int = 15
     requester_pays: bool = False
 

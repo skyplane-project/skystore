@@ -13,6 +13,9 @@ __pycache__/
 
 # experiment scripts
 solution/ 
+unit_test/
+old_test/
+local_test/
 
 # Distribution / packaging
 .Python

@@ -1,5 +1,6 @@
 from typing import List
 from skyplane.obj_store.object_store_interface import ObjectStoreInterface
+from skyplane.utils.path import parse_path
 
 
 class ObjectStore:
@@ -11,13 +12,16 @@ class ObjectStore:
         obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
         obj_store.delete_objects(keys)
 
-    def download_object(self, bucket_name: str, provider: str, key: str, filename: str):
+    def download_object(self, bucket_name: str, provider: str, key: str, filename: str, **kwargs):
         obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
-        obj_store.download_object(key, filename)
+        return obj_store.download_object(key, filename, **kwargs)
 
     def upload_object(self, filename: str, bucket_name: str, provider: str, key: str):
         obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
-        obj_store.upload_object(filename, key)
+        try:
+            obj_store.upload_object(filename, key)
+        except Exception as e:
+            print(f"Failed to upload {filename} to {bucket_name}/{key}. exception: {e}")
 
     def exists(self, bucket_name: str, provider: str, key: str) -> bool:
         obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
@@ -56,3 +60,20 @@ class ObjectStore:
 
         obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
         obj_store.delete_bucket()
+
+    def list_objects(self, bucket_url: str, prefix: str = None) -> List[str]:
+        provider, bucket_name, _ = parse_path(bucket_url)
+        obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
+        return obj_store.list_objects(prefix)
+
+    def bucket_region(self, bucket_url: str) -> str:
+        provider, bucket_name, _ = parse_path(bucket_url)
+        # azure not implemented
+        if provider == "azure":
+            raise NotImplementedError(f"Provider {provider} not implemented")
+        obj_store = ObjectStoreInterface.create(f"{provider}:infer", bucket_name)
+        return obj_store.region_tag()
+
+    def obj_exists(self, bucket_url: str, key: str) -> bool:
+        provider, bucket_name, _ = parse_path(bucket_url)
+        return self.exists(bucket_name, provider, key)

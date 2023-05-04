@@ -17,6 +17,8 @@ google-cloud-storage
 cachetools
 paramiko
 rich
+fastapi
+uvicorn
 # gateway dependencies
 flask
 lz4
