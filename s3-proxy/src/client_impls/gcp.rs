@@ -9,7 +9,7 @@ use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, Up
 use google_cloud_storage::http::objects::SourceObjects;
 
 use s3s::dto::{Range as S3Range, *};
-use s3s::{S3Request, S3Result};
+use s3s::{S3Request, S3Response, S3Result};
 
 pub struct GCPObjectStoreClient {
     client: Client,
@@ -26,7 +26,10 @@ impl GCPObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for GCPObjectStoreClient {
-    async fn head_object(&self, req: S3Request<HeadObjectInput>) -> S3Result<HeadObjectOutput> {
+    async fn head_object(
+        &self,
+        req: S3Request<HeadObjectInput>,
+    ) -> S3Result<S3Response<HeadObjectOutput>> {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
@@ -41,15 +44,18 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(HeadObjectOutput {
+        Ok(S3Response::new(HeadObjectOutput {
             e_tag: Some(res.etag),
             content_length: res.size,
             last_modified: res.updated.map(|t| Timestamp::from(t)),
             ..Default::default()
-        })
+        }))
     }
 
-    async fn get_object(&self, req: S3Request<GetObjectInput>) -> S3Result<GetObjectOutput> {
+    async fn get_object(
+        &self,
+        req: S3Request<GetObjectInput>,
+    ) -> S3Result<S3Response<GetObjectOutput>> {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
@@ -81,15 +87,18 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(GetObjectOutput {
+        Ok(S3Response::new(GetObjectOutput {
             body: Some(StreamingBlob::wrap(res)),
             content_length: metadata.size,
             last_modified: metadata.updated.map(|t| Timestamp::from(t)),
             ..Default::default()
-        })
+        }))
     }
 
-    async fn put_object(&self, req: S3Request<PutObjectInput>) -> S3Result<PutObjectOutput> {
+    async fn put_object(
+        &self,
+        req: S3Request<PutObjectInput>,
+    ) -> S3Result<S3Response<PutObjectOutput>> {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
@@ -101,19 +110,22 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                     bucket,
                     ..Default::default()
                 },
-                req.body.unwrap().inner,
+                req.body.unwrap(),
                 &UploadType::Simple(Media::new(object)),
             )
             .await
             .unwrap();
 
-        Ok(PutObjectOutput {
+        Ok(S3Response::new(PutObjectOutput {
             e_tag: Some(res.etag),
             ..Default::default()
-        })
+        }))
     }
 
-    async fn copy_object(&self, req: S3Request<CopyObjectInput>) -> S3Result<CopyObjectOutput> {
+    async fn copy_object(
+        &self,
+        req: S3Request<CopyObjectInput>,
+    ) -> S3Result<S3Response<CopyObjectOutput>> {
         let req = req.input;
         let destination_bucket = req.bucket;
         let destination_object = req.key;
@@ -138,26 +150,29 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(CopyObjectOutput {
+        Ok(S3Response::new(CopyObjectOutput {
             copy_object_result: Some(CopyObjectResult {
                 e_tag: Some(res.etag),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
 
     async fn create_multipart_upload(
         &self,
         _req: S3Request<CreateMultipartUploadInput>,
-    ) -> S3Result<CreateMultipartUploadOutput> {
-        Ok(CreateMultipartUploadOutput {
+    ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
+        Ok(S3Response::new(CreateMultipartUploadOutput {
             upload_id: Some(uuid::Uuid::new_v4().to_string()),
             ..Default::default()
-        })
+        }))
     }
 
-    async fn upload_part(&self, req: S3Request<UploadPartInput>) -> S3Result<UploadPartOutput> {
+    async fn upload_part(
+        &self,
+        req: S3Request<UploadPartInput>,
+    ) -> S3Result<S3Response<UploadPartOutput>> {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
@@ -171,7 +186,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                     bucket,
                     ..Default::default()
                 },
-                req.body.unwrap().inner,
+                req.body.unwrap(),
                 &UploadType::Simple(Media::new(format!(
                     "{}.sky-upload-{}.sky-multipart-{}",
                     object, upload_id, part_number
@@ -180,16 +195,16 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(UploadPartOutput {
+        Ok(S3Response::new(UploadPartOutput {
             e_tag: Some(res.etag),
             ..Default::default()
-        })
+        }))
     }
 
     async fn upload_part_copy(
         &self,
         req: S3Request<UploadPartCopyInput>,
-    ) -> S3Result<UploadPartCopyOutput> {
+    ) -> S3Result<S3Response<UploadPartCopyOutput>> {
         let req = req.input;
         let destination_bucket = req.bucket;
         let destination_object = req.key;
@@ -219,19 +234,19 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(UploadPartCopyOutput {
+        Ok(S3Response::new(UploadPartCopyOutput {
             copy_part_result: Some(CopyPartResult {
                 e_tag: Some(res.etag),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
 
     async fn complete_multipart_upload(
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
-    ) -> S3Result<CompleteMultipartUploadOutput> {
+    ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
@@ -304,9 +319,9 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         // TODO: delete parts, high priority
 
-        Ok(CompleteMultipartUploadOutput {
+        Ok(S3Response::new(CompleteMultipartUploadOutput {
             e_tag: Some(res.etag),
             ..Default::default()
-        })
+        }))
     }
 }

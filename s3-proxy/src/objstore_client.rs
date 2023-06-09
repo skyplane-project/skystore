@@ -1,57 +1,45 @@
 use s3s::dto::*;
-use s3s::{S3Request, S3Result};
+use s3s::{S3Request, S3Response, S3Result};
 
 #[async_trait::async_trait]
 pub trait ObjectStoreClient: Send + Sync + 'static {
-    async fn head_object(&self, req: S3Request<HeadObjectInput>) -> S3Result<HeadObjectOutput>;
+    async fn head_object(
+        &self,
+        req: S3Request<HeadObjectInput>,
+    ) -> S3Result<S3Response<HeadObjectOutput>>;
 
-    // async fn list_objects_v2(
-    //     &self,
-    //     req: S3Request<ListObjectsV2Input>,
-    // ) -> S3Result<ListObjectsV2Output>;
+    async fn get_object(
+        &self,
+        req: S3Request<GetObjectInput>,
+    ) -> S3Result<S3Response<GetObjectOutput>>;
 
-    async fn get_object(&self, req: S3Request<GetObjectInput>) -> S3Result<GetObjectOutput>;
+    async fn put_object(
+        &self,
+        req: S3Request<PutObjectInput>,
+    ) -> S3Result<S3Response<PutObjectOutput>>;
 
-    async fn put_object(&self, req: S3Request<PutObjectInput>) -> S3Result<PutObjectOutput>;
-
-    async fn copy_object(&self, req: S3Request<CopyObjectInput>) -> S3Result<CopyObjectOutput>;
-
-    // async fn delete_object(
-    //     &self,
-    //     req: S3Request<DeleteObjectInput>,
-    // ) -> S3Result<DeleteObjectOutput>;
-
-    // async fn delete_objects(
-    //     &self,
-    //     req: S3Request<DeleteObjectsInput>,
-    // ) -> S3Result<DeleteObjectsOutput>;
+    async fn copy_object(
+        &self,
+        req: S3Request<CopyObjectInput>,
+    ) -> S3Result<S3Response<CopyObjectOutput>>;
 
     async fn create_multipart_upload(
         &self,
         req: S3Request<CreateMultipartUploadInput>,
-    ) -> S3Result<CreateMultipartUploadOutput>;
+    ) -> S3Result<S3Response<CreateMultipartUploadOutput>>;
 
-    // async fn list_multipart_uploads(
-    //     &self,
-    //     req: S3Request<ListMultipartUploadsInput>,
-    // ) -> S3Result<ListMultipartUploadsOutput>;
-
-    // async fn list_parts(&self, req: S3Request<ListPartsInput>) -> S3Result<ListPartsOutput>;
-
-    async fn upload_part(&self, req: S3Request<UploadPartInput>) -> S3Result<UploadPartOutput>;
+    async fn upload_part(
+        &self,
+        req: S3Request<UploadPartInput>,
+    ) -> S3Result<S3Response<UploadPartOutput>>;
 
     async fn upload_part_copy(
         &self,
         req: S3Request<UploadPartCopyInput>,
-    ) -> S3Result<UploadPartCopyOutput>;
+    ) -> S3Result<S3Response<UploadPartCopyOutput>>;
 
     async fn complete_multipart_upload(
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
-    ) -> S3Result<CompleteMultipartUploadOutput>;
-
-    // async fn abort_multipart_upload(
-    //     &self,
-    //     req: S3Request<AbortMultipartUploadInput>,
-    // ) -> S3Result<AbortMultipartUploadOutput>;
+    ) -> S3Result<S3Response<CompleteMultipartUploadOutput>>;
 }

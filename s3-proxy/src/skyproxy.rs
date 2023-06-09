@@ -1,20 +1,18 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-
 use crate::objstore_client::ObjectStoreClient;
-use s3s::dto::*;
-
-use tracing::error;
-
-use s3s::{S3Request, S3Result, S3};
-
 use crate::stream_utils::split_streaming_blob;
 use crate::type_utils::*;
 
+use s3s::dto::*;
+use s3s::stream::ByteStream;
+use s3s::{S3Request, S3Response, S3Result, S3};
+
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
-
 use skystore_rust_client::models;
+
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use tracing::error;
 
 pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
@@ -110,10 +108,17 @@ impl SkyProxy {
 #[async_trait::async_trait]
 impl S3 for SkyProxy {
     ///////////////////////////////////////////////////////////////////////////
-    /// We start with the "blanket impl" that don't need acutal logs
+    /// We start with the "blanket impl" that don't need actual operation
+    /// from the physical store clients.
     #[tracing::instrument(level = "info")]
-    async fn list_objects(&self, req: S3Request<ListObjectsInput>) -> S3Result<ListObjectsOutput> {
-        let v2 = self.list_objects_v2(req.map_input(Into::into)).await?;
+    async fn list_objects(
+        &self,
+        req: S3Request<ListObjectsInput>,
+    ) -> S3Result<S3Response<ListObjectsOutput>> {
+        let v2 = self
+            .list_objects_v2(req.map_input(Into::into))
+            .await?
+            .output;
 
         let output = ListObjectsOutput {
             contents: v2.contents,
@@ -124,36 +129,33 @@ impl S3 for SkyProxy {
             max_keys: v2.max_keys,
             ..Default::default()
         };
-        Ok(output)
+        Ok(S3Response::new(output))
     }
 
     #[tracing::instrument(level = "info")]
     async fn delete_object(
         &self,
         _req: S3Request<DeleteObjectInput>,
-    ) -> S3Result<DeleteObjectOutput> {
+    ) -> S3Result<S3Response<DeleteObjectOutput>> {
         // todo!("delete_object");
         // HACK: just returning okay now
-        return Ok(DeleteObjectOutput::default());
+        return Ok(S3Response::new(DeleteObjectOutput::default()));
     }
 
     #[tracing::instrument(level = "info")]
     async fn delete_objects(
         &self,
         _req: S3Request<DeleteObjectsInput>,
-    ) -> S3Result<DeleteObjectsOutput> {
-        return Ok(DeleteObjectsOutput::default());
+    ) -> S3Result<S3Response<DeleteObjectsOutput>> {
+        return Ok(S3Response::new(DeleteObjectsOutput::default()));
     }
 
     #[tracing::instrument(level = "info")]
     async fn abort_multipart_upload(
         &self,
         _req: S3Request<AbortMultipartUploadInput>,
-    ) -> S3Result<AbortMultipartUploadOutput> {
-        // HACK: returning okay for now
-        return Ok(AbortMultipartUploadOutput {
-            ..Default::default()
-        });
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        return Ok(S3Response::new(AbortMultipartUploadOutput::default()));
     }
     ///////////////////////////////////////////////////////////////////////////
 
@@ -161,7 +163,7 @@ impl S3 for SkyProxy {
     async fn list_objects_v2(
         &self,
         req: S3Request<ListObjectsV2Input>,
-    ) -> S3Result<ListObjectsV2Output> {
+    ) -> S3Result<S3Response<ListObjectsV2Output>> {
         let resp = apis::list_objects(
             &self.dir_conf,
             models::ListObjectRequest {
@@ -184,10 +186,10 @@ impl S3 for SkyProxy {
                     })
                 }
 
-                Ok(ListObjectsV2Output {
+                Ok(S3Response::new(ListObjectsV2Output {
                     contents: Some(objects),
                     ..Default::default()
-                })
+                }))
             }
             Err(err) => {
                 error!("list_objects_v2 failed: {:?}", err);
@@ -200,7 +202,10 @@ impl S3 for SkyProxy {
     }
 
     #[tracing::instrument(level = "info")]
-    async fn get_object(&self, req: S3Request<GetObjectInput>) -> S3Result<GetObjectOutput> {
+    async fn get_object(
+        &self,
+        req: S3Request<GetObjectInput>,
+    ) -> S3Result<S3Response<GetObjectOutput>> {
         let locator = self
             .locate_object(req.input.bucket.clone(), req.input.key.clone())
             .await?;
@@ -225,16 +230,19 @@ impl S3 for SkyProxy {
     }
 
     #[tracing::instrument(level = "info")]
-    async fn put_object(&self, req: S3Request<PutObjectInput>) -> S3Result<PutObjectOutput> {
+    async fn put_object(
+        &self,
+        req: S3Request<PutObjectInput>,
+    ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
         let locator = self
             .locate_object(req.input.bucket.clone(), req.input.key.clone())
             .await?;
         if let Some(locator) = locator {
-            return Ok(PutObjectOutput {
+            return Ok(S3Response::new(PutObjectOutput {
                 e_tag: locator.etag,
                 ..Default::default()
-            });
+            }));
         }
 
         let start_upload_resp = apis::start_upload(
@@ -263,7 +271,7 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
-                let req = S3Request::from_input(clone_put_object_request(
+                let req = S3Request::new(clone_put_object_request(
                     &request_template,
                     Some(input_blob),
                 ))
@@ -275,12 +283,12 @@ impl S3 for SkyProxy {
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
-                    let e_tag = put_resp.e_tag.unwrap();
+                    let e_tag = put_resp.output.e_tag.unwrap();
 
                     // Retrieve the object metatada through HEAD request.
                     // So we get the proper size, etag, and last_modified from the object store pov.
                     let head_resp = client
-                        .head_object(S3Request::from_input(new_head_object_request(
+                        .head_object(S3Request::new(new_head_object_request(
                             locator.bucket.clone(),
                             locator.key.clone(),
                         )))
@@ -291,9 +299,11 @@ impl S3 for SkyProxy {
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: head_resp.content_length as u64,
+                            size: head_resp.output.content_length as u64,
                             etag: e_tag.clone(),
-                            last_modified: timestamp_to_string(head_resp.last_modified.unwrap()),
+                            last_modified: timestamp_to_string(
+                                head_resp.output.last_modified.unwrap(),
+                            ),
                         },
                     )
                     .await
@@ -308,14 +318,17 @@ impl S3 for SkyProxy {
             e_tags.push(e_tag);
         }
 
-        return Ok(PutObjectOutput {
+        Ok(S3Response::new(PutObjectOutput {
             e_tag: e_tags.pop(),
             ..Default::default()
-        });
+        }))
     }
 
     #[tracing::instrument(level = "info")]
-    async fn copy_object(&self, req: S3Request<CopyObjectInput>) -> S3Result<CopyObjectOutput> {
+    async fn copy_object(
+        &self,
+        req: S3Request<CopyObjectInput>,
+    ) -> S3Result<S3Response<CopyObjectOutput>> {
         //TODO for future: people commonly use copy_object to modify the metadata, instead of creatig a new today.
 
         let [src_bucket, src_key] = match &req.input.copy_source {
@@ -339,7 +352,7 @@ impl S3 for SkyProxy {
         };
 
         if let Some(dst_locator) = dst_locator {
-            return Ok(CopyObjectOutput {
+            return Ok(S3Response::new(CopyObjectOutput {
                 copy_object_result: Some(CopyObjectResult {
                     e_tag: dst_locator.etag,
                     last_modified: Some(string_to_timestamp(
@@ -348,7 +361,7 @@ impl S3 for SkyProxy {
                     ..Default::default()
                 }),
                 ..Default::default()
-            });
+            }));
         };
 
         let upload_resp = apis::start_upload(
@@ -381,7 +394,7 @@ impl S3 for SkyProxy {
 
                 tasks.spawn(async move {
                     let copy_resp = client
-                        .copy_object(S3Request::from_input(new_copy_object_request(
+                        .copy_object(S3Request::new(new_copy_object_request(
                             src_bucket.clone(),
                             src_key.clone(),
                             locator.bucket.clone(),
@@ -390,10 +403,10 @@ impl S3 for SkyProxy {
                         .await
                         .unwrap();
 
-                    let etag = copy_resp.copy_object_result.unwrap().e_tag.unwrap();
+                    let etag = copy_resp.output.copy_object_result.unwrap().e_tag.unwrap();
 
                     let head_output = client
-                        .head_object(S3Request::from_input(new_head_object_request(
+                        .head_object(S3Request::new(new_head_object_request(
                             locator.bucket.clone(),
                             locator.key.clone(),
                         )))
@@ -404,9 +417,11 @@ impl S3 for SkyProxy {
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: head_output.content_length as u64,
+                            size: head_output.output.content_length as u64,
                             etag: etag.clone(),
-                            last_modified: timestamp_to_string(head_output.last_modified.unwrap()),
+                            last_modified: timestamp_to_string(
+                                head_output.output.last_modified.unwrap(),
+                            ),
                         },
                     )
                     .await
@@ -421,20 +436,20 @@ impl S3 for SkyProxy {
             e_tags.push(e_tag);
         }
 
-        Ok(CopyObjectOutput {
+        Ok(S3Response::new(CopyObjectOutput {
             copy_object_result: Some(CopyObjectResult {
                 e_tag: e_tags.pop(),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
     async fn create_multipart_upload(
         &self,
         req: S3Request<CreateMultipartUploadInput>,
-    ) -> S3Result<CreateMultipartUploadOutput> {
+    ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
         let locator = self
             .locate_object(req.input.bucket.clone(), req.input.key.clone())
             .await?;
@@ -468,16 +483,14 @@ impl S3 for SkyProxy {
             let client = self.store_clients.get(&locator.tag).unwrap().clone();
 
             let resp = client
-                .create_multipart_upload(S3Request::from_input(
-                    new_create_multipart_upload_request(
-                        locator.bucket.clone(),
-                        locator.key.clone(),
-                    ),
-                ))
+                .create_multipart_upload(S3Request::new(new_create_multipart_upload_request(
+                    locator.bucket.clone(),
+                    locator.key.clone(),
+                )))
                 .await
                 .unwrap();
 
-            let physical_multipart_id = resp.upload_id.unwrap();
+            let physical_multipart_id = resp.output.upload_id.unwrap();
 
             apis::set_multipart_id(
                 &self.dir_conf,
@@ -490,19 +503,19 @@ impl S3 for SkyProxy {
             .unwrap();
         }
 
-        Ok(CreateMultipartUploadOutput {
+        Ok(S3Response::new(CreateMultipartUploadOutput {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
             upload_id: upload_resp.multipart_upload_id,
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
     async fn list_multipart_uploads(
         &self,
         req: S3Request<ListMultipartUploadsInput>,
-    ) -> S3Result<ListMultipartUploadsOutput> {
+    ) -> S3Result<S3Response<ListMultipartUploadsOutput>> {
         let resp = apis::list_multipart_uploads(
             &self.dir_conf,
             models::ListObjectRequest {
@@ -513,7 +526,7 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        Ok(ListMultipartUploadsOutput {
+        Ok(S3Response::new(ListMultipartUploadsOutput {
             uploads: Some(
                 resp.into_iter()
                     .map(|u| MultipartUpload {
@@ -526,11 +539,14 @@ impl S3 for SkyProxy {
             bucket: Some(req.input.bucket.clone()),
             prefix: req.input.prefix.clone(),
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
-    async fn list_parts(&self, req: S3Request<ListPartsInput>) -> S3Result<ListPartsOutput> {
+    async fn list_parts(
+        &self,
+        req: S3Request<ListPartsInput>,
+    ) -> S3Result<S3Response<ListPartsOutput>> {
         let resp = apis::list_parts(
             &self.dir_conf,
             models::ListPartsRequest {
@@ -543,7 +559,7 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        Ok(ListPartsOutput {
+        Ok(S3Response::new(ListPartsOutput {
             parts: Some(
                 resp.into_iter()
                     .map(|p| Part {
@@ -558,11 +574,14 @@ impl S3 for SkyProxy {
             key: Some(req.input.key.clone()),
             upload_id: Some(req.input.upload_id.clone()),
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
-    async fn upload_part(&self, req: S3Request<UploadPartInput>) -> S3Result<UploadPartOutput> {
+    async fn upload_part(
+        &self,
+        req: S3Request<UploadPartInput>,
+    ) -> S3Result<S3Response<UploadPartOutput>> {
         let resp = apis::continue_upload(
             &self.dir_conf,
             models::ContinueUploadRequest {
@@ -585,7 +604,6 @@ impl S3 for SkyProxy {
             .body
             .as_ref()
             .unwrap()
-            .inner
             .remaining_length()
             .exact()
             .unwrap();
@@ -595,18 +613,17 @@ impl S3 for SkyProxy {
             .for_each(|(locator, body)| {
                 let conf = self.dir_conf.clone();
                 let client = self.store_clients.get(&locator.tag).unwrap().clone();
-                let req =
-                    S3Request::from_input(clone_upload_part_request(&request_template, Some(body)))
-                        .map_input(|mut i| {
-                            i.bucket = locator.bucket.clone();
-                            i.key = locator.key.clone();
-                            i.upload_id = locator.multipart_upload_id.clone();
-                            i
-                        });
+                let req = S3Request::new(clone_upload_part_request(&request_template, Some(body)))
+                    .map_input(|mut i| {
+                        i.bucket = locator.bucket.clone();
+                        i.key = locator.key.clone();
+                        i.upload_id = locator.multipart_upload_id.clone();
+                        i
+                    });
                 let part_number = req.input.part_number;
 
                 tasks.spawn(async move {
-                    let resp: UploadPartOutput = client.upload_part(req).await.unwrap();
+                    let resp: UploadPartOutput = client.upload_part(req).await.unwrap().output;
 
                     let etag = resp.e_tag.unwrap();
 
@@ -639,17 +656,17 @@ impl S3 for SkyProxy {
         .unwrap();
         assert!(parts.len() == 1);
 
-        Ok(UploadPartOutput {
+        Ok(S3Response::new(UploadPartOutput {
             e_tag: Some(parts[0].etag.clone()),
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
     async fn upload_part_copy(
         &self,
         req: S3Request<UploadPartCopyInput>,
-    ) -> S3Result<UploadPartCopyOutput> {
+    ) -> S3Result<S3Response<UploadPartCopyOutput>> {
         let [src_bucket, src_key] = match &req.input.copy_source {
             CopySource::Bucket { bucket, key, .. } => [bucket.to_string(), key.to_string()],
             CopySource::AccessPoint { .. } => panic!("AccessPoint not supported"),
@@ -696,17 +713,14 @@ impl S3 for SkyProxy {
                     locator.copy_src_bucket.clone().unwrap(),
                     locator.copy_src_key.clone().unwrap(),
                 );
-                let copy_resp = client
-                    .upload_part_copy(S3Request::from_input(req))
-                    .await
-                    .unwrap();
+                let copy_resp = client.upload_part_copy(S3Request::new(req)).await.unwrap();
 
                 apis::append_part(
                     &conf,
                     models::PatchUploadMultipartUploadPart {
                         id: locator.id,
                         part_number,
-                        etag: copy_resp.copy_part_result.unwrap().e_tag.unwrap(),
+                        etag: copy_resp.output.copy_part_result.unwrap().e_tag.unwrap(),
                         size: content_length, // we actually can't head object this :(, this is a part.
                     },
                 )
@@ -730,20 +744,20 @@ impl S3 for SkyProxy {
         .unwrap();
         assert!(parts.len() == 1, "parts: {:?}", parts);
 
-        Ok(UploadPartCopyOutput {
+        Ok(S3Response::new(UploadPartCopyOutput {
             copy_part_result: Some(CopyPartResult {
                 e_tag: Some(parts[0].etag.clone()),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
 
     #[tracing::instrument(level = "info")]
     async fn complete_multipart_upload(
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
-    ) -> S3Result<CompleteMultipartUploadOutput> {
+    ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
         let locators = apis::continue_upload(
             &self.dir_conf,
             models::ContinueUploadRequest {
@@ -791,7 +805,7 @@ impl S3 for SkyProxy {
             assert!(physical_parts_list.len() == logical_parts_set.len());
 
             let resp = client
-                .complete_multipart_upload(S3Request::from_input(new_complete_multipart_request(
+                .complete_multipart_upload(S3Request::new(new_complete_multipart_request(
                     locator.bucket.clone(),
                     locator.key.clone(),
                     locator.multipart_upload_id.clone(),
@@ -803,7 +817,7 @@ impl S3 for SkyProxy {
                 .unwrap();
 
             let head_resp = client
-                .head_object(S3Request::from_input(new_head_object_request(
+                .head_object(S3Request::new(new_head_object_request(
                     locator.bucket.clone(),
                     locator.key.clone(),
                 )))
@@ -814,9 +828,9 @@ impl S3 for SkyProxy {
                 &self.dir_conf,
                 models::PatchUploadIsCompleted {
                     id: locator.id,
-                    etag: resp.e_tag.unwrap(),
-                    size: head_resp.content_length as u64,
-                    last_modified: timestamp_to_string(head_resp.last_modified.unwrap()),
+                    etag: resp.output.e_tag.unwrap(),
+                    size: head_resp.output.content_length as u64,
+                    last_modified: timestamp_to_string(head_resp.output.last_modified.unwrap()),
                 },
             )
             .await
@@ -833,12 +847,12 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        Ok(CompleteMultipartUploadOutput {
+        Ok(S3Response::new(CompleteMultipartUploadOutput {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
             e_tag: Some(head_resp.etag),
             ..Default::default()
-        })
+        }))
     }
 }
 
@@ -860,8 +874,8 @@ mod tests {
         let proxy = SkyProxy::new().await;
 
         let request = new_list_objects_v2_input("my-bucket".to_string(), None);
-        let req = S3Request::from_input(request);
-        let resp = proxy.list_objects_v2(req).await.unwrap();
+        let req = S3Request::new(request);
+        let resp = proxy.list_objects_v2(req).await.unwrap().output;
         assert!(resp.contents.is_some());
     }
 
@@ -875,24 +889,24 @@ mod tests {
             let body = "abcdefg".to_string().into_bytes();
             request.body = Some(s3s::Body::from(body).into());
 
-            let req = S3Request::from_input(request);
-            let resp = proxy.put_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.put_object(req).await.unwrap().output;
             assert!(resp.e_tag.is_some());
         }
 
         {
             let request =
                 new_list_objects_v2_input("my-bucket".to_string(), Some("my-key".to_string()));
-            let req = S3Request::from_input(request);
-            let resp = proxy.list_objects_v2(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.list_objects_v2(req).await.unwrap().output;
             assert!(resp.contents.is_some());
             assert!(resp.contents.unwrap().len() == 1);
         }
 
         {
             let request = new_get_object_request("my-bucket".to_string(), "my-key".to_string());
-            let req = S3Request::from_input(request);
-            let resp = proxy.get_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
 
             let resp_body = resp.body.unwrap();
@@ -921,8 +935,8 @@ mod tests {
             let body = "abcdefg".to_string().into_bytes();
             request.body = Some(s3s::Body::from(body).into());
 
-            let req = S3Request::from_input(request);
-            let resp = proxy.put_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.put_object(req).await.unwrap().output;
             assert!(resp.e_tag.is_some());
         }
 
@@ -934,8 +948,8 @@ mod tests {
                 "my-bucket".to_string(),
                 "my-copy-key-copy".to_string(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.copy_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.copy_object(req).await.unwrap().output;
             assert!(resp.copy_object_result.is_some());
         }
 
@@ -943,8 +957,8 @@ mod tests {
         {
             let request =
                 new_get_object_request("my-bucket".to_string(), "my-copy-key-copy".to_string());
-            let req = S3Request::from_input(request);
-            let resp = proxy.get_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
 
             let resp_body = resp.body.unwrap();
@@ -976,8 +990,8 @@ mod tests {
                 "my-bucket".to_string(),
                 "my-multipart-key".to_string(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.create_multipart_upload(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.create_multipart_upload(req).await.unwrap().output;
             assert!(resp.upload_id.is_some());
             resp.upload_id.unwrap()
         };
@@ -988,8 +1002,8 @@ mod tests {
                 "my-bucket".to_string(),
                 "my-multipart-key".to_string(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.list_multipart_uploads(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.list_multipart_uploads(req).await.unwrap().output;
             assert!(resp.uploads.is_some());
             let uploads = resp.uploads.unwrap();
             assert!(!uploads.is_empty());
@@ -1011,8 +1025,8 @@ mod tests {
             // let body: Vec<u8> = vec![0; 6];
             request.body = Some(s3s::Body::from(body).into());
 
-            let req = S3Request::from_input(request);
-            let resp = proxy.upload_part(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.upload_part(req).await.unwrap().output;
 
             resp.e_tag.unwrap()
         };
@@ -1024,8 +1038,8 @@ mod tests {
                 "my-multipart-key".to_string(),
                 upload_id.clone(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.list_parts(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.list_parts(req).await.unwrap().output;
             assert!(resp.parts.is_some());
             let parts = resp.parts.unwrap();
             assert!(parts.len() == 1);
@@ -1039,8 +1053,8 @@ mod tests {
                 new_put_object_request("my-bucket".to_string(), "my-copy-src-key".to_string());
             let body: Vec<u8> = vec![0; part_size];
             request.body = Some(s3s::Body::from(body).into());
-            let req = S3Request::from_input(request);
-            let resp = proxy.put_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.put_object(req).await.unwrap().output;
             assert!(resp.e_tag.is_some());
 
             // now issue a copy part request
@@ -1053,8 +1067,8 @@ mod tests {
                 "my-copy-src-key".to_string(),
             );
 
-            let req = S3Request::from_input(request);
-            let resp = proxy.upload_part_copy(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.upload_part_copy(req).await.unwrap().output;
             assert!(resp.copy_part_result.is_some());
             resp.copy_part_result.unwrap().e_tag.unwrap()
         };
@@ -1086,15 +1100,15 @@ mod tests {
                     ]),
                 },
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.complete_multipart_upload(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.complete_multipart_upload(req).await.unwrap().output;
             assert!(resp.e_tag.is_some());
 
             // We should able to get the content of the object
             let request =
                 new_get_object_request("my-bucket".to_string(), "my-multipart-key".to_string());
-            let req = S3Request::from_input(request);
-            let resp = proxy.get_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
 
             let resp_body = resp.body.unwrap();
@@ -1124,8 +1138,8 @@ mod tests {
                 "my-bucket".to_string(),
                 "my-multipart-many-parts-key".to_string(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.create_multipart_upload(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.create_multipart_upload(req).await.unwrap().output;
             assert!(resp.upload_id.is_some());
             resp.upload_id.unwrap()
         };
@@ -1142,8 +1156,8 @@ mod tests {
             let body: Vec<u8> = vec![0; 5 * 1024 * 1024];
             request.body = Some(s3s::Body::from(body).into());
 
-            let req = S3Request::from_input(request);
-            let resp = proxy.upload_part(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.upload_part(req).await.unwrap().output;
 
             etags.push(resp.e_tag.unwrap());
         }
@@ -1171,8 +1185,8 @@ mod tests {
                     ),
                 },
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.complete_multipart_upload(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.complete_multipart_upload(req).await.unwrap().output;
             assert!(resp.e_tag.is_some());
 
             // We should able to get the content of the object
@@ -1180,8 +1194,8 @@ mod tests {
                 "my-bucket".to_string(),
                 "my-multipart-many-parts-key".to_string(),
             );
-            let req = S3Request::from_input(request);
-            let resp = proxy.get_object(req).await.unwrap();
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
 
             let resp_body = resp.body.unwrap();

@@ -1,11 +1,10 @@
 use crate::objstore_client::ObjectStoreClient;
-use azure_core::{Body, RetryOptions, SeekableStream};
+use azure_core::{Body, SeekableStream};
 use azure_storage::StorageCredentials;
 use azure_storage_blobs::prelude::*;
 use futures::io::AsyncRead;
-use futures::stream::StreamExt;
-use futures::Stream;
-use s3s::dto::*;
+use futures_lite::stream::StreamExt;
+use s3s::{dto::*, stream::ByteStream, S3Response};
 use std::{
     pin::Pin,
     sync::{Arc, Mutex},
@@ -28,7 +27,7 @@ struct SeekableBlobWrapper {
 
 impl SeekableBlobWrapper {
     fn new(blob: StreamingBlob) -> Self {
-        let initial_size = blob.inner.remaining_length().exact().unwrap();
+        let initial_size = blob.remaining_length().exact().unwrap();
         Self {
             blob: Arc::new(Mutex::new(blob)),
             initial_size,
@@ -76,7 +75,7 @@ impl AsyncRead for SeekableBlobWrapper {
             return Poll::Ready(Ok(len));
         }
 
-        let item = Pin::new(&mut this.blob.lock().unwrap().inner).poll_next(cx);
+        let item = Pin::new(&mut this.blob.lock().unwrap()).poll_next(cx);
         match item {
             Poll::Ready(Some(Ok(bytes))) => {
                 let len = std::cmp::min(buf.len(), bytes.len());
@@ -140,7 +139,10 @@ impl ObjectStoreClient for AzureObjectStoreClient {
     // container and key to blob. Theoretically, bucket should be
     // mapped to storage account and key is mapped to container+blob.
     // A future follow up work.
-    async fn head_object(&self, req: S3Request<HeadObjectInput>) -> S3Result<HeadObjectOutput> {
+    async fn head_object(
+        &self,
+        req: S3Request<HeadObjectInput>,
+    ) -> S3Result<S3Response<HeadObjectOutput>> {
         let req = req.input;
         let container_name = req.bucket;
         let blob_name = req.key;
@@ -148,12 +150,12 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let blob_client = self.blob_client(&container_name, &blob_name);
         let resp = blob_client.get_properties().await;
         match resp {
-            Ok(resp) => Ok(HeadObjectOutput {
+            Ok(resp) => Ok(S3Response::new(HeadObjectOutput {
                 content_length: resp.blob.properties.content_length as i64,
                 e_tag: Some(resp.blob.properties.etag.to_string()),
                 last_modified: Some(resp.blob.properties.last_modified.into()),
                 ..Default::default()
-            }),
+            })),
             // TODO: handle 404 better here.
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
@@ -162,14 +164,10 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
-    // async fn list_objects_v2(
-    //     &self,
-    //     _req: S3Request<ListObjectsV2Input>,
-    // ) -> S3Result<ListObjectsV2Output> {
-    //     todo!()
-    // }
-
-    async fn get_object(&self, req: S3Request<GetObjectInput>) -> S3Result<GetObjectOutput> {
+    async fn get_object(
+        &self,
+        req: S3Request<GetObjectInput>,
+    ) -> S3Result<S3Response<GetObjectOutput>> {
         let req = req.input;
         let container_name = req.bucket;
         let blob_name = req.key;
@@ -191,13 +189,13 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let resp = resp.pop().unwrap();
 
         match resp {
-            Ok(resp) => Ok(GetObjectOutput {
+            Ok(resp) => Ok(S3Response::new(GetObjectOutput {
                 body: Some(StreamingBlob::wrap(resp.data)),
                 content_length: resp.blob.properties.content_length as i64,
                 e_tag: Some(resp.blob.properties.etag.to_string()),
                 last_modified: Some(resp.blob.properties.last_modified.into()),
                 ..Default::default()
-            }),
+            })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
                 format!("Request failed: {}", err),
@@ -205,7 +203,10 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
-    async fn put_object(&self, req: S3Request<PutObjectInput>) -> S3Result<PutObjectOutput> {
+    async fn put_object(
+        &self,
+        req: S3Request<PutObjectInput>,
+    ) -> S3Result<S3Response<PutObjectOutput>> {
         let req = req.input;
         let container_name = req.bucket;
         let blob_name = req.key;
@@ -219,10 +220,10 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let resp = blob_client.put_block_blob(input_stream).await;
 
         match resp {
-            Ok(resp) => Ok(PutObjectOutput {
+            Ok(resp) => Ok(S3Response::new(PutObjectOutput {
                 e_tag: Some(resp.etag.to_string()),
                 ..Default::default()
-            }),
+            })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
                 format!("Request failed: {}", err),
@@ -230,7 +231,10 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
-    async fn copy_object(&self, req: S3Request<CopyObjectInput>) -> S3Result<CopyObjectOutput> {
+    async fn copy_object(
+        &self,
+        req: S3Request<CopyObjectInput>,
+    ) -> S3Result<S3Response<CopyObjectOutput>> {
         let req = req.input;
 
         let container_name = req.bucket;
@@ -251,53 +255,31 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let blob_client = self.blob_client(&container_name, &blob_name);
         let resp = blob_client.copy(src_blob_url).await.unwrap();
 
-        Ok(CopyObjectOutput {
+        Ok(S3Response::new(CopyObjectOutput {
             copy_object_result: Some(CopyObjectResult {
                 e_tag: Some(resp.etag.to_string()),
                 last_modified: Some(resp.last_modified.into()),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
-
-    // async fn delete_object(
-    //     &self,
-    //     _req: S3Request<DeleteObjectInput>,
-    // ) -> S3Result<DeleteObjectOutput> {
-    //     todo!()
-    // }
-
-    // async fn delete_objects(
-    //     &self,
-    //     _req: S3Request<DeleteObjectsInput>,
-    // ) -> S3Result<DeleteObjectsOutput> {
-    //     todo!()
-    // }
 
     async fn create_multipart_upload(
         &self,
         _req: S3Request<CreateMultipartUploadInput>,
-    ) -> S3Result<CreateMultipartUploadOutput> {
+    ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
         // Azure doesn't need you to create mutlipart ahead of time.
-        Ok(CreateMultipartUploadOutput {
+        Ok(S3Response::new(CreateMultipartUploadOutput {
             upload_id: Some(uuid::Uuid::new_v4().to_string()),
             ..Default::default()
-        })
+        }))
     }
 
-    // async fn list_multipart_uploads(
-    //     &self,
-    //     _req: S3Request<ListMultipartUploadsInput>,
-    // ) -> S3Result<ListMultipartUploadsOutput> {
-    //     todo!()
-    // }
-
-    // async fn list_parts(&self, _req: S3Request<ListPartsInput>) -> S3Result<ListPartsOutput> {
-    //     todo!()
-    // }
-
-    async fn upload_part(&self, req: S3Request<UploadPartInput>) -> S3Result<UploadPartOutput> {
+    async fn upload_part(
+        &self,
+        req: S3Request<UploadPartInput>,
+    ) -> S3Result<S3Response<UploadPartOutput>> {
         // Azure requires the block id to be the same length so we pad the part number to full four bytes
         // The e_tag is no needed for complete upload. We just stuff it with md5 but it's not necessary.
         let req = req.input;
@@ -313,11 +295,11 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let resp = blob_client.put_block(block_id, input_stream).await;
 
         match resp {
-            Ok(resp) => Ok(UploadPartOutput {
+            Ok(resp) => Ok(S3Response::new(UploadPartOutput {
                 // Azure doesn't return checksum unless you also provide the checksum.
                 e_tag: Some(resp.request_id.to_string()),
                 ..Default::default()
-            }),
+            })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
                 format!("Request failed: {}", err),
@@ -328,7 +310,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
     async fn upload_part_copy(
         &self,
         req: S3Request<UploadPartCopyInput>,
-    ) -> S3Result<UploadPartCopyOutput> {
+    ) -> S3Result<S3Response<UploadPartCopyOutput>> {
         let req = req.input;
         let container_name = req.bucket;
         let blob_name = req.key;
@@ -362,20 +344,20 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(UploadPartCopyOutput {
+        Ok(S3Response::new(UploadPartCopyOutput {
             copy_part_result: Some(CopyPartResult {
                 // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
                 e_tag: Some(resp.request_id.to_string()),
                 ..Default::default()
             }),
             ..Default::default()
-        })
+        }))
     }
 
     async fn complete_multipart_upload(
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
-    ) -> S3Result<CompleteMultipartUploadOutput> {
+    ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
         let req = req.input;
         let container_name = req.bucket;
         let blob_name = req.key;
@@ -398,18 +380,11 @@ impl ObjectStoreClient for AzureObjectStoreClient {
 
         let resp = blob_client.put_block_list(block_list).await.unwrap();
 
-        Ok(CompleteMultipartUploadOutput {
+        Ok(S3Response::new(CompleteMultipartUploadOutput {
             bucket: Some(container_name),
             key: Some(blob_name),
             e_tag: Some(resp.etag.to_string()),
             ..Default::default()
-        })
+        }))
     }
-
-    // async fn abort_multipart_upload(
-    //     &self,
-    //     _req: S3Request<AbortMultipartUploadInput>,
-    // ) -> S3Result<AbortMultipartUploadOutput> {
-    //     todo!()
-    // }
 }

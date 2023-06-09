@@ -3,6 +3,7 @@ use std::pin::Pin;
 use flo_stream::MessagePublisher;
 use s3s::dto::StreamingBlob;
 
+use s3s::stream::ByteStream;
 use s3s::stream::RemainingLength;
 
 use tokio_stream::Stream;
@@ -50,8 +51,7 @@ where
     S: Stream<Item = T> + Unpin,
 {
     fn remaining_length(&self) -> s3s::stream::RemainingLength {
-        // println!("remaining_length: {:?}", self.size_hint);
-        self.size_hint
+        s3s::stream::RemainingLength::new_exact(self.size_hint.exact().unwrap())
     }
 }
 
@@ -61,13 +61,14 @@ pub fn split_streaming_blob(incoming: StreamingBlob, num_splits: usize) -> Vec<S
 
     // size_hint is required so the S3 client can set content length header properly.
     // that's why we just need it once in the beginning and keep it static.
-    let hint = incoming.inner.remaining_length();
+    let hint = incoming.remaining_length();
     // println!("hint: {:?}", hint);
 
     let mut result: Vec<StreamingBlob> = Vec::new();
     for _ in 0..num_splits {
         let sub = publisher.subscribe();
-        let stream = WrapToResultStream::new(sub, hint);
+        let stream =
+            WrapToResultStream::new(sub, RemainingLength::new_exact(hint.exact().unwrap()));
         // let boxed: Box< dyn Stream<Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync>>>
         //         + Send,
         // > = Box::new(stream);
