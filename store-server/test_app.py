@@ -321,6 +321,3 @@ def test_multipart_flow(client):
     resp.raise_for_status()
     resp_data = resp.json()
     assert resp_data["region"] == "us-west-1"
-
-def test_copy_flow():
-    # TODO write the test for this.

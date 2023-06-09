@@ -5,3 +5,5 @@ aiosqlite
 pydantic
 pytest
 httpx
+sqlalchemy>=2.0
+sqlalchemy_repr

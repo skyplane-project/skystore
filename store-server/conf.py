@@ -26,13 +26,40 @@ class Configuration(BaseModel):
 TEST_CONFIGURATION = Configuration(
     physical_locations=[
         PhysicalLocation(
+            name="aws:us-west-1",
+            cloud="aws",
+            region="us-west-1",
+            bucket="my-bucket-1",
+            prefix="my-prefix-1/",
+            broadcast_to=["aws:us-east-2"],
+        ),
+        PhysicalLocation(
+            name="aws:us-east-2",
+            cloud="aws",
+            region="us-east-2",
+            bucket="my-bucket-2",
+            prefix="my-prefix-2/",
+        ),
+        PhysicalLocation(
+            name="gcp:us-central-3",
+            cloud="gcp",
+            region="us-central-3",
+            bucket="my-bucket-3",
+            prefix="my-prefix-3/",
+        ),
+    ]
+)
+
+
+DEMO_CONFIGURATION = Configuration(
+    physical_locations=[
+        PhysicalLocation(
             name="azure:westus3",
             cloud="azure",
             region="westus3",
             bucket="sky-s3-backend",
             prefix="demo-dry-run/",
-            # broadcast_to=["gcp:us-west1", "aws:us-west-2"],
-            # broadcast_to=["gcp:us-west1"],
+            broadcast_to=["gcp:us-west1", "aws:us-west-2"],
         ),
         PhysicalLocation(
             name="gcp:us-west1",

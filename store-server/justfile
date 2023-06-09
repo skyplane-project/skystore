@@ -5,10 +5,11 @@ install:
     pip install -r requirements.txt
 
 clean:
+    #!/usr/bin/env bash
     rm skystore.db || true
-    sudo -i -u postgres psql -c "DROP DATABASE IF EXISTS skystore"
-    sudo -i -u postgres psql -c "CREATE DATABASE skystore"
-    sudo -i -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skystore TO ubuntu"
+    # sudo -i -u postgres psql -c "DROP DATABASE IF EXISTS skystore"
+    # sudo -i -u postgres psql -c "CREATE DATABASE skystore"
+    # sudo -i -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skystore TO ubuntu"
 
 
 run-debug:

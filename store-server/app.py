@@ -2,21 +2,29 @@ import enum
 import logging
 import uuid
 from datetime import datetime
-from typing import Annotated, List, Literal, Optional, Union
+from typing import Annotated, List, Literal, Optional
+import os
 
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.routing import APIRoute
-from numpy import minimum
-from pydantic import BaseConfig, BaseModel, Field, NonNegativeInt, PositiveInt, StrictInt, validate_arguments, validator
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
 from rich.logging import RichHandler
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, select, Boolean
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    select,
+)
+from sqlalchemy.dialects.postgresql import BIGINT
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy_repr import RepresentableBase
-from sqlalchemy.dialects.postgresql import BIGINT
 
 from conf import TEST_CONFIGURATION
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,15 +34,14 @@ logging.basicConfig(
     force=True,
 )
 
-import os
 
 LOG_SQL = os.environ.get("LOG_SQL", "false").lower() == "1"
 
 logger = logging.getLogger()
 
 Base = declarative_base(cls=RepresentableBase)
-# engine = create_async_engine("sqlite+aiosqlite:///skystore.db", echo=LOG_SQL, future=True)  # , connect_args={"timeout": 15})
-engine = create_async_engine("postgresql+asyncpg://ubuntu:ubuntu@localhost:5432/skystore", echo=LOG_SQL, future=True)
+engine = create_async_engine("sqlite+aiosqlite:///skystore.db", echo=LOG_SQL, future=True)  # , connect_args={"timeout": 15})
+# engine = create_async_engine("postgresql+asyncpg://ubuntu:ubuntu@localhost:5432/skystore", echo=LOG_SQL, future=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
