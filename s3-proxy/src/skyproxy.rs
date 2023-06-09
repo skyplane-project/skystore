@@ -23,29 +23,45 @@ pub struct SkyProxy {
 impl SkyProxy {
     pub async fn new() -> Self {
         let mut store_clients = HashMap::new();
-        store_clients.insert(
-            "azure:westus3".to_string(),
-            Arc::new(
-                Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-                    as Box<dyn ObjectStoreClient>,
-            ),
-        );
-        store_clients.insert(
-            "gcp:us-west1".to_string(),
-            Arc::new(
-                Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
-                    as Box<dyn ObjectStoreClient>,
-            ),
-        );
-        store_clients.insert(
-            "aws:us-west-2".to_string(),
-            Arc::new(Box::new(
-                crate::client_impls::s3::S3ObjectStoreClient::new(
-                    "https://s3.us-west-2.amazonaws.com".to_string(),
-                )
-                .await,
-            ) as Box<dyn ObjectStoreClient>),
-        );
+
+        //// Test Configuration, hard coded from conf.py
+        let regions = vec!["aws:us-west-1", "aws:us-east-2", "gcp:us-central-3"];
+        for r in regions {
+            store_clients.insert(
+                r.to_string(),
+                Arc::new(Box::new(
+                    crate::client_impls::s3::S3ObjectStoreClient::new(
+                        "http://localhost:8014".to_string(),
+                    )
+                    .await,
+                ) as Box<dyn ObjectStoreClient>),
+            );
+        }
+
+        //// Demo Configuration
+        // store_clients.insert(
+        //     "azure:westus3".to_string(),
+        //     Arc::new(
+        //         Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+        //             as Box<dyn ObjectStoreClient>,
+        //     ),
+        // );
+        // store_clients.insert(
+        //     "gcp:us-west1".to_string(),
+        //     Arc::new(
+        //         Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
+        //             as Box<dyn ObjectStoreClient>,
+        //     ),
+        // );
+        // store_clients.insert(
+        //     "aws:us-west-2".to_string(),
+        //     Arc::new(Box::new(
+        //         crate::client_impls::s3::S3ObjectStoreClient::new(
+        //             "https://s3.us-west-2.amazonaws.com".to_string(),
+        //         )
+        //         .await,
+        //     ) as Box<dyn ObjectStoreClient>),
+        // );
 
         let dir_conf = Configuration {
             base_path: "http://localhost:3000".to_string(),
@@ -59,7 +75,8 @@ impl SkyProxy {
         Self {
             store_clients,
             dir_conf,
-            client_from_region: "azure:westus3".to_string(),
+            client_from_region: "aws:us-west-1".to_string(),
+            // client_from_region: "azure:westus3".to_string(),
         }
     }
 }

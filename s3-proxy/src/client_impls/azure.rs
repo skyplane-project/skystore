@@ -109,6 +109,7 @@ impl SeekableStream for SeekableBlobWrapper {
 }
 
 impl AzureObjectStoreClient {
+    #[allow(dead_code)]
     pub async fn new() -> Self {
         let account = std::env::var("STORAGE_ACCOUNT").expect("missing STORAGE_ACCOUNT");
         let access_key = std::env::var("STORAGE_ACCESS_KEY").expect("missing STORAGE_ACCOUNT_KEY");

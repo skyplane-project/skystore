@@ -9,6 +9,7 @@ pub struct S3ObjectStoreClient {
 }
 
 impl S3ObjectStoreClient {
+    #[allow(dead_code)]
     pub async fn new(endpoint_url: String) -> Self {
         let config: aws_config::SdkConfig = aws_config::from_env()
             .endpoint_url(endpoint_url)

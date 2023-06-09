@@ -16,6 +16,7 @@ pub struct GCPObjectStoreClient {
 }
 
 impl GCPObjectStoreClient {
+    #[allow(dead_code)]
     pub async fn new() -> Self {
         let config = ClientConfig::default().with_auth().await.unwrap();
         Self {
