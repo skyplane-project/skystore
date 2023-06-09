@@ -1,0 +1,48 @@
+list:
+    just --list
+
+install:
+    pip install -r requirements.txt
+
+clean:
+    rm skystore.db || true
+    sudo -i -u postgres psql -c "DROP DATABASE IF EXISTS skystore"
+    sudo -i -u postgres psql -c "CREATE DATABASE skystore"
+    sudo -i -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skystore TO ubuntu"
+
+
+run-debug:
+    LOG_SQL=1 uvicorn --http httptools app:app --reload --port 3000
+
+run:
+    uvicorn app:app --reload --port 3000
+    # uvicorn --http httptools app:app --reload --port 3000
+    # gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:3000 --enable-stdio-inheritance app:app
+
+test args='': clean
+    pytest -v -s --show-capture=no . {{args}}
+
+dump:
+    sqlite3 skystore.db .dump
+
+generate-openapi:
+    #!/usr/bin/env bash
+    # run the app in the background
+    uvicorn app:app --port 3000 &
+    # get the pid
+    pid=$!
+    # curl the openapi.json, retry few times
+    for i in {1..5}; do
+        curl http://localhost:3000/openapi.json > /tmp/openapi.json && break
+        sleep 1
+    done
+    # kill the app
+    kill $pid
+
+generate-rust:
+    #!/usr/bin/env bash
+    npx @openapitools/openapi-generator-cli generate -g rust \
+        -i /tmp/openapi.json \
+        -o ../skystore-rust-client \
+        --additional-properties=preferUnsignedInt=true,bestFitInt=true,packageName=skystore-rust-client
+    rm openapitools.json

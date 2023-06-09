@@ -1,0 +1,44 @@
+[package]
+name = "sky-s3"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.68"
+aws-config = "0.55.2"
+aws-sdk-s3 = "0.26.0"
+http = "0.2.9"
+hyper = { version = "0.14.26", features = ["full"] }
+reqwest = "0.11.17"
+# s3s = { git = "https://github.com/Nugine/s3s.git", rev = "2124b50def2f558ed5a9fbc9cfa3bee986b34f0a" }
+# s3s-aws = { git = "https://github.com/Nugine/s3s.git", rev = "2124b50def2f558ed5a9fbc9cfa3bee986b34f0a" }
+# s3s-fs = { git = "https://github.com/Nugine/s3s.git", rev = "2124b50def2f558ed5a9fbc9cfa3bee986b34f0a" }
+s3s = { path = "../s3s/crates/s3s" }
+s3s-aws = { path = "../s3s/crates/s3s-aws" }
+s3s-fs = { path = "../s3s/crates/s3s-fs" }
+serde = "1.0.160"
+serde_json = "1.0.96"
+syn = "2.0.15"
+tokio = { version = "1.28.0", features = ["full"] }
+tower = { version = "0.4.13", features = ["make"] }
+tower-http = { version = "0.4.0", features = ["trace"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+skystore-rust-client = { path = "../skystore-rust-client" }
+chrono = { version = "0.4", features = ["serde"] }
+time = "0.3.21"
+serial_test = "2.0.0"
+tokio-stream = "0.1.14"
+tokio-util = "0.7.8"
+bytes = "1.4.0"
+flo_stream = "0.7.0"
+azure_storage_blobs = { path = "../../azure-sdk-for-rust/sdk/storage_blobs" }
+azure_storage = { path = "../../azure-sdk-for-rust/sdk/storage" }
+azure_core = { path = "../../azure-sdk-for-rust/sdk/core" }
+futures = "0.3.28"
+uuid = "1.3.3"
+hex = "0.4.3"
+google-cloud-storage = "0.11.0"
+google-cloud-default = { version = "0.2.0", features = ["storage"] }
