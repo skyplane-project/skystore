@@ -34,16 +34,19 @@ generate-openapi:
     pid=$!
     # curl the openapi.json, retry few times
     for i in {1..5}; do
-        curl http://localhost:3000/openapi.json > /tmp/openapi.json && break
+        curl http://localhost:3000/openapi.json > ../generated/openapi.json && break
         sleep 1
     done
     # kill the app
     kill $pid
 
-generate-rust:
+_check-java:
+    java -version || (echo "java not found, please install java" && exit 1)
+
+generate-rust: _check-java
     #!/usr/bin/env bash
     npx @openapitools/openapi-generator-cli generate -g rust \
-        -i /tmp/openapi.json \
-        -o ../skystore-rust-client \
+        -i ../generated/openapi.json \
+        -o ../generated/skystore-rust-client \
         --additional-properties=preferUnsignedInt=true,bestFitInt=true,packageName=skystore-rust-client
     rm openapitools.json
