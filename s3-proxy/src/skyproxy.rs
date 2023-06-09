@@ -742,7 +742,7 @@ impl S3 for SkyProxy {
         )
         .await
         .unwrap();
-        assert!(parts.len() == 1, "parts: {:?}", parts);
+        assert!(parts.len() == 1, "parts: {parts:?}");
 
         Ok(S3Response::new(UploadPartCopyOutput {
             copy_part_result: Some(CopyPartResult {

@@ -36,9 +36,9 @@ impl SeekableBlobWrapper {
     }
 }
 
-impl Into<Body> for SeekableBlobWrapper {
-    fn into(self) -> Body {
-        Body::SeekableStream(Box::new(self))
+impl From<SeekableBlobWrapper> for Body {
+    fn from(val: SeekableBlobWrapper) -> Self {
+        Body::SeekableStream(Box::new(val))
     }
 }
 
@@ -90,7 +90,7 @@ impl AsyncRead for SeekableBlobWrapper {
             }
             Poll::Ready(Some(Err(err))) => Poll::Ready(Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("read error: {}", err),
+                format!("read error: {err}"),
             ))),
             Poll::Ready(None) => Poll::Ready(Ok(0)),
             Poll::Pending => Poll::Pending,
@@ -159,7 +159,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             // TODO: handle 404 better here.
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                format!("Request failed: {}", err),
+                format!("Request failed: {err}"),
             )),
         }
     }
@@ -198,7 +198,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                format!("Request failed: {}", err),
+                format!("Request failed: {err}"),
             )),
         }
     }
@@ -221,12 +221,12 @@ impl ObjectStoreClient for AzureObjectStoreClient {
 
         match resp {
             Ok(resp) => Ok(S3Response::new(PutObjectOutput {
-                e_tag: Some(resp.etag.to_string()),
+                e_tag: Some(resp.etag),
                 ..Default::default()
             })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                format!("Request failed: {}", err),
+                format!("Request failed: {err}"),
             )),
         }
     }
@@ -291,7 +291,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
 
         let blob_client = self.blob_client(&container_name, &blob_name);
         let input_stream = SeekableBlobWrapper::new(req.body.unwrap());
-        let block_id = format!("{}-{:04}", upload_id, part_number);
+        let block_id = format!("{upload_id}-{part_number:04}");
         let resp = blob_client.put_block(block_id, input_stream).await;
 
         match resp {
@@ -302,7 +302,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                format!("Request failed: {}", err),
+                format!("Request failed: {err}"),
             )),
         }
     }
@@ -338,7 +338,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let src_block_url = src_blob_client.generate_signed_blob_url(&token).unwrap();
 
         let blob_client = self.blob_client(&container_name, &blob_name);
-        let block_id = format!("{}-{:04}", upload_id, part_number);
+        let block_id = format!("{upload_id}-{part_number:04}");
         let resp = blob_client
             .put_block_url(block_id, src_block_url)
             .await
@@ -383,7 +383,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         Ok(S3Response::new(CompleteMultipartUploadOutput {
             bucket: Some(container_name),
             key: Some(blob_name),
-            e_tag: Some(resp.etag.to_string()),
+            e_tag: Some(resp.etag),
             ..Default::default()
         }))
     }

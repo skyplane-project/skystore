@@ -47,7 +47,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         Ok(S3Response::new(HeadObjectOutput {
             e_tag: Some(res.etag),
             content_length: res.size,
-            last_modified: res.updated.map(|t| Timestamp::from(t)),
+            last_modified: res.updated.map(Timestamp::from),
             ..Default::default()
         }))
     }
@@ -90,7 +90,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         Ok(S3Response::new(GetObjectOutput {
             body: Some(StreamingBlob::wrap(res)),
             content_length: metadata.size,
-            last_modified: metadata.updated.map(|t| Timestamp::from(t)),
+            last_modified: metadata.updated.map(Timestamp::from),
             ..Default::default()
         }))
     }
@@ -188,8 +188,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 },
                 req.body.unwrap(),
                 &UploadType::Simple(Media::new(format!(
-                    "{}.sky-upload-{}.sky-multipart-{}",
-                    object, upload_id, part_number
+                    "{object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
                 ))),
             )
             .await
@@ -224,8 +223,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .copy_object(&CopyObjectRequest {
                 destination_bucket,
                 destination_object: format!(
-                    "{}.sky-upload-{}.sky-multipart-{}",
-                    destination_object, upload_id, part_number
+                    "{destination_object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
                 ),
                 source_bucket: source_bucket.to_string(),
                 source_object: source_object.to_string(),
@@ -265,7 +263,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 )
             })
             .map(|s| SourceObjects {
-                name: s.to_string(),
+                name: s,
                 ..Default::default()
             })
             .collect();
@@ -277,8 +275,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             let mut compose_batch_id: usize = 0;
             while parts.len() > 32 {
                 let composed_object = format!(
-                    "{}.sky-upload-{}.sky-multipart-compose-batch-{}",
-                    object, upload_id, compose_batch_id,
+                    "{object}.sky-upload-{upload_id}.sky-multipart-compose-batch-{compose_batch_id}",
                 );
                 let res = self
                     .client

@@ -151,7 +151,7 @@ pub fn clone_put_object_request(
         content_md5: inp.content_md5.clone(),
         content_type: inp.content_type.clone(),
         expected_bucket_owner: inp.expected_bucket_owner.clone(),
-        expires: inp.expires.as_ref().map(|t| clone_timestamp(&t)),
+        expires: inp.expires.as_ref().map(clone_timestamp),
         grant_full_control: inp.grant_full_control.clone(),
         grant_read: inp.grant_read.clone(),
         grant_read_acp: inp.grant_read_acp.clone(),
@@ -162,7 +162,7 @@ pub fn clone_put_object_request(
         object_lock_retain_until_date: inp
             .object_lock_retain_until_date
             .as_ref()
-            .map(|t| clone_timestamp(&t)),
+            .map(clone_timestamp),
         request_payer: inp.request_payer.clone(),
         sse_customer_algorithm: inp.sse_customer_algorithm.clone(),
         sse_customer_key: inp.sse_customer_key.clone(),
