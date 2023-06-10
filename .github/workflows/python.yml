@@ -25,4 +25,4 @@ jobs:
           cd store-server && black --check .
           cd store-server && ruff check
       - name: Test
-        run: cd store-server && pytest -v -s .
+        run: cd store-server && just test

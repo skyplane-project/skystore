@@ -10,7 +10,7 @@ list:
   just --list
 
 test:
-  cargo test skyproxy::tests::test_multipart_many_parts
+  cargo test skyproxy
 
 run:
   RUST_LOG=INFO cargo run
@@ -138,16 +138,17 @@ run-unit-test-once:
   set -ex
 
   just run-local-s3 &
-  local-s3-proc=$!
+  local_s3_proc=$!
 
   just run-skystore-server &
-  skystore-server-proc=$!
+  skystore_server_proc=$!
 
   cleanup() {
-    kill $local-s3-proc
-    kill $skystore-server-proc
+    kill -9 $local_s3_proc
+    kill -9 $skystore_server_proc
   }
   trap cleanup EXIT
 
-  cargo test
+  sleep 2
+  just test
 
