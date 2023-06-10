@@ -27,4 +27,6 @@ jobs:
           black --check .
           ruff check .
       - name: Test
-        run: cd store-server && just test
+        run: |
+          cargo install just
+          cd store-server && just test
