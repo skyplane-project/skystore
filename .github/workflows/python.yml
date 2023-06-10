@@ -25,6 +25,6 @@ jobs:
           pip install black ruff
           cd store-server
           black --check .
-          ruff check
+          ruff check .
       - name: Test
         run: cd store-server && just test
