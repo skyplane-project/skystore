@@ -26,7 +26,7 @@ jobs:
           cd store-server
           black --check .
           ruff check .
+      - uses: extractions/setup-just@v1
       - name: Test
         run: |
-          cargo install just
           cd store-server && just test
