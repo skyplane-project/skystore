@@ -23,7 +23,8 @@ jobs:
       - name: Lint
         run: |
           pip install black ruff
+          cd store-server
           black --check .
           ruff check
       - name: Test
-        run: just test
+        run: cd store-server && just test
