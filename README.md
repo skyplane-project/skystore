@@ -5,6 +5,8 @@ It currently support S3, Azure Blob, and GCS.
 You interact with SkyStore through S3 API.
 SkyStore automatically place your data in the right cloud provider and region to optimize performance and cost.
 
+Currently, this repo is still in a prototype phase. We are preparing for an alpha at the moment.
+
 ## Getting Started
 
 TODO

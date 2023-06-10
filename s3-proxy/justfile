@@ -132,3 +132,22 @@ purge-buckets:
   az storage blob delete-batch --account-key $STORAGE_ACCESS_KEY --account-name $STORAGE_ACCOUNT --source sky-s3-backend
   aws s3 rm s3://sky-s3-backend --recursive --output text
   gsutil -m rm -a gs://sky-s3-backend/**
+
+run-unit-test-once:
+  #!/usr/bin/env bash
+  set -ex
+
+  just run-local-s3 &
+  local-s3-proc=$!
+
+  just run-skystore-server &
+  skystore-server-proc=$!
+
+  cleanup() {
+    kill $local-s3-proc
+    kill $skystore-server-proc
+  }
+  trap cleanup EXIT
+
+  cargo test
+
