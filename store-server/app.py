@@ -40,8 +40,16 @@ LOG_SQL = os.environ.get("LOG_SQL", "false").lower() == "1"
 logger = logging.getLogger()
 
 Base = declarative_base(cls=RepresentableBase)
-engine = create_async_engine("sqlite+aiosqlite:///skystore.db", echo=LOG_SQL, future=True)  # , connect_args={"timeout": 15})
-# engine = create_async_engine("postgresql+asyncpg://ubuntu:ubuntu@localhost:5432/skystore", echo=LOG_SQL, future=True)
+engine = create_async_engine(
+    "sqlite+aiosqlite:///skystore.db",
+    echo=LOG_SQL,
+    future=True,
+)
+# engine = create_async_engine(
+#     "postgresql+asyncpg://ubuntu:ubuntu@localhost:5432/skystore",
+#     echo=LOG_SQL,
+#     future=True,
+# )
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
@@ -68,17 +76,25 @@ class DBLogicalObject(Base):
 
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship("DBLogicalMultipartUploadPart", back_populates="logical_object")
+    multipart_upload_parts = relationship(
+        "DBLogicalMultipartUploadPart", back_populates="logical_object"
+    )
 
-    physical_object_locators = relationship("DBPhysicalObjectLocator", back_populates="logical_object")
+    physical_object_locators = relationship(
+        "DBPhysicalObjectLocator", back_populates="logical_object"
+    )
 
 
 class DBLogicalMultipartUploadPart(Base):
     __tablename__ = "logical_multipart_upload_parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    logical_object_id = Column(Integer, ForeignKey("logical_objects.id"), nullable=False)
-    logical_object = relationship("DBLogicalObject", back_populates="multipart_upload_parts")
+    logical_object_id = Column(
+        Integer, ForeignKey("logical_objects.id"), nullable=False
+    )
+    logical_object = relationship(
+        "DBLogicalObject", back_populates="multipart_upload_parts"
+    )
 
     part_number = Column(Integer)
     etag = Column(String)
@@ -89,8 +105,12 @@ class DBPhysicalObjectLocator(Base):
     __tablename__ = "physical_object_locators"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    logical_object_id = Column(Integer, ForeignKey("logical_objects.id"), nullable=False)
-    logical_object = relationship("DBLogicalObject", back_populates="physical_object_locators")
+    logical_object_id = Column(
+        Integer, ForeignKey("logical_objects.id"), nullable=False
+    )
+    logical_object = relationship(
+        "DBLogicalObject", back_populates="physical_object_locators"
+    )
 
     location_tag = Column(String)
     cloud = Column(String)
@@ -101,7 +121,9 @@ class DBPhysicalObjectLocator(Base):
     is_primary = Column(Boolean, nullable=False, default=False)
 
     multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship("DBPhysicalMultipartUploadPart", back_populates="physical_object_locator")
+    multipart_upload_parts = relationship(
+        "DBPhysicalMultipartUploadPart", back_populates="physical_object_locator"
+    )
 
     status = Column(Enum(Status))
 
@@ -110,8 +132,12 @@ class DBPhysicalMultipartUploadPart(Base):
     __tablename__ = "physical_multipart_upload_parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    physical_object_locator_id = Column(Integer, ForeignKey("physical_object_locators.id"), nullable=False)
-    physical_object_locator = relationship("DBPhysicalObjectLocator", back_populates="multipart_upload_parts")
+    physical_object_locator_id = Column(
+        Integer, ForeignKey("physical_object_locators.id"), nullable=False
+    )
+    physical_object_locator = relationship(
+        "DBPhysicalObjectLocator", back_populates="multipart_upload_parts"
+    )
 
     part_number = Column(Integer)
     etag = Column(String)
@@ -157,9 +183,14 @@ class LocateObjectResponse(BaseModel):
 
 @app.post(
     "/locate_object",
-    responses={status.HTTP_200_OK: {"model": LocateObjectResponse}, status.HTTP_404_NOT_FOUND: {"description": "Object not found"}},
+    responses={
+        status.HTTP_200_OK: {"model": LocateObjectResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "Object not found"},
+    },
 )
-async def locate_object(request: LocateObjectRequest, db: DBSession) -> LocateObjectResponse:
+async def locate_object(
+    request: LocateObjectRequest, db: DBSession
+) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
     stmt = (
         select(DBPhysicalObjectLocator)
@@ -185,7 +216,9 @@ async def locate_object(request: LocateObjectRequest, db: DBSession) -> LocateOb
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
 
-    logger.debug(f"locate_object: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}")
+    logger.debug(
+        f"locate_object: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
+    )
 
     await db.refresh(chosen_locator, ["logical_object"])
 
@@ -220,7 +253,9 @@ class StartUploadResponse(BaseModel):
 
 
 @app.post("/start_upload")
-async def start_upload(request: StartUploadRequest, db: DBSession) -> StartUploadResponse:
+async def start_upload(
+    request: StartUploadRequest, db: DBSession
+) -> StartUploadResponse:
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -255,7 +290,9 @@ async def start_upload(request: StartUploadRequest, db: DBSession) -> StartUploa
             .where(DBLogicalObject.status == Status.ready)
         )
         copy_src_locators = (await db.scalars(copy_src_stmt)).all()
-        copy_src_locators_map = {locator.location_tag: locator for locator in copy_src_locators}
+        copy_src_locators_map = {
+            locator.location_tag: locator for locator in copy_src_locators
+        }
         copy_src_locations = set(locator.location_tag for locator in copy_src_locators)
     else:
         copy_src_locations = None
@@ -275,7 +312,9 @@ async def start_upload(request: StartUploadRequest, db: DBSession) -> StartUploa
         await db.refresh(existing_objects[0], ["logical_object"])
         logical_object = existing_objects[0].logical_object
 
-    upload_to_region_tags = [request.client_from_region] + conf.lookup(request.client_from_region).broadcast_to
+    upload_to_region_tags = [request.client_from_region] + conf.lookup(
+        request.client_from_region
+    ).broadcast_to
     copy_src_buckets = []
     copy_src_keys = []
     if copy_src_locations is not None:
@@ -284,15 +323,24 @@ async def start_upload(request: StartUploadRequest, db: DBSession) -> StartUploa
         # (1) filter down the desired locality region to the one where src exists
         # (2) if not preferred location, we will ask the client to copy in the region where the object is
         # available.
-        upload_to_region_tags = [tag for tag in upload_to_region_tags if tag in copy_src_locations]
+        upload_to_region_tags = [
+            tag for tag in upload_to_region_tags if tag in copy_src_locations
+        ]
         if len(upload_to_region_tags) == 0:
             upload_to_region_tags = list(copy_src_locations)
 
-        copy_src_buckets = [copy_src_locators_map[tag].bucket for tag in upload_to_region_tags]
-        copy_src_keys = [copy_src_locators_map[tag].key for tag in upload_to_region_tags]
+        copy_src_buckets = [
+            copy_src_locators_map[tag].bucket for tag in upload_to_region_tags
+        ]
+        copy_src_keys = [
+            copy_src_locators_map[tag].key for tag in upload_to_region_tags
+        ]
 
         logger.debug(
-            f"start_upload: copy_src_locations={copy_src_locations}, upload_to_region_tags={upload_to_region_tags}, copy_src_buckets={copy_src_buckets}, copy_src_keys={copy_src_keys}"
+            f"start_upload: copy_src_locations={copy_src_locations}, "
+            f"upload_to_region_tags={upload_to_region_tags}, "
+            f"copy_src_buckets={copy_src_buckets}, "
+            f"copy_src_keys={copy_src_keys}"
         )
 
     locators = []
@@ -362,7 +410,11 @@ class PatchUploadMultipartUploadPart(BaseModel):
 
 @app.patch("/complete_upload")
 async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
-    stmt = select(DBPhysicalObjectLocator).join(DBLogicalObject).where(DBPhysicalObjectLocator.id == request.id)
+    stmt = (
+        select(DBPhysicalObjectLocator)
+        .join(DBLogicalObject)
+        .where(DBPhysicalObjectLocator.id == request.id)
+    )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
         logger.error(f"physical locator not found: {request}")
@@ -376,13 +428,19 @@ async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
         physical_locator.logical_object.status = Status.ready
         physical_locator.logical_object.size = request.size
         physical_locator.logical_object.etag = request.etag
-        physical_locator.logical_object.last_modified = request.last_modified.replace(tzinfo=None)
+        physical_locator.logical_object.last_modified = request.last_modified.replace(
+            tzinfo=None
+        )
     await db.commit()
 
 
 @app.patch("/set_multipart_id")
 async def set_multipart_id(request: PatchUploadMultipartUploadId, db: DBSession):
-    stmt = select(DBPhysicalObjectLocator).join(DBLogicalObject).where(DBPhysicalObjectLocator.id == request.id)
+    stmt = (
+        select(DBPhysicalObjectLocator)
+        .join(DBLogicalObject)
+        .where(DBPhysicalObjectLocator.id == request.id)
+    )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
         logger.error(f"physical locator not found: {request}")
@@ -398,7 +456,11 @@ async def set_multipart_id(request: PatchUploadMultipartUploadId, db: DBSession)
 
 @app.patch("/append_part")
 async def append_part(request: PatchUploadMultipartUploadPart, db: DBSession):
-    stmt = select(DBPhysicalObjectLocator).join(DBLogicalObject).where(DBPhysicalObjectLocator.id == request.id)
+    stmt = (
+        select(DBPhysicalObjectLocator)
+        .join(DBLogicalObject)
+        .where(DBPhysicalObjectLocator.id == request.id)
+    )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
         logger.error(f"physical locator not found: {request}")
@@ -453,7 +515,9 @@ class ContinueUploadResponse(LocateObjectResponse):
 
 
 @app.post("/continue_upload")
-async def continue_upload(request: ContinueUploadRequest, db: DBSession) -> List[ContinueUploadResponse]:
+async def continue_upload(
+    request: ContinueUploadRequest, db: DBSession
+) -> List[ContinueUploadResponse]:
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -516,7 +580,9 @@ async def continue_upload(request: ContinueUploadRequest, db: DBSession) -> List
             ]
             if request.do_list_parts
             else None,
-            copy_src_bucket=copy_src_buckets[i] if request.copy_src_bucket is not None else None,
+            copy_src_bucket=copy_src_buckets[i]
+            if request.copy_src_bucket is not None
+            else None,
             copy_src_key=copy_src_keys[i] if request.copy_src_key is not None else None,
         )
         for i, locator in enumerate(locators)
@@ -537,8 +603,14 @@ class ObjectResponse(BaseModel):
 
 
 @app.post("/list_objects")
-async def list_objects(request: ListObjectRequest, db: DBSession) -> List[ObjectResponse]:
-    stmt = select(DBLogicalObject).where(DBLogicalObject.bucket == request.bucket).where(DBLogicalObject.status == Status.ready)
+async def list_objects(
+    request: ListObjectRequest, db: DBSession
+) -> List[ObjectResponse]:
+    stmt = (
+        select(DBLogicalObject)
+        .where(DBLogicalObject.bucket == request.bucket)
+        .where(DBLogicalObject.status == Status.ready)
+    )
     if request.prefix is not None:
         stmt = stmt.where(DBLogicalObject.key.startswith(request.prefix))
     objects = (await db.scalars(stmt)).all()
@@ -601,7 +673,9 @@ class MultipartResponse(BaseModel):
 
 
 @app.post("/list_multipart_uploads")
-async def list_multipart_uploads(request: ListObjectRequest, db: DBSession) -> List[MultipartResponse]:
+async def list_multipart_uploads(
+    request: ListObjectRequest, db: DBSession
+) -> List[MultipartResponse]:
     stmt = (
         select(DBLogicalObject)
         .where(DBLogicalObject.bucket == request.bucket)
@@ -638,7 +712,9 @@ class LogicalPartResponse(BaseModel):
 
 
 @app.post("/list_parts")
-async def list_parts(request: ListPartsRequest, db: DBSession) -> List[LogicalPartResponse]:
+async def list_parts(
+    request: ListPartsRequest, db: DBSession
+) -> List[LogicalPartResponse]:
     stmt = (
         select(DBLogicalObject)
         .where(DBLogicalObject.bucket == request.bucket)
@@ -653,7 +729,9 @@ async def list_parts(request: ListPartsRequest, db: DBSession) -> List[LogicalPa
     assert len(objects) == 1, "should only have one object"
     await db.refresh(objects[0], ["multipart_upload_parts"])
 
-    logger.debug(f"list_parts: {request} -> {objects[0], objects[0].multipart_upload_parts}")
+    logger.debug(
+        f"list_parts: {request} -> {objects[0], objects[0].multipart_upload_parts}"
+    )
 
     return [
         LogicalPartResponse(

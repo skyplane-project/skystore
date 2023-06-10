@@ -31,6 +31,6 @@ jobs:
       - name: Build
         run: cd s3-proxy && cargo build --verbose
       - name: Lint
-        run: cd s3-proxy && cargo fmt --all -- --check &&  cargo clippy -- -D warnings
+        run: cd s3-proxy && cargo fmt --check && cargo clippy -- -D warnings
       - name: Test
         run: cd s3-proxy && just run-unit-test-once

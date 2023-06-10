@@ -1,0 +1,28 @@
+name: Python
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd store-server && pip install -r requirements.txt
+      - name: Lint
+        run: |
+          pip install black ruff
+          cd store-server && black --check .
+          cd store-server && ruff check
+      - name: Test
+        run: cd store-server && pytest -v -s .
