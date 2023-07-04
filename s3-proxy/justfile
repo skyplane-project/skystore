@@ -12,7 +12,7 @@ list:
 test:
   cargo test skyproxy
 
-run:
+run: 
   RUST_LOG=INFO cargo run
 
 run-release:
@@ -21,7 +21,7 @@ run-release:
 run-registry:
   docker run -p 5000:5000 --network=host \
     -e REGISTRY_STORAGE=s3 \
-    -e REGISTRY_STORAGE_S3_BUCKET=image-bucket \
+    -e REGISTRY_STORAGE_S3_BUCKET=my-bucket-1 \
     -e REGISTRY_STORAGE_S3_REGIONENDPOINT=http://localhost:8002 \
     -e REGISTRY_STORAGE_S3_REGION=us-west-2 \
     -e REGISTRY_STORAGE_S3_SECURE=false \
@@ -38,7 +38,7 @@ run-registry:
 run-registry-local-s3:
   docker run -p 5000:5000 --network=host \
     -e REGISTRY_STORAGE=s3 \
-    -e REGISTRY_STORAGE_S3_BUCKET=image-bucket \
+    -e REGISTRY_STORAGE_S3_BUCKET=my-bucket-1 \
     -e REGISTRY_STORAGE_S3_REGIONENDPOINT=http://localhost:8014 \
     -e REGISTRY_STORAGE_S3_ACCESSKEY=$AWS_ACCESS_KEY_ID \
     -e REGISTRY_STORAGE_S3_SECRETKEY=$AWS_SECRET_ACCESS_KEY \
@@ -108,22 +108,22 @@ run-sample-pull:
 s3-args := "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
 
 run-cli-put:
-  aws s3api {{s3-args}} put-object --bucket image-bucket --key readme-2 --body "./README.md"
+  aws s3api {{s3-args}} put-object --bucket my-bucket-1 --key readme-2 --body "./README.md"
 
 run-cli-list:
-  aws s3api {{s3-args}} list-objects --bucket image-bucket
+  aws s3api {{s3-args}} list-objects --bucket my-bucket-1
 
 run-cli-get:
   rm readme-2 || true
-  aws s3api {{s3-args}} get-object --bucket image-bucket --key readme-2 readme-2
+  aws s3api {{s3-args}} get-object --bucket my-bucket-1 --key readme-2 readme-2
   cat readme-2
   rm readme-2
 
 run-cli-multipart:
-  aws s3api {{s3-args}} create-multipart-upload --bucket image-bucket --key readme-3 | jq -r '.UploadId' > /tmp/upload-id
-  aws s3api {{s3-args}} upload-part --bucket image-bucket --key readme-3 --part-number 1 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-1
-  aws s3api {{s3-args}} upload-part --bucket image-bucket --key readme-3 --part-number 2 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-2
-  aws s3api {{s3-args}} complete-multipart-upload --bucket image-bucket --key readme-3 --multipart-upload "Parts=[{ETag=$(cat /tmp/ETag-1),PartNumber=1},{ETag=$(cat /tmp/ETag-2),PartNumber=2}]" --upload-id $(cat /tmp/upload-id)
+  aws s3api {{s3-args}} create-multipart-upload --bucket my-bucket-1 --key readme-3 | jq -r '.UploadId' > /tmp/upload-id
+  aws s3api {{s3-args}} upload-part --bucket my-bucket-1 --key readme-3 --part-number 1 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-1
+  aws s3api {{s3-args}} upload-part --bucket my-bucket-1 --key readme-3 --part-number 2 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-2
+  aws s3api {{s3-args}} complete-multipart-upload --bucket my-bucket-1 --key readme-3 --multipart-upload "Parts=[{ETag=$(cat /tmp/ETag-1),PartNumber=1},{ETag=$(cat /tmp/ETag-2),PartNumber=2}]" --upload-id $(cat /tmp/upload-id)
 
 run-skystore-server:
   cd ../store-server && just clean && just run
