@@ -41,10 +41,25 @@ Run some sample commands using the AWS CLI:
 
 ```bash
 cd s3-proxy
+just run-cli-create-bucket
+just run-cli-list-buckets 
 just run-cli-put
 just run-cli-get
 just run-cli-list
 just run-cli-multipart
+```
+
+Test the server: make sure to run `just run-skystore-server` in a separate window first 
+```
+cd store-server
+just test
+```
+
+Before E2E test, if make changes to the server, then run 
+```
+cd store-server
+just generate-openapi
+just generate-rust
 ```
 
 ### Container Registry
