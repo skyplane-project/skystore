@@ -39,7 +39,7 @@ impl ObjectStoreClient for S3ObjectStoreClient {
     ) -> S3Result<S3Response<DeleteBucketOutput>> {
         return self.s3_proxy.delete_bucket(req).await;
     }
-    
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

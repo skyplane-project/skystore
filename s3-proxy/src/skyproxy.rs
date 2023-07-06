@@ -6,18 +6,18 @@ use s3s::dto::*;
 use s3s::stream::ByteStream;
 use s3s::{S3Request, S3Response, S3Result, S3};
 
+use chrono::Utc;
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
-use chrono::{Utc};
-use std::time::SystemTime;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::SystemTime;
 use tracing::error;
 
 pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
-    dir_conf: Configuration, 
+    dir_conf: Configuration,
     client_from_region: String,
 }
 
@@ -26,7 +26,12 @@ impl SkyProxy {
         let mut store_clients = HashMap::new();
 
         //// Test Configuration, hard coded from conf.py
-        let regions = vec!["aws:us-west-1", "aws:us-east-2", "gcp:us-central-3", "aws:eu-central-1"];
+        let regions = vec![
+            "aws:us-west-1",
+            "aws:us-east-2",
+            "gcp:us-central-3",
+            "aws:eu-central-1",
+        ];
         for r in regions {
             store_clients.insert(
                 r.to_string(),
@@ -177,13 +182,12 @@ impl S3 for SkyProxy {
     }
     ///////////////////////////////////////////////////////////////////////////
 
-
     #[tracing::instrument(level = "info")]
     async fn create_bucket(
         &self,
         req: S3Request<CreateBucketInput>,
     ) -> S3Result<S3Response<CreateBucketOutput>> {
-        // Send start create bucket request 
+        // Send start create bucket request
         let create_bucket_resp = apis::start_create_bucket(
             &self.dir_conf,
             models::CreateBucketRequest {
@@ -195,27 +199,30 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        // Create bucket in actual storages 
+        // Create bucket in actual storages
         let mut tasks = tokio::task::JoinSet::new();
         let locators = create_bucket_resp.locators;
 
         for locator in locators {
             let client: Arc<Box<dyn ObjectStoreClient>> =
                 self.store_clients.get(&locator.tag).unwrap().clone();
-            
+
             let bucket_name = locator.bucket.clone();
             let dir_conf = self.dir_conf.clone();
 
             tasks.spawn(async move {
                 let create_bucket_req = new_create_bucket_request(bucket_name.clone());
-                client.create_bucket(S3Request::new(create_bucket_req)).await.unwrap();
-                
+                client
+                    .create_bucket(S3Request::new(create_bucket_req))
+                    .await
+                    .unwrap();
+
                 let system_time: SystemTime = Utc::now().into();
                 let timestamp: s3s::dto::Timestamp = system_time.into();
 
                 apis::complete_create_bucket(
                     &dir_conf,
-                    models::CreateBucketIsCompleted{
+                    models::CreateBucketIsCompleted {
                         id: locator.id,
                         creation_date: timestamp_to_string(timestamp), // TODO: fix this, get metadata from actual storage
                     },
@@ -224,14 +231,14 @@ impl S3 for SkyProxy {
                 .unwrap();
             });
         }
-        
+
         // Wait for all tasks to complete
         while let Some(result) = tasks.join_next().await {
             if let Err(err) = result {
                 // Converting the error to a string and embedding it into S3Error.
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::InternalError,
-                    format!("Error creating bucket: {}", err)
+                    format!("Error creating bucket: {}", err),
                 ));
             }
         }
@@ -239,13 +246,11 @@ impl S3 for SkyProxy {
         Ok(S3Response::new(CreateBucketOutput::default()))
     }
 
-
     #[tracing::instrument(level = "info")]
     async fn delete_bucket(
         &self,
         req: S3Request<DeleteBucketInput>,
     ) -> S3Result<S3Response<DeleteBucketOutput>> {
-
         // Send start delete bucket request
         let delete_bucket_resp = apis::start_delete_bucket(
             &self.dir_conf,
@@ -263,19 +268,20 @@ impl S3 for SkyProxy {
         for locator in locators {
             let client: Arc<Box<dyn ObjectStoreClient>> =
                 self.store_clients.get(&locator.tag).unwrap().clone();
-            
+
             let bucket_name = req.input.bucket.clone();
             let dir_conf = self.dir_conf.clone();
 
             tasks.spawn(async move {
                 let delete_bucket_req = new_delete_bucket_request(bucket_name.clone());
-                client.delete_bucket(S3Request::new(delete_bucket_req)).await.unwrap();
+                client
+                    .delete_bucket(S3Request::new(delete_bucket_req))
+                    .await
+                    .unwrap();
 
                 apis::complete_delete_bucket(
                     &dir_conf,
-                    models::DeleteBucketIsCompleted{
-                        id: locator.id,
-                    },
+                    models::DeleteBucketIsCompleted { id: locator.id },
                 )
                 .await
                 .unwrap();
@@ -288,7 +294,7 @@ impl S3 for SkyProxy {
                 // Converting the error to a string and embedding it into S3Error.
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::InternalError,
-                    format!("Error deleting bucket: {}", err)
+                    format!("Error deleting bucket: {}", err),
                 ));
             }
         }
@@ -309,15 +315,14 @@ impl S3 for SkyProxy {
 
                 for bucket in resp {
                     buckets.push(Bucket {
-                        creation_date: Some(string_to_timestamp(&bucket.creation_date)), 
+                        creation_date: Some(string_to_timestamp(&bucket.creation_date)),
                         name: Some(bucket.bucket),
                     });
                 }
 
                 Ok(S3Response::new(ListBucketsOutput {
                     buckets: Some(buckets),
-                    owner: None, 
-                    ..Default::default()
+                    owner: None,
                 }))
             }
             Err(err) => {
@@ -1032,6 +1037,11 @@ mod tests {
     use super::*;
     use serial_test::serial;
 
+    fn generate_unique_bucket_name() -> String {
+        let timestamp = chrono::Utc::now().timestamp_nanos();
+        format!("my-bucket-{}", timestamp)
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_constructor() {
@@ -1044,7 +1054,13 @@ mod tests {
     async fn test_list_objects() {
         let proxy = SkyProxy::new().await;
 
-        let request = new_list_objects_v2_input("my-bucket".to_string(), None);
+        // create a bucket
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string());
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        let request = new_list_objects_v2_input(bucket_name.to_string(), None);
         let req = S3Request::new(request);
         let resp = proxy.list_objects_v2(req).await.unwrap().output;
         assert!(resp.contents.is_some());
@@ -1055,8 +1071,14 @@ mod tests {
     async fn test_put_then_get() {
         let proxy = SkyProxy::new().await;
 
+        // create a bucket
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string());
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
         {
-            let mut request = new_put_object_request("my-bucket".to_string(), "my-key".to_string());
+            let mut request = new_put_object_request(bucket_name.to_string(), "my-key".to_string());
             let body = "abcdefg".to_string().into_bytes();
             request.body = Some(s3s::Body::from(body).into());
 
@@ -1067,7 +1089,7 @@ mod tests {
 
         {
             let request =
-                new_list_objects_v2_input("my-bucket".to_string(), Some("my-key".to_string()));
+                new_list_objects_v2_input(bucket_name.to_string(), Some("my-key".to_string()));
             let req = S3Request::new(request);
             let resp = proxy.list_objects_v2(req).await.unwrap().output;
             assert!(resp.contents.is_some());
@@ -1075,7 +1097,7 @@ mod tests {
         }
 
         {
-            let request = new_get_object_request("my-bucket".to_string(), "my-key".to_string());
+            let request = new_get_object_request(bucket_name.to_string(), "my-key".to_string());
             let req = S3Request::new(request);
             let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
@@ -1099,10 +1121,16 @@ mod tests {
     async fn test_copy_object() {
         let proxy = SkyProxy::new().await;
 
+        // create a bucket
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string());
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
         // put an object to my-bucket/my-copy-key
         {
             let mut request =
-                new_put_object_request("my-bucket".to_string(), "my-copy-key".to_string());
+                new_put_object_request(bucket_name.to_string(), "my-copy-key".to_string());
             let body = "abcdefg".to_string().into_bytes();
             request.body = Some(s3s::Body::from(body).into());
 
@@ -1114,9 +1142,9 @@ mod tests {
         // copy the object
         {
             let request = new_copy_object_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-copy-key".to_string(),
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-copy-key-copy".to_string(),
             );
             let req = S3Request::new(request);
@@ -1127,7 +1155,7 @@ mod tests {
         // get the object at my-copy-key-copy
         {
             let request =
-                new_get_object_request("my-bucket".to_string(), "my-copy-key-copy".to_string());
+                new_get_object_request(bucket_name.to_string(), "my-copy-key-copy".to_string());
             let req = S3Request::new(request);
             let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
@@ -1152,6 +1180,12 @@ mod tests {
     async fn test_multipart_flow() {
         let proxy = SkyProxy::new().await;
 
+        // create a bucket
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string());
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
         // AWS's The minimal multipart upload size is 5Mb
         // which is pretty sad but we have to test it against real service here.
         let part_size = 10 * 1024 * 1024;
@@ -1159,7 +1193,7 @@ mod tests {
         // initiate multipart upload
         let upload_id = {
             let request = new_create_multipart_upload_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
             );
             let req = S3Request::new(request);
@@ -1171,7 +1205,7 @@ mod tests {
         // test list multipart upload contains upload_id
         {
             let request = new_list_multipart_uploads_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
             );
             let req = S3Request::new(request);
@@ -1188,7 +1222,7 @@ mod tests {
         // upload part 1
         let etag1 = {
             let mut request = new_upload_part_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
                 upload_id.clone(),
                 1,
@@ -1206,7 +1240,7 @@ mod tests {
         // list parts
         {
             let request = new_list_parts_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
                 upload_id.clone(),
             );
@@ -1222,7 +1256,7 @@ mod tests {
         let etag2 = {
             // start by uploading a simple object
             let mut request =
-                new_put_object_request("my-bucket".to_string(), "my-copy-src-key".to_string());
+                new_put_object_request(bucket_name.to_string(), "my-copy-src-key".to_string());
             let body: Vec<u8> = vec![0; part_size];
             request.body = Some(s3s::Body::from(body).into());
             let req = S3Request::new(request);
@@ -1231,11 +1265,11 @@ mod tests {
 
             // now issue a copy part request
             let request = new_upload_part_copy_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
                 upload_id.clone(),
                 2,
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-copy-src-key".to_string(),
             );
 
@@ -1248,7 +1282,7 @@ mod tests {
         // complete the upload
         {
             let request = new_complete_multipart_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-key".to_string(),
                 upload_id.clone(),
                 CompletedMultipartUpload {
@@ -1278,7 +1312,7 @@ mod tests {
 
             // We should able to get the content of the object
             let request =
-                new_get_object_request("my-bucket".to_string(), "my-multipart-key".to_string());
+                new_get_object_request(bucket_name.to_string(), "my-multipart-key".to_string());
             let req = S3Request::new(request);
             let resp = proxy.get_object(req).await.unwrap().output;
             assert!(resp.body.is_some());
@@ -1304,10 +1338,16 @@ mod tests {
     async fn test_multipart_many_parts() {
         let proxy = SkyProxy::new().await;
 
+        // create a bucket
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string());
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
         // initiate multipart upload
         let upload_id = {
             let request = new_create_multipart_upload_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-many-parts-key".to_string(),
             );
             let req = S3Request::new(request);
@@ -1320,7 +1360,7 @@ mod tests {
         let mut etags = Vec::new();
         for i in 1..=40 {
             let mut request = new_upload_part_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-many-parts-key".to_string(),
                 upload_id.clone(),
                 i,
@@ -1337,7 +1377,7 @@ mod tests {
         // complete the upload
         {
             let request = new_complete_multipart_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-many-parts-key".to_string(),
                 upload_id.clone(),
                 CompletedMultipartUpload {
@@ -1363,7 +1403,7 @@ mod tests {
 
             // We should able to get the content of the object
             let request = new_get_object_request(
-                "my-bucket".to_string(),
+                bucket_name.to_string(),
                 "my-multipart-many-parts-key".to_string(),
             );
             let req = S3Request::new(request);

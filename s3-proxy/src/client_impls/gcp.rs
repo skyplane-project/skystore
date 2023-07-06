@@ -1,10 +1,10 @@
 use crate::objstore_client::ObjectStoreClient;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
-use google_cloud_storage::http::buckets::insert::{InsertBucketRequest, BucketCreationConfig};
+use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
+use google_cloud_storage::http::buckets::insert::{BucketCreationConfig, InsertBucketRequest};
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
-use google_cloud_storage::http::buckets::delete::DeleteBucketRequest; 
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
@@ -49,13 +49,12 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             })
             .await
             .unwrap();
-    
+
         Ok(S3Response::new(CreateBucketOutput {
             location: Some(res.location),
-            ..Default::default()
         }))
     }
-    
+
     async fn delete_bucket(
         &self,
         req: S3Request<DeleteBucketInput>,
@@ -63,20 +62,17 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
 
-        self
-            .client
+        self.client
             .delete_bucket(&DeleteBucketRequest {
                 bucket,
                 ..Default::default()
             })
             .await
             .unwrap();
-    
-        Ok(S3Response::new(DeleteBucketOutput {
-            ..Default::default()
-        }))
+
+        Ok(S3Response::new(DeleteBucketOutput::default()))
     }
-    
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

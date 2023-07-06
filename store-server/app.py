@@ -383,6 +383,7 @@ async def locate_object(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
+    print("Request bucket name: ", request.bucket)
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)

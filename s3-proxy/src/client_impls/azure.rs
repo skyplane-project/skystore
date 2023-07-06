@@ -153,7 +153,6 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         match resp {
             Ok(_) => Ok(S3Response::new(CreateBucketOutput {
                 location: Some(container_name.clone()),
-                ..Default::default()
             })),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
@@ -173,9 +172,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let resp = container_client.delete().await;
 
         match resp {
-            Ok(_) => Ok(S3Response::new(DeleteBucketOutput {
-                ..Default::default()
-            })),
+            Ok(_) => Ok(S3Response::new(DeleteBucketOutput::default())),
             Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
                 format!("Request failed: {}", err),

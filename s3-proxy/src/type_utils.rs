@@ -233,7 +233,6 @@ pub fn clone_timestamp(timestamp: &Timestamp) -> Timestamp {
     )
 }
 
-
 pub fn timestamp_to_string(timestamp: Timestamp) -> String {
     let mut buf = Vec::new();
     timestamp
