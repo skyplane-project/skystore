@@ -1,6 +1,25 @@
 use s3s::dto::*;
 
 #[allow(dead_code)]
+pub fn new_create_bucket_request(bucket: String) -> CreateBucketInput {
+    let mut builder = CreateBucketInput::builder();
+    builder.set_bucket(bucket);
+    builder.build().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn new_delete_bucket_request(bucket: String) -> DeleteBucketInput {
+    let mut builder = DeleteBucketInput::builder();
+    builder.set_bucket(bucket);
+    builder.build().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn new_list_buckets_input() -> ListBucketsInput {
+    ListBucketsInput::default()
+}
+
+#[allow(dead_code)]
 pub fn new_list_objects_v2_input(bucket: String, prefix: Option<String>) -> ListObjectsV2Input {
     let mut builder = ListObjectsV2Input::builder();
     builder.set_bucket(bucket);
@@ -213,6 +232,7 @@ pub fn clone_timestamp(timestamp: &Timestamp) -> Timestamp {
         .unwrap(),
     )
 }
+
 
 pub fn timestamp_to_string(timestamp: Timestamp) -> String {
     let mut buf = Vec::new();

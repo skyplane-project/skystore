@@ -26,6 +26,20 @@ impl S3ObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for S3ObjectStoreClient {
+    async fn create_bucket(
+        &self,
+        req: S3Request<CreateBucketInput>,
+    ) -> S3Result<S3Response<CreateBucketOutput>> {
+        return self.s3_proxy.create_bucket(req).await;
+    }
+
+    async fn delete_bucket(
+        &self,
+        req: S3Request<DeleteBucketInput>,
+    ) -> S3Result<S3Response<DeleteBucketOutput>> {
+        return self.s3_proxy.delete_bucket(req).await;
+    }
+    
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

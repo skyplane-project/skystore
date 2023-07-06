@@ -9,8 +9,209 @@ def client():
         yield client
 
 
-def test_get_object(client):
-    """Test that the `get_object` endpoint returns the correct object."""
+def test_bucket_create(client):
+    """Test that the `create_bucket` endpoint works."""
+    resp = client.post("/list_buckets")
+    assert resp.json() == []
+
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "test-bucket-op",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-central-3"],
+        },
+    )
+    resp.raise_for_status()
+
+    # Double create: 409
+    assert (
+        client.post(
+            "/start_create_bucket",
+            json={
+                "bucket": "test-bucket-op",
+                "client_from_region": "aws:us-west-1",
+                "warmup_regions": ["gcp:us-central-3"],
+            },
+        ).status_code
+        == 409
+    )
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    # list buckets
+    resp = client.post("/list_buckets")
+    assert resp.json() == [
+        {
+            "bucket": "test-bucket-op",
+            "creation_date": "2020-01-01T00:00:00",
+        }
+    ]
+
+    # delete bucket
+    resp = client.post(
+        "/start_delete_bucket",
+        json={
+            "bucket": "test-bucket-op",
+        },
+    )
+
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_delete_bucket",
+            json={"id": physical_bucket["id"]},
+        )
+        resp.raise_for_status()
+
+    resp = client.post("/list_buckets")
+    assert resp.json() == []
+
+
+def test_bucket_register(client):
+    resp = client.post(
+        "/register_buckets",
+        json={
+            "bucket": "test-bucket-register",
+            "config": {
+                "physical_locations": [
+                    {
+                        "name": "aws:us-west-1",
+                        "cloud": "aws",
+                        "region": "us-west-1",
+                        "bucket": "my-bucket-1",
+                        "prefix": "my-prefix-1/",
+                        "broadcast_to": ["aws:us-east-2"],
+                        "is_primary": True,
+                        "need_warmup": False,
+                    },
+                    {
+                        "name": "aws:us-east-2",
+                        "cloud": "aws",
+                        "region": "us-east-2",
+                        "bucket": "my-bucket-2",
+                        "prefix": "my-prefix-2/",
+                        "is_primary": False,
+                        "need_warmup": False,
+                    },
+                    {
+                        "name": "gcp:us-central-3",
+                        "cloud": "gcp",
+                        "region": "us-central-3",
+                        "bucket": "my-bucket-3",
+                        "prefix": "my-prefix-3/",
+                        "is_primary": False,
+                        "need_warmup": True,
+                    },
+                ]
+            },
+        },
+    )
+    resp.raise_for_status()
+
+    # Upload to a primary location
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "test-bucket-register",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2023-07-01T00:00:00",
+            },
+        ).raise_for_status()
+
+    # Check if object can be located from primary region
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "test-bucket-register",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["tag"] == "aws:us-west-1"
+    assert resp_data["region"] == "us-west-1"
+
+    # Check if object can be located from warmup region
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "test-bucket-register",
+            "key": "my-key",
+            "client_from_region": "gcp:us-central-3",
+        },
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["tag"] == "gcp:us-central-3"
+    assert resp_data["region"] == "us-central-3"
+
+    # Check if object can be located from a non-warmup region
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "test-bucket-register",
+            "key": "my-key",
+            "client_from_region": "aws:us-east-2",
+        },
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["tag"] == "aws:us-west-1"
+    assert resp_data["region"] == "us-west-1"
+
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "test-bucket-register",
+            "key": "my-key",
+            "client_from_region": "aws:eu-central-1",
+        },
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["tag"] == "aws:us-west-1"
+    assert resp_data["region"] == "us-west-1"
+
+
+def test_delete_bucket(client):
+    resp = client.post(
+        "/start_create_bucket",
+        json={"bucket": "my-bucket", "client_from_region": "aws:us-west-1"},
+    )
+    resp.raise_for_status()
+
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
 
     resp = client.post(
         "/start_upload",
@@ -34,10 +235,67 @@ def test_get_object(client):
             },
         ).raise_for_status()
 
+    assert (
+        client.post(
+            "/start_delete_bucket",
+            json={
+                "bucket": "my-bucket",
+            },
+        ).status_code
+        == 409
+    )
+
+
+def test_get_object(client):
+    """Test that the `get_object` endpoint returns the correct object."""
+
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-get-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-central-3"],
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-get-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00",
+            },
+        ).raise_for_status()
+
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-get-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
         },
@@ -47,8 +305,8 @@ def test_get_object(client):
     resp_data.pop("id")
     assert resp_data == {
         "tag": "aws:us-west-1",
-        "bucket": "my-bucket-1",
-        "key": "my-prefix-1/my-key",
+        "bucket": "my-get-bucket-us-west-1",
+        "key": "my-key",
         "region": "us-west-1",
         "cloud": "aws",
         "size": 100,
@@ -61,9 +319,9 @@ def test_get_object(client):
         client.post(
             "/locate_object",
             json={
-                "bucket": "my-bucket",
+                "bucket": "my-get-bucket",
                 "key": "non-existent-my-key",
-                "client_from_region": "us-west-2",
+                "client_from_region": "aws:us-west-2",
             },
         ).status_code
         == 404
@@ -73,30 +331,47 @@ def test_get_object(client):
     location = client.post(
         "/locate_object",
         json={
-            "bucket": "my-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-east-2",
-        },
-    ).json()["region"]
-    assert location == "us-east-2"
-
-    # Remote read
-    location = client.post(
-        "/locate_object",
-        json={
-            "bucket": "my-bucket",
+            "bucket": "my-get-bucket",
             "key": "my-key",
             "client_from_region": "gcp:us-central-3",
         },
     ).json()["region"]
-    assert location in {"us-west-1", "us-east-2"}
+    assert location == "us-central-3"
+
+    # Remote Read
+    location = client.post(
+        "/locate_object",
+        json={
+            "bucket": "my-get-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:eu-west-1",
+        },
+    ).json()["region"]
+    assert location in {"us-west-1", "us-central-3"}
 
 
 def test_write_back(client):
     resp = client.post(
+        "/start_create_bucket",
+        json={"bucket": "my-writeback-bucket", "client_from_region": "aws:us-east-2"},
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-writeback-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
@@ -113,11 +388,11 @@ def test_write_back(client):
             },
         ).raise_for_status()
 
-    # we should get able to get it from us-east-2
+    # we should be able to get it from us-east-2 (Pull-based Policy)
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-writeback-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
         },
@@ -128,7 +403,7 @@ def test_write_back(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-writeback-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -150,7 +425,7 @@ def test_write_back(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-writeback-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
         },
@@ -160,9 +435,29 @@ def test_write_back(client):
 
 def test_list_objects(client):
     resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-list-bucket",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-bucket-2",
+            "bucket": "my-list-bucket",
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -182,7 +477,7 @@ def test_list_objects(client):
     resp = client.post(
         "/list_objects",
         json={
-            "bucket": "my-bucket-2",
+            "bucket": "my-list-bucket",
             "prefix": "my-prefix-1",
         },
     )
@@ -191,13 +486,13 @@ def test_list_objects(client):
     resp = client.post(
         "/list_objects",
         json={
-            "bucket": "my-bucket-2",
+            "bucket": "my-list-bucket",
             "prefix": "my-key",
         },
     )
     assert resp.json() == [
         {
-            "bucket": "my-bucket-2",
+            "bucket": "my-list-bucket",
             "key": "my-key-1",
             "size": 100,
             "etag": "123",
@@ -212,9 +507,30 @@ def test_multipart_flow(client):
     # Simulate CreateMultipartUpload. We create an multipart, get a logical id, return it to the client.
     # Also crated the actual multipart id and stuck them in database.
     resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-multipart-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-central-3"],
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "is_multipart": True,
@@ -240,7 +556,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/list_multipart_uploads",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "prefix": "my-key-multi",
         },
     )
@@ -248,7 +564,7 @@ def test_multipart_flow(client):
     resp_data = resp.json()
     assert resp_data == [
         {
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "key": "my-key-multipart",
             "upload_id": multipart_upload_id,
         }
@@ -258,7 +574,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/continue_upload",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "multipart_upload_id": multipart_upload_id,
@@ -267,9 +583,7 @@ def test_multipart_flow(client):
     resp.raise_for_status()
     resp_data = resp.json()
     for locator in resp_data:
-        assert (
-            locator["multipart_upload_id"] == locator["tag"] + "-" + multipart_upload_id
-        )
+        assert locator["multipart_upload_id"] == locator["tag"] + "-" + multipart_upload_id
 
         client.patch(
             "/append_part",
@@ -285,7 +599,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/list_parts",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "key": "my-key-multipart",
             "upload_id": multipart_upload_id,
         },
@@ -315,7 +629,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-bucket",
+            "bucket": "my-multipart-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
         },

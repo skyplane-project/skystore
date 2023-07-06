@@ -132,10 +132,57 @@ impl AzureObjectStoreClient {
             .container_client(container_name)
             .blob_client(blob_name)
     }
+
+    fn container_client(&self, container_name: &String) -> ContainerClient {
+        self.client.clone().container_client(container_name)
+    }
 }
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for AzureObjectStoreClient {
+    async fn create_bucket(
+        &self,
+        req: S3Request<CreateBucketInput>,
+    ) -> S3Result<S3Response<CreateBucketOutput>> {
+        let req = req.input;
+        let container_name = req.bucket;
+
+        let container_client = self.container_client(&container_name);
+        let resp = container_client.create().await;
+
+        match resp {
+            Ok(_) => Ok(S3Response::new(CreateBucketOutput {
+                location: Some(container_name.clone()),
+                ..Default::default()
+            })),
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Request failed: {err}"),
+            )),
+        }
+    }
+
+    async fn delete_bucket(
+        &self,
+        req: S3Request<DeleteBucketInput>,
+    ) -> S3Result<S3Response<DeleteBucketOutput>> {
+        let req = req.input;
+        let container_name = req.bucket;
+
+        let container_client = self.container_client(&container_name);
+        let resp = container_client.delete().await;
+
+        match resp {
+            Ok(_) => Ok(S3Response::new(DeleteBucketOutput {
+                ..Default::default()
+            })),
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Request failed: {}", err),
+            )),
+        }
+    }
+
     // NOTE: in the current impl, we are just going to map bucket to
     // container and key to blob. Theoretically, bucket should be
     // mapped to storage account and key is mapped to container+blob.

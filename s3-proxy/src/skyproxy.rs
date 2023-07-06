@@ -9,14 +9,15 @@ use s3s::{S3Request, S3Response, S3Result, S3};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
-
+use chrono::{Utc};
+use std::time::SystemTime;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tracing::error;
 
 pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
-    dir_conf: Configuration,
+    dir_conf: Configuration, 
     client_from_region: String,
 }
 
@@ -25,7 +26,7 @@ impl SkyProxy {
         let mut store_clients = HashMap::new();
 
         //// Test Configuration, hard coded from conf.py
-        let regions = vec!["aws:us-west-1", "aws:us-east-2", "gcp:us-central-3"];
+        let regions = vec!["aws:us-west-1", "aws:us-east-2", "gcp:us-central-3", "aws:eu-central-1"];
         for r in regions {
             store_clients.insert(
                 r.to_string(),
@@ -175,6 +176,159 @@ impl S3 for SkyProxy {
         return Ok(S3Response::new(AbortMultipartUploadOutput::default()));
     }
     ///////////////////////////////////////////////////////////////////////////
+
+
+    #[tracing::instrument(level = "info")]
+    async fn create_bucket(
+        &self,
+        req: S3Request<CreateBucketInput>,
+    ) -> S3Result<S3Response<CreateBucketOutput>> {
+        // Send start create bucket request 
+        let create_bucket_resp = apis::start_create_bucket(
+            &self.dir_conf,
+            models::CreateBucketRequest {
+                bucket: req.input.bucket.clone(),
+                client_from_region: self.client_from_region.clone(),
+                warmup_regions: None, // TODO: add this support somehow?
+            },
+        )
+        .await
+        .unwrap();
+
+        // Create bucket in actual storages 
+        let mut tasks = tokio::task::JoinSet::new();
+        let locators = create_bucket_resp.locators;
+
+        for locator in locators {
+            let client: Arc<Box<dyn ObjectStoreClient>> =
+                self.store_clients.get(&locator.tag).unwrap().clone();
+            
+            let bucket_name = locator.bucket.clone();
+            let dir_conf = self.dir_conf.clone();
+
+            tasks.spawn(async move {
+                let create_bucket_req = new_create_bucket_request(bucket_name.clone());
+                client.create_bucket(S3Request::new(create_bucket_req)).await.unwrap();
+                
+                let system_time: SystemTime = Utc::now().into();
+                let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                apis::complete_create_bucket(
+                    &dir_conf,
+                    models::CreateBucketIsCompleted{
+                        id: locator.id,
+                        creation_date: timestamp_to_string(timestamp), // TODO: fix this, get metadata from actual storage
+                    },
+                )
+                .await
+                .unwrap();
+            });
+        }
+        
+        // Wait for all tasks to complete
+        while let Some(result) = tasks.join_next().await {
+            if let Err(err) = result {
+                // Converting the error to a string and embedding it into S3Error.
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    format!("Error creating bucket: {}", err)
+                ));
+            }
+        }
+
+        Ok(S3Response::new(CreateBucketOutput::default()))
+    }
+
+
+    #[tracing::instrument(level = "info")]
+    async fn delete_bucket(
+        &self,
+        req: S3Request<DeleteBucketInput>,
+    ) -> S3Result<S3Response<DeleteBucketOutput>> {
+
+        // Send start delete bucket request
+        let delete_bucket_resp = apis::start_delete_bucket(
+            &self.dir_conf,
+            models::DeleteBucketRequest {
+                bucket: req.input.bucket.clone(),
+            },
+        )
+        .await
+        .unwrap();
+
+        // Delete bucket in actual storages
+        let mut tasks = tokio::task::JoinSet::new();
+        let locators = delete_bucket_resp.locators;
+
+        for locator in locators {
+            let client: Arc<Box<dyn ObjectStoreClient>> =
+                self.store_clients.get(&locator.tag).unwrap().clone();
+            
+            let bucket_name = req.input.bucket.clone();
+            let dir_conf = self.dir_conf.clone();
+
+            tasks.spawn(async move {
+                let delete_bucket_req = new_delete_bucket_request(bucket_name.clone());
+                client.delete_bucket(S3Request::new(delete_bucket_req)).await.unwrap();
+
+                apis::complete_delete_bucket(
+                    &dir_conf,
+                    models::DeleteBucketIsCompleted{
+                        id: locator.id,
+                    },
+                )
+                .await
+                .unwrap();
+            });
+        }
+
+        // Wait for all tasks to complete
+        while let Some(result) = tasks.join_next().await {
+            if let Err(err) = result {
+                // Converting the error to a string and embedding it into S3Error.
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    format!("Error deleting bucket: {}", err)
+                ));
+            }
+        }
+
+        Ok(S3Response::new(DeleteBucketOutput::default()))
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn list_buckets(
+        &self,
+        _req: S3Request<ListBucketsInput>,
+    ) -> S3Result<S3Response<ListBucketsOutput>> {
+        let resp = apis::list_buckets(&self.dir_conf).await;
+
+        match resp {
+            Ok(resp) => {
+                let mut buckets: Vec<Bucket> = Vec::new();
+
+                for bucket in resp {
+                    buckets.push(Bucket {
+                        creation_date: Some(string_to_timestamp(&bucket.creation_date)), 
+                        name: Some(bucket.bucket),
+                    });
+                }
+
+                Ok(S3Response::new(ListBucketsOutput {
+                    buckets: Some(buckets),
+                    owner: None, 
+                    ..Default::default()
+                }))
+            }
+            Err(err) => {
+                error!("list_buckets failed: {:?}", err);
+                Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "list_buckets failed",
+                ))
+            }
+        }
+    }
 
     #[tracing::instrument(level = "info")]
     async fn list_objects_v2(

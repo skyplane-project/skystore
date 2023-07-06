@@ -3,6 +3,16 @@ use s3s::{S3Request, S3Response, S3Result};
 
 #[async_trait::async_trait]
 pub trait ObjectStoreClient: Send + Sync + 'static {
+    async fn create_bucket(
+        &self,
+        req: S3Request<CreateBucketInput>,
+    ) -> S3Result<S3Response<CreateBucketOutput>>;
+
+    async fn delete_bucket(
+        &self,
+        req: S3Request<DeleteBucketInput>,
+    ) -> S3Result<S3Response<DeleteBucketOutput>>;
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

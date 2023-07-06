@@ -9,7 +9,8 @@ class PhysicalLocation(BaseModel):
     bucket: str
     prefix: str = ""
 
-    broadcast_to: list[str] = Field(default_factory=list)
+    is_primary: bool = False
+    need_warmup: bool = False  # secondary region needs to be warmed up from primary region
 
 
 class Configuration(BaseModel):
@@ -22,6 +23,8 @@ class Configuration(BaseModel):
         raise ValueError(f"Unknown location: {location_name}")
 
 
+DEFAULT_INIT_REGIONS = ["aws:eu-central-1", "aws:us-west-1"]
+
 TEST_CONFIGURATION = Configuration(
     physical_locations=[
         PhysicalLocation(
@@ -30,14 +33,16 @@ TEST_CONFIGURATION = Configuration(
             region="us-west-1",
             bucket="my-bucket-1",
             prefix="my-prefix-1/",
-            broadcast_to=["aws:us-east-2"],
+            is_primary=True
+            # broadcast_to=["aws:us-east-2"],
         ),
         PhysicalLocation(
             name="aws:us-east-2",
             cloud="aws",
             region="us-east-2",
             bucket="my-bucket-2",
-            prefix="my-prefix-2/",
+            need_warmup=True,
+            # prefix="my-prefix-2/",
         ),
         PhysicalLocation(
             name="gcp:us-central-3",
