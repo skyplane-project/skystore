@@ -57,7 +57,10 @@ class DBPhysicalObjectLocator(Base):
     physical_bucket = relationship(
         "DBPhysicalBucketLocator",
         back_populates="physical_object_locators",
-        primaryjoin="and_(DBPhysicalObjectLocator.bucket==DBPhysicalBucketLocator.bucket, DBPhysicalObjectLocator.location_tag==DBPhysicalBucketLocator.location_tag)",
+        primaryjoin=(
+            "and_(DBPhysicalObjectLocator.bucket==DBPhysicalBucketLocator.bucket, "
+            "DBPhysicalObjectLocator.location_tag==DBPhysicalBucketLocator.location_tag)"
+        ),
     )
 
     key = Column(String)

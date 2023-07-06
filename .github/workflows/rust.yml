@@ -31,7 +31,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
       - name: Install dev depedencies
-        run: cargo install just
+        run: cargo install just --force 
       - name: Build
         run: cd s3-proxy && cargo build
       - name: Lint
