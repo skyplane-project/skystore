@@ -27,7 +27,9 @@ class DBLogicalBucket(Base):
     creation_date = Column(DateTime)
 
     # Add relationship to physical bucket
-    physical_bucket_locators = relationship("DBPhysicalBucketLocator", back_populates="logical_bucket")
+    physical_bucket_locators = relationship(
+        "DBPhysicalBucketLocator", back_populates="logical_bucket"
+    )
 
     # Add relationship to logical object
     logical_objects = relationship("DBLogicalObject", back_populates="logical_bucket")
@@ -45,15 +47,23 @@ class DBPhysicalBucketLocator(Base):
     prefix = Column(String, default="")
 
     status = Column(Enum(Status), default=Status.pending)
-    is_primary = Column(Boolean, nullable=False, default=False)  # TODO: bucket / object-level primary fix; fix prefix
+    is_primary = Column(
+        Boolean, nullable=False, default=False
+    )  # TODO: bucket / object-level primary fix; fix prefix
     need_warmup = Column(Boolean, nullable=False, default=False)  # push-based warmup
 
     # Add relationship to logical bucket
-    logical_bucket_id = Column(Integer, ForeignKey("logical_buckets.id"), nullable=False)
-    logical_bucket = relationship("DBLogicalBucket", back_populates="physical_bucket_locators")
+    logical_bucket_id = Column(
+        Integer, ForeignKey("logical_buckets.id"), nullable=False
+    )
+    logical_bucket = relationship(
+        "DBLogicalBucket", back_populates="physical_bucket_locators"
+    )
 
     # Add explicit relationship to DBPhysicalObjectLocator
-    physical_object_locators = relationship("DBPhysicalObjectLocator", back_populates="physical_bucket")
+    physical_object_locators = relationship(
+        "DBPhysicalObjectLocator", back_populates="physical_bucket"
+    )
 
 
 class LocateBucketRequest(BaseModel):

@@ -32,10 +32,14 @@ class DBLogicalObject(Base):
 
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship("DBLogicalMultipartUploadPart", back_populates="logical_object")
+    multipart_upload_parts = relationship(
+        "DBLogicalMultipartUploadPart", back_populates="logical_object"
+    )
 
     # Add relationship to physical object
-    physical_object_locators = relationship("DBPhysicalObjectLocator", back_populates="logical_object")
+    physical_object_locators = relationship(
+        "DBPhysicalObjectLocator", back_populates="logical_object"
+    )
 
 
 class DBPhysicalObjectLocator(Base):
@@ -47,7 +51,9 @@ class DBPhysicalObjectLocator(Base):
     cloud = Column(String)
     region = Column(String)
 
-    bucket = Column(String, ForeignKey("physical_bucket_locators.bucket"))  # added ForeignKey
+    bucket = Column(
+        String, ForeignKey("physical_bucket_locators.bucket")
+    )  # added ForeignKey
     physical_bucket = relationship(
         "DBPhysicalBucketLocator",
         back_populates="physical_object_locators",
@@ -60,11 +66,17 @@ class DBPhysicalObjectLocator(Base):
     is_primary = Column(Boolean, nullable=False, default=False)
 
     multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship("DBPhysicalMultipartUploadPart", back_populates="physical_object_locator")
+    multipart_upload_parts = relationship(
+        "DBPhysicalMultipartUploadPart", back_populates="physical_object_locator"
+    )
 
     # Add relationship to logical object
-    logical_object_id = Column(Integer, ForeignKey("logical_objects.id"), nullable=False)
-    logical_object = relationship("DBLogicalObject", back_populates="physical_object_locators")
+    logical_object_id = Column(
+        Integer, ForeignKey("logical_objects.id"), nullable=False
+    )
+    logical_object = relationship(
+        "DBLogicalObject", back_populates="physical_object_locators"
+    )
 
 
 class LocateObjectRequest(BaseModel):
@@ -91,8 +103,12 @@ class DBLogicalMultipartUploadPart(Base):
     __tablename__ = "logical_multipart_upload_parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    logical_object_id = Column(Integer, ForeignKey("logical_objects.id"), nullable=False)
-    logical_object = relationship("DBLogicalObject", back_populates="multipart_upload_parts")
+    logical_object_id = Column(
+        Integer, ForeignKey("logical_objects.id"), nullable=False
+    )
+    logical_object = relationship(
+        "DBLogicalObject", back_populates="multipart_upload_parts"
+    )
 
     part_number = Column(Integer)
     etag = Column(String)
@@ -103,8 +119,12 @@ class DBPhysicalMultipartUploadPart(Base):
     __tablename__ = "physical_multipart_upload_parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    physical_object_locator_id = Column(Integer, ForeignKey("physical_object_locators.id"), nullable=False)
-    physical_object_locator = relationship("DBPhysicalObjectLocator", back_populates="multipart_upload_parts")
+    physical_object_locator_id = Column(
+        Integer, ForeignKey("physical_object_locators.id"), nullable=False
+    )
+    physical_object_locator = relationship(
+        "DBPhysicalObjectLocator", back_populates="multipart_upload_parts"
+    )
 
     part_number = Column(Integer)
     etag = Column(String)

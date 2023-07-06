@@ -583,7 +583,9 @@ def test_multipart_flow(client):
     resp.raise_for_status()
     resp_data = resp.json()
     for locator in resp_data:
-        assert locator["multipart_upload_id"] == locator["tag"] + "-" + multipart_upload_id
+        assert (
+            locator["multipart_upload_id"] == locator["tag"] + "-" + multipart_upload_id
+        )
 
         client.patch(
             "/append_part",

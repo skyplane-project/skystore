@@ -10,7 +10,9 @@ class PhysicalLocation(BaseModel):
     prefix: str = ""
 
     is_primary: bool = False
-    need_warmup: bool = False  # secondary region needs to be warmed up from primary region
+    need_warmup: bool = (
+        False  # secondary region needs to be warmed up from primary region
+    )
 
 
 class Configuration(BaseModel):
