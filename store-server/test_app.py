@@ -19,7 +19,7 @@ def test_bucket_create(client):
         json={
             "bucket": "test-bucket-op",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-central-3"],
+            "warmup_regions": ["gcp:us-west1"],
         },
     )
     resp.raise_for_status()
@@ -31,7 +31,7 @@ def test_bucket_create(client):
             json={
                 "bucket": "test-bucket-op",
                 "client_from_region": "aws:us-west-1",
-                "warmup_regions": ["gcp:us-central-3"],
+                "warmup_regions": ["gcp:us-west1"],
             },
         ).status_code
         == 409
@@ -102,9 +102,9 @@ def test_bucket_register(client):
                         "need_warmup": False,
                     },
                     {
-                        "name": "gcp:us-central-3",
+                        "name": "gcp:us-west1",
                         "cloud": "gcp",
-                        "region": "us-central-3",
+                        "region": "us-west1",
                         "bucket": "my-bucket-3",
                         "prefix": "my-prefix-3/",
                         "is_primary": False,
@@ -159,13 +159,13 @@ def test_bucket_register(client):
         json={
             "bucket": "test-bucket-register",
             "key": "my-key",
-            "client_from_region": "gcp:us-central-3",
+            "client_from_region": "gcp:us-west1",
         },
     )
     resp.raise_for_status()
     resp_data = resp.json()
-    assert resp_data["tag"] == "gcp:us-central-3"
-    assert resp_data["region"] == "us-central-3"
+    assert resp_data["tag"] == "gcp:us-west1"
+    assert resp_data["region"] == "us-west1"
 
     # Check if object can be located from a non-warmup region
     resp = client.post(
@@ -253,7 +253,7 @@ def test_get_object(client):
         json={
             "bucket": "my-get-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-central-3"],
+            "warmup_regions": ["gcp:us-west1"],
         },
     )
     resp.raise_for_status()
@@ -332,10 +332,10 @@ def test_get_object(client):
         json={
             "bucket": "my-get-bucket",
             "key": "my-key",
-            "client_from_region": "gcp:us-central-3",
+            "client_from_region": "gcp:us-west1",
         },
     ).json()["region"]
-    assert location == "us-central-3"
+    assert location == "us-west1"
 
     # Remote Read
     location = client.post(
@@ -346,7 +346,7 @@ def test_get_object(client):
             "client_from_region": "aws:eu-west-1",
         },
     ).json()["region"]
-    assert location in {"us-west-1", "us-central-3"}
+    assert location in {"us-west-1", "us-west1"}
 
 
 def test_write_back(client):
@@ -510,7 +510,7 @@ def test_multipart_flow(client):
         json={
             "bucket": "my-multipart-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-central-3"],
+            "warmup_regions": ["gcp:us-west1"],
         },
     )
     resp.raise_for_status()
