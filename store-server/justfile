@@ -24,8 +24,8 @@ test args='': clean
     pytest -v -s --show-capture=no . {{args}}
 
 test-register:
-    python register_test.py
-    
+    python register.py
+
 dump:
     sqlite3 skystore.db .dump
 
