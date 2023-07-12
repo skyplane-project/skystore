@@ -49,7 +49,7 @@ just run-cli-list
 just run-cli-multipart
 ```
 
-Test the server: make sure to run `just run-skystore-server` in a separate window first 
+Test the server
 ```
 cd store-server
 just test
