@@ -469,7 +469,6 @@ impl S3 for SkyProxy {
             .zip(input_blobs.into_iter())
             .for_each(|(locator, input_blob)| {
                 let conf = self.dir_conf.clone();
-                println!("locator: {:?}", locator.tag);
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
                 let req = S3Request::new(clone_put_object_request(
