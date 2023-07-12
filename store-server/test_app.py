@@ -89,7 +89,6 @@ def test_bucket_register(client):
                         "region": "us-west-1",
                         "bucket": "my-bucket-1",
                         "prefix": "my-prefix-1/",
-                        "broadcast_to": ["aws:us-east-2"],
                         "is_primary": True,
                         "need_warmup": False,
                     },

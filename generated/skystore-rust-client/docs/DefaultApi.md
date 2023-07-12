@@ -16,6 +16,7 @@ Method | HTTP request | Description
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
+[**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
 [**start_delete_bucket**](DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
@@ -342,6 +343,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::LocateObjectResponse**](LocateObjectResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## register_buckets
+
+> serde_json::Value register_buckets(register_bucket_request)
+Register Buckets
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**register_bucket_request** | [**RegisterBucketRequest**](RegisterBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
 
 ### Authorization
 

@@ -29,9 +29,11 @@ impl SkyProxy {
         let regions = vec![
             "aws:us-west-1",
             "aws:us-east-2",
-            "gcp:us-central-3",
+            "gcp:us-west1",
             "aws:eu-central-1",
         ];
+
+        // Local test configuration
         for r in regions {
             store_clients.insert(
                 r.to_string(),
@@ -43,6 +45,29 @@ impl SkyProxy {
                 ) as Box<dyn ObjectStoreClient>),
             );
         }
+
+        //// Real object store configuration
+        // for r in regions {
+        //     let split: Vec<&str> = r.splitn(2, ':').collect();
+        //     let (provider, region) = (split[0], split[1]);
+
+        //     let client: Box<dyn ObjectStoreClient> = match provider {
+        //         "azure" => {
+        //             Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+        //         }
+        //         "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
+        //         "aws" => Box::new(
+        //             crate::client_impls::s3::S3ObjectStoreClient::new(format!(
+        //                 "https://s3.{}.amazonaws.com",
+        //                 region
+        //             ))
+        //             .await,
+        //         ),
+        //         _ => panic!("Unknown provider: {}", provider),
+        //     };
+
+        //     store_clients.insert(r.to_string(), Arc::new(client));
+        // };
 
         //// Demo Configuration
         // store_clients.insert(
@@ -193,7 +218,8 @@ impl S3 for SkyProxy {
             models::CreateBucketRequest {
                 bucket: req.input.bucket.clone(),
                 client_from_region: self.client_from_region.clone(),
-                warmup_regions: None, // TODO: add this support somehow?
+                warmup_regions: None,       // TODO
+                default_init_regions: None, // TODO
             },
         )
         .await
@@ -235,7 +261,6 @@ impl S3 for SkyProxy {
         // Wait for all tasks to complete
         while let Some(result) = tasks.join_next().await {
             if let Err(err) = result {
-                // Converting the error to a string and embedding it into S3Error.
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::InternalError,
                     format!("Error creating bucket: {}", err),
@@ -291,7 +316,6 @@ impl S3 for SkyProxy {
         // Wait for all tasks to complete
         while let Some(result) = tasks.join_next().await {
             if let Err(err) = result {
-                // Converting the error to a string and embedding it into S3Error.
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::InternalError,
                     format!("Error deleting bucket: {}", err),
@@ -445,6 +469,7 @@ impl S3 for SkyProxy {
             .zip(input_blobs.into_iter())
             .for_each(|(locator, input_blob)| {
                 let conf = self.dir_conf.clone();
+                println!("locator: {:?}", locator.tag);
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
                 let req = S3Request::new(clone_put_object_request(

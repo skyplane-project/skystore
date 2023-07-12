@@ -1,4 +1,6 @@
 use crate::objstore_client::ObjectStoreClient;
+use aws_sdk_s3::config::Region;
+use reqwest::Url;
 use s3s::dto::*;
 use s3s::S3;
 use s3s::{S3Request, S3Response, S3Result};
@@ -11,10 +13,22 @@ pub struct S3ObjectStoreClient {
 impl S3ObjectStoreClient {
     #[allow(dead_code)]
     pub async fn new(endpoint_url: String) -> Self {
-        let config: aws_config::SdkConfig = aws_config::from_env()
-            .endpoint_url(endpoint_url)
-            .load()
-            .await;
+        let config: aws_config::SdkConfig = if endpoint_url.starts_with("http://localhost:") {
+            aws_config::from_env()
+                .endpoint_url(endpoint_url)
+                .load()
+                .await
+        } else {
+            let url = Url::parse(&endpoint_url).unwrap();
+            let host = url.host_str().unwrap().to_string();
+            let region = host.split('.').nth(1).unwrap().to_string();
+            aws_config::from_env()
+                .region(Region::new(region))
+                .endpoint_url(endpoint_url)
+                .load()
+                .await
+        };
+
         let s3_config = aws_sdk_s3::config::Builder::from(&config)
             .force_path_style(true)
             .build();

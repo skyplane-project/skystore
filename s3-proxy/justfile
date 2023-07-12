@@ -71,6 +71,15 @@ run-cli-create-bucket:
 run-cli-delete-bucket:
   aws s3api {{s3-args}} delete-bucket --bucket example-test-bucket
 
+run-test-register:
+  cd ../store-server && just test-register 
+  aws s3api {{s3-args}} put-object --bucket default-skybucket --key readme-2 --body "./README.md"
+  aws s3api {{s3-args}} list-objects --bucket default-skybucket
+  rm readme-2 || true
+  aws s3api {{s3-args}} get-object --bucket default-skybucket --key readme-2 readme-2
+  cat readme-2
+  rm readme-2
+
 run-cli-list-buckets:
   aws s3api {{s3-args}} list-buckets
   

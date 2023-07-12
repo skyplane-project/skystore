@@ -1,5 +1,7 @@
 pub mod bucket_response;
 pub use self::bucket_response::BucketResponse;
+pub mod configuration;
+pub use self::configuration::Configuration;
 pub mod continue_upload_physical_part;
 pub use self::continue_upload_physical_part::ContinueUploadPhysicalPart;
 pub mod continue_upload_request;
@@ -50,6 +52,10 @@ pub mod patch_upload_multipart_upload_id;
 pub use self::patch_upload_multipart_upload_id::PatchUploadMultipartUploadId;
 pub mod patch_upload_multipart_upload_part;
 pub use self::patch_upload_multipart_upload_part::PatchUploadMultipartUploadPart;
+pub mod physical_location;
+pub use self::physical_location::PhysicalLocation;
+pub mod register_bucket_request;
+pub use self::register_bucket_request::RegisterBucketRequest;
 pub mod start_upload_request;
 pub use self::start_upload_request::StartUploadRequest;
 pub mod start_upload_response;
