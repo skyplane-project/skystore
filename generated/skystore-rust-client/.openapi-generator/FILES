@@ -14,6 +14,7 @@ docs/DefaultApi.md
 docs/DeleteBucketIsCompleted.md
 docs/DeleteBucketRequest.md
 docs/DeleteBucketResponse.md
+docs/HeadBucketRequest.md
 docs/HeadObjectRequest.md
 docs/HeadObjectResponse.md
 docs/HealthcheckResponse.md
@@ -52,6 +53,7 @@ src/models/create_bucket_response.rs
 src/models/delete_bucket_is_completed.rs
 src/models/delete_bucket_request.rs
 src/models/delete_bucket_response.rs
+src/models/head_bucket_request.rs
 src/models/head_object_request.rs
 src/models/head_object_response.rs
 src/models/healthcheck_response.rs

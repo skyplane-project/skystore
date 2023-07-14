@@ -64,12 +64,11 @@ run-sample-pull:
   docker pull localhost:5000/alpine
 
 s3-args := "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
+# s3-args := "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl" # s3fs test 
 
-run-cli-create-bucket:
-  aws s3api {{s3-args}} create-bucket --bucket example-test-bucket
-
-run-cli-delete-bucket:
-  aws s3api {{s3-args}} delete-bucket --bucket example-test-bucket
+run-s3fs:
+  mkdir -p test_mount
+  s3fs default-skybucket test_mount -o dbglevel=info -f -o curldbg -o url=http://127.0.0.1:8002 -o allow_other -o no_check_certificate -o use_path_request_style
 
 run-cli-register-put-get:
   cd ../store-server && just register-config 
@@ -79,6 +78,12 @@ run-cli-register-put-get:
   aws s3api {{s3-args}} get-object --bucket default-skybucket --key readme-2 readme-2
   cat readme-2
   rm readme-2
+
+run-cli-create-bucket:
+  aws s3api {{s3-args}} create-bucket --bucket example-test-bucket
+
+run-cli-delete-bucket:
+  aws s3api {{s3-args}} delete-bucket --bucket example-test-bucket
 
 run-cli-list-buckets:
   aws s3api {{s3-args}} list-buckets
@@ -132,18 +137,13 @@ init:
   #!/usr/bin/env bash
     set -e
 
-    # just run-local-s3 &
-    # local_s3_proc=$!
-
     just run-skystore-server &
     skystore_server_proc=$!
 
     just run &
     registry_proc=$!
 
-
     cleanup() {
-        # kill -9 $local_s3_proc
         kill -9 $skystore_server_proc
         kill -9 $registry_proc
     }

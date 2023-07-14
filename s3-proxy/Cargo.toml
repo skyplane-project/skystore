@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+lazy_static = "1.4"
 async-trait = "0.1.68"
 aws-config = "0.55.3"
 aws-credential-types = "0.55.3"

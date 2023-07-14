@@ -5,14 +5,14 @@ from utils import Base
 from typing import Annotated, List
 from sqlalchemy.orm import joinedload
 import os
-
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.routing import APIRoute
 from rich.logging import RichHandler
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from conf import TEST_CONFIGURATION
+from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS
 from utils import Status
 from bucket_models import (
     DBLogicalBucket,
@@ -20,6 +20,7 @@ from bucket_models import (
     RegisterBucketRequest,
     LocateBucketRequest,
     LocateBucketResponse,
+    HeadBucketRequest,
     BucketResponse,
     CreateBucketRequest,
     CreateBucketResponse,
@@ -80,14 +81,22 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
 conf = TEST_CONFIGURATION
+init_region_tags = DEFAULT_INIT_REGIONS
+
+load_dotenv()
 
 
 @app.on_event("startup")
 async def startup():
+    global init_region_tags
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
+
+    if os.getenv("INIT_REGIONS"):
+        init_region_tags = os.getenv("INIT_REGIONS").split(",")
 
 
 async def get_session() -> AsyncSession:
@@ -115,6 +124,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
     )
     db.add(logical_bucket)
 
+    added_loc_tags = set()
     for location in request.config.physical_locations:
         physical_bucket_locator = DBPhysicalBucketLocator(
             logical_bucket=logical_bucket,
@@ -122,12 +132,30 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
             cloud=location.cloud,
             region=location.region,
             bucket=location.bucket,
-            prefix=location.prefix,
+            prefix="",  # location.prefix + "/",
             status=Status.ready,
-            is_primary=location.is_primary,
+            is_primary=location.is_primary,  # TODO: assume one primary must be specified for now
             need_warmup=location.need_warmup,
         )
         db.add(physical_bucket_locator)
+        added_loc_tags.add(location.name)
+
+    for location_tag in init_region_tags:
+        if location_tag not in added_loc_tags:
+            cloud, region = location_tag.split(":")
+            physical_bucket_locator = DBPhysicalBucketLocator(
+                logical_bucket=logical_bucket,
+                location_tag=region,
+                cloud=cloud,
+                region=region,
+                bucket=f"skystore-{region}",
+                prefix="",  # logical_bucket.bucket
+                # + "/",  # TODO: integrate with prefix, perhaps "skystore/logical_bucket_name/"
+                status=Status.ready,
+                is_primary=False,
+                need_warmup=False,
+            )
+            db.add(physical_bucket_locator)
 
     await db.commit()
 
@@ -156,13 +184,10 @@ async def start_create_bucket(
     )
     db.add(logical_bucket)
 
-    # default_init_regions: regions to create physical buckets in
     # warmup_regions: regions to upload warmup objects to upon writes
     warmup_regions = request.warmup_regions if request.warmup_regions else []
     upload_to_region_tags = list(
-        set(
-            request.default_init_regions + [request.client_from_region] + warmup_regions
-        )
+        set(init_region_tags + [request.client_from_region] + warmup_regions)
     )
 
     bucket_locators = []
@@ -170,15 +195,16 @@ async def start_create_bucket(
     for region_tag in upload_to_region_tags:
         cloud, region = region_tag.split(":")
         physical_bucket_name = (
-            f"{request.bucket}-{region}"  # NOTE: might need another naming scheme
+            f"skystore-{region}"  # NOTE: might need another naming scheme
         )
+
         bucket_locator = DBPhysicalBucketLocator(
             logical_bucket=logical_bucket,
             location_tag=region_tag,
             cloud=cloud,
             region=region,
             bucket=physical_bucket_name,
-            prefix="",  # NOTE: integrate prefix
+            prefix="",  # logical_bucket.bucket + "/",  # TODO: integrate prefix
             status=Status.pending,
             is_primary=(
                 region_tag == request.client_from_region
@@ -326,6 +352,24 @@ async def complete_delete_bucket(request: DeleteBucketIsCompleted, db: DBSession
     return DeleteBucketIsCompleted(id=physical_locator.logical_bucket.id)
 
 
+@app.post("/head_bucket")
+async def head_bucket(request: HeadBucketRequest, db: DBSession):
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+
+    logger.debug(f"head_bucket: {request} -> {bucket}")
+
+    return Response(
+        status_code=200,
+        content="Bucket exists",
+    )
+
+
 @app.post(
     "/locate_bucket",
     responses={
@@ -400,6 +444,11 @@ async def locate_object(
 
     chosen_locator = None
     reason = ""
+
+    # if request.get_primary:
+    #     chosen_locator = next(locator for locator in locators if locator.is_primary)
+    #     reason = "exact match (primary)"
+    # else:
     for locator in locators:
         if locator.location_tag == request.client_from_region:
             chosen_locator = locator
@@ -433,7 +482,6 @@ async def locate_object(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
-    print("Request bucket name: ", request.bucket)
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -785,7 +833,7 @@ async def list_objects(
         DBLogicalObject.bucket == logical_bucket.bucket,
         DBLogicalObject.status == Status.ready,
     )
-    if request.prefix:
+    if request.prefix is not None:
         stmt = stmt.where(DBLogicalObject.key.startswith(request.prefix))
 
     objects = await db.execute(stmt)

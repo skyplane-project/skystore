@@ -12,7 +12,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
 from utils import Base, Status
-from conf import DEFAULT_INIT_REGIONS, Configuration
+from conf import Configuration
 
 
 class DBLogicalBucket(Base):
@@ -80,6 +80,10 @@ class LocateBucketResponse(BaseModel):
     region: str
 
 
+class HeadBucketRequest(BaseModel):
+    bucket: str
+
+
 class BucketResponse(BaseModel):
     bucket: str
     creation_date: datetime
@@ -91,9 +95,6 @@ class RegisterBucketRequest(BaseModel):
 
 
 class CreateBucketRequest(LocateBucketRequest):
-    # default regions to create empty buckets
-    default_init_regions: Optional[List[str]] = DEFAULT_INIT_REGIONS
-
     # warmup regions for push-based warmup
     warmup_regions: Optional[List[str]] = None
 

@@ -2,6 +2,7 @@ use crate::objstore_client::ObjectStoreClient;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
+use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::insert::{BucketCreationConfig, InsertBucketRequest};
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
@@ -71,6 +72,24 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .unwrap();
 
         Ok(S3Response::new(DeleteBucketOutput::default()))
+    }
+
+    async fn head_bucket(
+        &self,
+        req: S3Request<HeadBucketInput>,
+    ) -> S3Result<S3Response<HeadBucketOutput>> {
+        let req = req.input;
+        let bucket = req.bucket;
+
+        self.client
+            .get_bucket(&GetBucketRequest {
+                bucket,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        Ok(S3Response::new(HeadBucketOutput::default()))
     }
 
     async fn head_object(

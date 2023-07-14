@@ -3,4 +3,5 @@
 members = [
     "./s3-proxy",
     "./generated/skystore-rust-client",
+    "./skystore-cli", 
 ]

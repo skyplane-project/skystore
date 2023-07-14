@@ -9,6 +9,7 @@ Method | HTTP request | Description
 [**complete_delete_bucket**](DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 [**complete_upload**](DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 [**continue_upload**](DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
+[**head_bucket**](DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
 [**head_object**](DefaultApi.md#head_object) | **POST** /head_object | Head Object
 [**healthz**](DefaultApi.md#healthz) | **GET** /healthz | Healthz
 [**list_buckets**](DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
@@ -152,6 +153,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**Vec<crate::models::ContinueUploadResponse>**](ContinueUploadResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## head_bucket
+
+> serde_json::Value head_bucket(head_bucket_request)
+Head Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**head_bucket_request** | [**HeadBucketRequest**](HeadBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
 
 ### Authorization
 

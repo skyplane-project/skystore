@@ -13,6 +13,11 @@ pub trait ObjectStoreClient: Send + Sync + 'static {
         req: S3Request<DeleteBucketInput>,
     ) -> S3Result<S3Response<DeleteBucketOutput>>;
 
+    async fn head_bucket(
+        &self,
+        req: S3Request<HeadBucketInput>,
+    ) -> S3Result<S3Response<HeadBucketOutput>>;
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

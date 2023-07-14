@@ -30,6 +30,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**complete_delete_bucket**](docs/DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 *DefaultApi* | [**complete_upload**](docs/DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 *DefaultApi* | [**continue_upload**](docs/DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
+*DefaultApi* | [**head_bucket**](docs/DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
 *DefaultApi* | [**head_object**](docs/DefaultApi.md#head_object) | **POST** /head_object | Head Object
 *DefaultApi* | [**healthz**](docs/DefaultApi.md#healthz) | **GET** /healthz | Healthz
 *DefaultApi* | [**list_buckets**](docs/DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
@@ -58,6 +59,7 @@ Class | Method | HTTP request | Description
  - [DeleteBucketIsCompleted](docs/DeleteBucketIsCompleted.md)
  - [DeleteBucketRequest](docs/DeleteBucketRequest.md)
  - [DeleteBucketResponse](docs/DeleteBucketResponse.md)
+ - [HeadBucketRequest](docs/HeadBucketRequest.md)
  - [HeadObjectRequest](docs/HeadObjectRequest.md)
  - [HeadObjectResponse](docs/HeadObjectResponse.md)
  - [HealthcheckResponse](docs/HealthcheckResponse.md)

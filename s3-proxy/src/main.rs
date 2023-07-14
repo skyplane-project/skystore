@@ -10,6 +10,7 @@ mod objstore_client;
 mod skyproxy;
 mod stream_utils;
 mod type_utils;
+use std::env;
 
 use crate::skyproxy::SkyProxy;
 #[tokio::main]
@@ -28,7 +29,15 @@ async fn main() {
         .init();
 
     // Setup our proxy object
-    let proxy = SkyProxy::new().await;
+    let init_regions: Vec<String> = env::var("INIT_REGIONS")
+        .expect("INIT_REGIONS must be set")
+        .split(',')
+        .map(|s| s.to_string())
+        .collect();
+    let client_from_region: String =
+        env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
+
+    let proxy = SkyProxy::new(init_regions, client_from_region).await;
 
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain

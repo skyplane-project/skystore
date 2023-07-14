@@ -304,8 +304,8 @@ def test_get_object(client):
     resp_data.pop("id")
     assert resp_data == {
         "tag": "aws:us-west-1",
-        "bucket": "my-get-bucket-us-west-1",
-        "key": "my-key",
+        "bucket": "skystore-us-west-1",  # Bucket is prefixed with "skystore-"
+        "key": "my-key",  # "my-get-bucket/my-key",  # Key is prefixed with logical bucket name
         "region": "us-west-1",
         "cloud": "aws",
         "size": 100,
@@ -477,7 +477,7 @@ def test_list_objects(client):
         "/list_objects",
         json={
             "bucket": "my-list-bucket",
-            "prefix": "my-prefix-1",
+            "prefix": "my-prefix-1/",
         },
     )
     assert resp.json() == []

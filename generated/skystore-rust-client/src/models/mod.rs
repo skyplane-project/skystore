@@ -20,6 +20,8 @@ pub mod delete_bucket_request;
 pub use self::delete_bucket_request::DeleteBucketRequest;
 pub mod delete_bucket_response;
 pub use self::delete_bucket_response::DeleteBucketResponse;
+pub mod head_bucket_request;
+pub use self::head_bucket_request::HeadBucketRequest;
 pub mod head_object_request;
 pub use self::head_object_request::HeadObjectRequest;
 pub mod head_object_response;

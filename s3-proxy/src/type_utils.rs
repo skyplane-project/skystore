@@ -1,9 +1,14 @@
 use s3s::dto::*;
 
 #[allow(dead_code)]
-pub fn new_create_bucket_request(bucket: String) -> CreateBucketInput {
+pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> CreateBucketInput {
     let mut builder = CreateBucketInput::builder();
     builder.set_bucket(bucket);
+    if let Some(r) = region {
+        builder.set_create_bucket_configuration(Some(CreateBucketConfiguration {
+            location_constraint: Some(BucketLocationConstraint::from(r)),
+        }));
+    }
     builder.build().unwrap()
 }
 
@@ -57,6 +62,12 @@ pub fn new_copy_object_request(
         key: src_key.into(),
         version_id: None,
     });
+    builder.build().unwrap()
+}
+
+pub fn new_head_bucket_request(bucket: String) -> HeadBucketInput {
+    let mut builder = HeadBucketInput::builder();
+    builder.set_bucket(bucket);
     builder.build().unwrap()
 }
 

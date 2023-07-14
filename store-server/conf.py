@@ -24,8 +24,6 @@ class Configuration(BaseModel):
         raise ValueError(f"Unknown location: {location_name}")
 
 
-DEFAULT_INIT_REGIONS = ["aws:eu-central-1", "aws:us-west-1"]
-
 TEST_CONFIGURATION = Configuration(
     physical_locations=[
         PhysicalLocation(
@@ -51,6 +49,13 @@ TEST_CONFIGURATION = Configuration(
         ),
     ]
 )
+
+DEFAULT_INIT_REGIONS = [
+    "aws:us-west-1",
+    "aws:us-east-2",
+    # "gcp:us-west1",
+    # "aws:eu-central-1",
+]
 
 
 DEMO_CONFIGURATION = Configuration(
