@@ -33,7 +33,7 @@ impl SkyProxy {
             "aws:eu-central-1",
         ];
 
-        // Local test configuration
+        // // Local test configuration
         for r in regions {
             store_clients.insert(
                 r.to_string(),
@@ -70,29 +70,29 @@ impl SkyProxy {
         // };
 
         //// Demo Configuration
-        // store_clients.insert(
-        //     "azure:westus3".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "gcp:us-west1".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "aws:us-west-2".to_string(),
-        //     Arc::new(Box::new(
-        //         crate::client_impls::s3::S3ObjectStoreClient::new(
-        //             "https://s3.us-west-2.amazonaws.com".to_string(),
-        //         )
-        //         .await,
-        //     ) as Box<dyn ObjectStoreClient>),
-        // );
+        store_clients.insert(
+            "azure:westus3".to_string(),
+            Arc::new(
+                Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+                    as Box<dyn ObjectStoreClient>,
+            ),
+        );
+        store_clients.insert(
+            "gcp:us-west1".to_string(),
+            Arc::new(
+                Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
+                    as Box<dyn ObjectStoreClient>,
+            ),
+        );
+        store_clients.insert(
+            "aws:us-west-2".to_string(),
+            Arc::new(Box::new(
+                crate::client_impls::s3::S3ObjectStoreClient::new(
+                    "https://s3.us-west-2.amazonaws.com".to_string(),
+                )
+                .await,
+            ) as Box<dyn ObjectStoreClient>),
+        );
 
         let dir_conf = Configuration {
             base_path: "http://localhost:3000".to_string(),
@@ -398,6 +398,44 @@ impl S3 for SkyProxy {
                     "list_objects_v2 failed",
                 ))
             }
+        }
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn head_object(
+        &self,
+        req: S3Request<HeadObjectInput>,
+    ) -> S3Result<S3Response<HeadObjectOutput>> {
+        let locator = self
+            .locate_object(req.input.bucket.clone(), req.input.key.clone())
+            .await?;
+
+        match locator {
+            Some(locator) => {
+                let client: Arc<Box<dyn ObjectStoreClient>> =
+                    self.store_clients.get(&locator.tag).unwrap().clone();
+
+                match client
+                    .head_object(S3Request::new(new_head_object_request(
+                        locator.bucket.clone(),
+                        locator.key.clone(),
+                    )))
+                    .await
+                {
+                    Ok(resp) => Ok(resp),
+                    Err(err) => {
+                        error!("head_object failed: {:?}", err);
+                        Err(s3s::S3Error::with_message(
+                            s3s::S3ErrorCode::InternalError,
+                            "head_object failed",
+                        ))
+                    }
+                }
+            }
+            None => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::NoSuchKey,
+                "No such key",
+            )),
         }
     }
 

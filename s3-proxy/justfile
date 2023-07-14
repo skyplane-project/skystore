@@ -71,8 +71,8 @@ run-cli-create-bucket:
 run-cli-delete-bucket:
   aws s3api {{s3-args}} delete-bucket --bucket example-test-bucket
 
-run-test-register:
-  cd ../store-server && just test-register 
+run-cli-register-put-get:
+  cd ../store-server && just register-config 
   aws s3api {{s3-args}} put-object --bucket default-skybucket --key readme-2 --body "./README.md"
   aws s3api {{s3-args}} list-objects --bucket default-skybucket
   rm readme-2 || true
@@ -128,3 +128,30 @@ run-unit-test-once:
   sleep 2
   just test
 
+init:
+  #!/usr/bin/env bash
+    set -e
+
+    # just run-local-s3 &
+    # local_s3_proc=$!
+
+    just run-skystore-server &
+    skystore_server_proc=$!
+
+    just run &
+    registry_proc=$!
+
+
+    cleanup() {
+        # kill -9 $local_s3_proc
+        kill -9 $skystore_server_proc
+        kill -9 $registry_proc
+    }
+    trap cleanup EXIT
+
+    echo "Services started. Press Ctrl+C to stop."
+
+    sleep 2
+    cd ../store-server && just register-config 
+
+    wait 

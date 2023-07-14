@@ -32,6 +32,8 @@ pub mod list_object_request;
 pub use self::list_object_request::ListObjectRequest;
 pub mod list_parts_request;
 pub use self::list_parts_request::ListPartsRequest;
+pub mod locate_bucket_request;
+pub use self::locate_bucket_request::LocateBucketRequest;
 pub mod locate_bucket_response;
 pub use self::locate_bucket_response::LocateBucketResponse;
 pub mod locate_object_request;

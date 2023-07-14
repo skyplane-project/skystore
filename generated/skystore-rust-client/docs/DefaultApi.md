@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**list_multipart_uploads**](DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
+[**locate_bucket**](DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 [**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
@@ -313,6 +314,36 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**Vec<crate::models::LogicalPartResponse>**](LogicalPartResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## locate_bucket
+
+> crate::models::LocateBucketResponse locate_bucket(locate_bucket_request)
+Locate Bucket
+
+Given the bucket name, return one or zero physical bucket locators.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**locate_bucket_request** | [**LocateBucketRequest**](LocateBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::LocateBucketResponse**](LocateBucketResponse.md)
 
 ### Authorization
 

@@ -1,3 +1,4 @@
+use s3s::auth::SimpleAuth;
 use s3s::service::S3ServiceBuilder;
 
 use tower::ServiceBuilder;
@@ -32,7 +33,23 @@ async fn main() {
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain
     // https://github.com/Nugine/s3s/blob/b0b6878dafee0e08a876bec5239425fc40c01271/crates/s3s-fs/src/main.rs#L58-L66
-    let s3_service = S3ServiceBuilder::new(proxy).build().into_shared();
+
+    // let s3_service = S3ServiceBuilder::new(proxy).build().into_shared();
+    // TODO: hardcode for now for mount test
+    let s3_service = {
+        let mut b = S3ServiceBuilder::new(proxy);
+        // Enable authentication
+        let access_key = std::env::var("AWS_ACCESS_KEY_ID").expect("ACCESS_KEY must be set");
+        let secret_key = std::env::var("AWS_SECRET_ACCESS_KEY").expect("SECRET_KEY must be set");
+        b.set_auth(SimpleAuth::from_single(access_key, secret_key));
+
+        // Configure virtual-host style domain?
+        // let domain_name = "domain_name".to_string();
+        // b.set_base_domain(domain_name);
+
+        b.build().into_shared()
+    };
+
     let service = ServiceBuilder::new()
         .layer(
             TraceLayer::new_for_http()

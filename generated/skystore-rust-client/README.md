@@ -36,6 +36,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**list_multipart_uploads**](docs/DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
+*DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 *DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
@@ -63,6 +64,7 @@ Class | Method | HTTP request | Description
  - [HttpValidationError](docs/HttpValidationError.md)
  - [ListObjectRequest](docs/ListObjectRequest.md)
  - [ListPartsRequest](docs/ListPartsRequest.md)
+ - [LocateBucketRequest](docs/LocateBucketRequest.md)
  - [LocateBucketResponse](docs/LocateBucketResponse.md)
  - [LocateObjectRequest](docs/LocateObjectRequest.md)
  - [LocateObjectResponse](docs/LocateObjectResponse.md)

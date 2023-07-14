@@ -18,6 +18,7 @@ from bucket_models import (
     DBLogicalBucket,
     DBPhysicalBucketLocator,
     RegisterBucketRequest,
+    LocateBucketRequest,
     LocateBucketResponse,
     BucketResponse,
     CreateBucketRequest,
@@ -323,6 +324,55 @@ async def complete_delete_bucket(request: DeleteBucketIsCompleted, db: DBSession
         return Response(status_code=500, content="Error committing changes")
 
     return DeleteBucketIsCompleted(id=physical_locator.logical_bucket.id)
+
+
+@app.post(
+    "/locate_bucket",
+    responses={
+        status.HTTP_200_OK: {"model": LocateBucketResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "Bucket not found"},
+    },
+)
+async def locate_bucket(
+    request: LocateBucketRequest, db: DBSession
+) -> LocateBucketResponse:
+    """Given the bucket name, return one or zero physical bucket locators."""
+    stmt = (
+        select(DBPhysicalBucketLocator)
+        .join(DBLogicalBucket)
+        .where(DBLogicalBucket.name == request.bucket)
+        .where(DBLogicalBucket.status == Status.ready)
+    )
+    locators = (await db.scalars(stmt)).all()
+
+    if len(locators) == 0:
+        return Response(status_code=404, content="Bucket Not Found")
+
+    chosen_locator = None
+    reason = ""
+    for locator in locators:
+        if locator.location_tag == request.client_from_region:
+            chosen_locator = locator
+            reason = "exact match"
+            break
+    else:
+        # find the primary locator
+        chosen_locator = next(locator for locator in locators if locator.is_primary)
+        reason = "fallback to primary"
+
+    logger.debug(
+        f"locate_bucket: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
+    )
+
+    await db.refresh(chosen_locator, ["logical_bucket"])
+
+    return LocateBucketResponse(
+        id=chosen_locator.id,
+        tag=chosen_locator.location_tag,
+        cloud=chosen_locator.cloud,
+        bucket=chosen_locator.bucket,
+        region=chosen_locator.region,
+    )
 
 
 @app.post(
