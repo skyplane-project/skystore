@@ -1,2 +1,2 @@
 # So GitHub will hide this when reviewing PR
-generated/ linguist-generated=true
+generated/** linguist-generated=true
