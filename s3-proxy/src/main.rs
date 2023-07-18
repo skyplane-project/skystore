@@ -10,7 +10,6 @@ mod objstore_client;
 mod skyproxy;
 mod stream_utils;
 mod type_utils;
-use std::env;
 
 use crate::skyproxy::SkyProxy;
 #[tokio::main]
@@ -29,13 +28,17 @@ async fn main() {
         .init();
 
     // Setup our proxy object
-    let init_regions: Vec<String> = env::var("INIT_REGIONS")
-        .expect("INIT_REGIONS must be set")
-        .split(',')
-        .map(|s| s.to_string())
-        .collect();
-    let client_from_region: String =
-        env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
+    // Hard code config for now
+    let init_regions = vec!["aws:us-west-1".to_string(), "aws:us-east-2".to_string()];
+    let client_from_region = "aws:us-west-1".to_string();
+
+    // let init_regions: Vec<String> = env::var("INIT_REGIONS")
+    //     .expect("INIT_REGIONS must be set")
+    //     .split(',')
+    //     .map(|s| s.to_string())
+    //     .collect();
+    // let client_from_region: String =
+    //     env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
 
     let proxy = SkyProxy::new(init_regions, client_from_region).await;
 

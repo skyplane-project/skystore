@@ -134,7 +134,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
             bucket=location.bucket,
             prefix="",  # location.prefix + "/",
             status=Status.ready,
-            is_primary=location.is_primary,  # TODO: assume one primary must be specified for now
+            is_primary=location.is_primary,  # TODO: assume one primary must be specified for now, need to enforce this
             need_warmup=location.need_warmup,
         )
         db.add(physical_bucket_locator)
@@ -149,8 +149,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
                 cloud=cloud,
                 region=region,
                 bucket=f"skystore-{region}",
-                prefix="",  # logical_bucket.bucket
-                # + "/",  # TODO: integrate with prefix, perhaps "skystore/logical_bucket_name/"
+                prefix="",  # TODO: integrate with prefix
                 status=Status.ready,
                 is_primary=False,
                 need_warmup=False,
@@ -204,7 +203,7 @@ async def start_create_bucket(
             cloud=cloud,
             region=region,
             bucket=physical_bucket_name,
-            prefix="",  # logical_bucket.bucket + "/",  # TODO: integrate prefix
+            prefix="",  # TODO: integrate prefix, e.x. logical_bucket.bucket + "/"
             status=Status.pending,
             is_primary=(
                 region_tag == request.client_from_region
