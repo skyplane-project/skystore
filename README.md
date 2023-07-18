@@ -55,7 +55,7 @@ cd store-server
 just test
 ```
 
-Before E2E test, if make changes to the server, then run 
+Before E2E test, if make changes to the server's API, then run the following to re-generate the rust client code. 
 ```
 cd store-server
 just generate-openapi
