@@ -21,7 +21,7 @@ run-release:
 run-registry:
   docker run -p 5000:5000 --network=host \
     -e REGISTRY_STORAGE=s3 \
-    -e REGISTRY_STORAGE_S3_BUCKET=image-bucket \
+    -e REGISTRY_STORAGE_S3_BUCKET=my-bucket-1 \
     -e REGISTRY_STORAGE_S3_REGIONENDPOINT=http://localhost:8002 \
     -e REGISTRY_STORAGE_S3_REGION=us-west-2 \
     -e REGISTRY_STORAGE_S3_SECURE=false \
@@ -35,25 +35,10 @@ run-registry:
     -e REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE=1000000000 \
     registry:2
 
-run-registry-local-s3:
-  docker run -p 5000:5000 --network=host \
-    -e REGISTRY_STORAGE=s3 \
-    -e REGISTRY_STORAGE_S3_BUCKET=image-bucket \
-    -e REGISTRY_STORAGE_S3_REGIONENDPOINT=http://localhost:8014 \
-    -e REGISTRY_STORAGE_S3_ACCESSKEY=$AWS_ACCESS_KEY_ID \
-    -e REGISTRY_STORAGE_S3_SECRETKEY=$AWS_SECRET_ACCESS_KEY \
-    -e REGISTRY_STORAGE_S3_REGION=us-west-2 \
-    -e REGISTRY_STORAGE_S3_SECURE=false \
-    -e REGISTRY_STORAGE_S3_V4AUTH=true \
-    -e REGISTRY_LOG_LEVEL=debug \
-    -e REGISTRY_HEALTH_STORAGEDRIVER_ENABLED=false \
-    -e REGISTRY_STORAGE_REDIRECT_DISABLE=true \
-    registry:2
-
 install-local-s3:
   cargo install \
-    --git https://github.com/Nugine/s3s.git \
-    --rev e8bba54fe291664f73566235354002eb02002a75 \
+    --git https://github.com/simon-mo/s3s.git \
+    --rev 579b49e10c8bc3662786d57dbe718f20de512a2c \
     --bin s3s-fs \
     --features="binary" \
     s3s-fs
@@ -69,37 +54,10 @@ run-local-s3: _check-local-s3
   # RUST_LOG="s3s::service=DEBUG,s3s_fs=DEBUG" s3s-fs --host localhost --port 8014 --access-key $AWS_ACCESS_KEY_ID --secret-key $AWS_SECRET_ACCESS_KEY /tmp/s3-local-cache
   RUST_LOG="s3s_fs=DEBUG" s3s-fs --host localhost --port 8014 --access-key $AWS_ACCESS_KEY_ID --secret-key $AWS_SECRET_ACCESS_KEY --domain-name localhost:8014 /tmp/s3-local-cache
 
-run-local-gcs:
-  mkdir -p /tmp/gcs-local-cache/sky-s3-backend
-  fake-gcs-server -filesystem-root /tmp/gcs-local-cache \
-    -data /tmp/gcs-local-cache \
-    -port 8014 \
-    -scheme http \
-    -log-level trace \
-    -location us-west-2 \
-    -public-host localhost:8014
-
-run-local-azure:
-  mkdir -p /tmp/azure-local-cache
-  cd ../Azurite && npm exec azurite-blob -- --blobPort 10000 --location /tmp/azure-local-cache --debug /tmp/azurite-log.txt
-
-clean-local-azure:
-  rm -rf /tmp/azure-local-cache
-
-run-local-azure-create:
-  #!/usr/bin/env bash
-  for name in my-bucket-1 my-bucket-2; do
-    az storage container create --name $name --connection-string "DefaultEndpointsProtocol=http;AccountName=$STORAGE_ACCOUNT;AccountKey=$STORAGE_ACCESS_KEY;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
-  done
-
-
 run-sample-push:
   docker pull alpine
   docker tag alpine localhost:5000/alpine
   docker --debug --log-level=debug push localhost:5000/alpine
-
-run-vicuna-pre-split-push:
-  docker push localhost:5000/vicuna:latest
 
 run-sample-pull:
   docker image rm localhost:5000/alpine
@@ -108,22 +66,22 @@ run-sample-pull:
 s3-args := "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
 
 run-cli-put:
-  aws s3api {{s3-args}} put-object --bucket image-bucket --key readme-2 --body "./README.md"
+  aws s3api {{s3-args}} put-object --bucket my-bucket-1 --key readme-2 --body "./README.md"
 
 run-cli-list:
-  aws s3api {{s3-args}} list-objects --bucket image-bucket
+  aws s3api {{s3-args}} list-objects --bucket my-bucket-1
 
 run-cli-get:
   rm readme-2 || true
-  aws s3api {{s3-args}} get-object --bucket image-bucket --key readme-2 readme-2
+  aws s3api {{s3-args}} get-object --bucket my-bucket-1 --key readme-2 readme-2
   cat readme-2
   rm readme-2
 
 run-cli-multipart:
-  aws s3api {{s3-args}} create-multipart-upload --bucket image-bucket --key readme-3 | jq -r '.UploadId' > /tmp/upload-id
-  aws s3api {{s3-args}} upload-part --bucket image-bucket --key readme-3 --part-number 1 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-1
-  aws s3api {{s3-args}} upload-part --bucket image-bucket --key readme-3 --part-number 2 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-2
-  aws s3api {{s3-args}} complete-multipart-upload --bucket image-bucket --key readme-3 --multipart-upload "Parts=[{ETag=$(cat /tmp/ETag-1),PartNumber=1},{ETag=$(cat /tmp/ETag-2),PartNumber=2}]" --upload-id $(cat /tmp/upload-id)
+  aws s3api {{s3-args}} create-multipart-upload --bucket my-bucket-1 --key readme-3 | jq -r '.UploadId' > /tmp/upload-id
+  aws s3api {{s3-args}} upload-part --bucket my-bucket-1 --key readme-3 --part-number 1 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-1
+  aws s3api {{s3-args}} upload-part --bucket my-bucket-1 --key readme-3 --part-number 2 --body README.md --upload-id $(cat /tmp/upload-id) | jq -r '.ETag' > /tmp/ETag-2
+  aws s3api {{s3-args}} complete-multipart-upload --bucket my-bucket-1 --key readme-3 --multipart-upload "Parts=[{ETag=$(cat /tmp/ETag-1),PartNumber=1},{ETag=$(cat /tmp/ETag-2),PartNumber=2}]" --upload-id $(cat /tmp/upload-id)
 
 run-skystore-server:
   cd ../store-server && just clean && just run
