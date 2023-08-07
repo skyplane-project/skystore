@@ -47,6 +47,18 @@ just run-cli-list
 just run-cli-multipart
 ```
 
+Test the server
+```
+cd store-server
+just test
+```
+
+Before E2E test, if make changes to the server's API, then run the following to re-generate the rust client code. 
+```
+cd store-server
+just generate-openapi
+just generate-rust
+```
 ### Container Registry
 For a slightly more complicated workload, you can test the container registry support by running a local registry configured to push to the SkyStore service and push `alpine` image to it.
 
