@@ -97,11 +97,9 @@ class LocateObjectResponse(BaseModel):
     region: str
     key: str
 
-    size: Optional[PositiveInt] = Field(
-        None, json_schema_extra={"minimum": 0, "format": "int64"}
-    )
-    last_modified: Optional[datetime] = Field(None)
-    etag: Optional[str] = Field(None)
+    size: Optional[PositiveInt] = Field(None, minimum=0, format="int64")
+    last_modified: Optional[datetime] = None
+    etag: Optional[str] = None
 
 
 class DBLogicalMultipartUploadPart(Base):
@@ -141,24 +139,22 @@ class StartUploadRequest(LocateObjectRequest):
     # If we are performing a copy, we want to locate the source object physical locations,
     # and only return the locators in the same locations so the client can do "local bucket copy".
     # NOTE: for future, consider whether the bucket is needed here. Should we only do intra-bucket copy?
-    copy_src_bucket: Optional[str] = Field(None)
-    copy_src_key: Optional[str] = Field(None)
+    copy_src_bucket: Optional[str] = None
+    copy_src_key: Optional[str] = None
 
 
 class StartUploadResponse(BaseModel):
     locators: List[LocateObjectResponse]
-    multipart_upload_id: Optional[str] = Field(None)
+    multipart_upload_id: Optional[str] = None
 
-    copy_src_buckets: List[str] = Field(None)
-    copy_src_keys: List[str] = Field(None)
+    copy_src_buckets: List[str]
+    copy_src_keys: List[str]
 
 
 class PatchUploadIsCompleted(BaseModel):
     # This is called when the PUT operation finishes or upon CompleteMultipartUpload
     id: int
-    size: NonNegativeInt = Field(
-        ..., json_schema_extra={"minimum": 0, "format": "int64"}
-    )
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
 
@@ -174,9 +170,7 @@ class PatchUploadMultipartUploadPart(BaseModel):
     id: int
     part_number: int
     etag: str
-    size: NonNegativeInt = Field(
-        ..., json_schema_extra={"minimum": 0, "format": "int64"}
-    )
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
 
 class ContinueUploadRequest(LocateObjectRequest):
@@ -210,9 +204,7 @@ class ListObjectRequest(BaseModel):
 class ObjectResponse(BaseModel):
     bucket: str
     key: str
-    size: NonNegativeInt = Field(
-        ..., json_schema_extra={"minimum": 0, "format": "int64"}
-    )
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
 
@@ -225,9 +217,7 @@ class HeadObjectRequest(BaseModel):
 class HeadObjectResponse(BaseModel):
     bucket: str
     key: str
-    size: NonNegativeInt = Field(
-        ..., json_schema_extra={"minimum": 0, "format": "int64"}
-    )
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
 
@@ -250,9 +240,7 @@ class LogicalPartResponse(BaseModel):
     part_number: int
     etag: str
     # TODO: remove this size thing, it doesn't matter
-    size: NonNegativeInt = Field(
-        ..., json_schema_extra={"minimum": 0, "format": "int64"}
-    )
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
 
 class HealthcheckResponse(BaseModel):
