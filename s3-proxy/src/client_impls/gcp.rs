@@ -200,7 +200,8 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             bucket: source_bucket,
             key: source_object,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("Only bucket copy is supported");
         };
 
@@ -280,7 +281,8 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             bucket: source_bucket,
             key: source_object,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("Only bucket copy is supported");
         };
 

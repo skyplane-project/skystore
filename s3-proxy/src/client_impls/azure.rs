@@ -307,7 +307,8 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             bucket: src_container,
             key: src_blob,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("AccessPoint copy not supported");
         };
         let src_blob_url = self
@@ -384,7 +385,8 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             bucket: src_container,
             key: src_blob,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("AccessPoint copy not supported");
         };
 
