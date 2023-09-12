@@ -62,6 +62,7 @@ just generate-openapi
 just generate-rust
 ```
 
+
 ### Container Registry
 For a slightly more complicated workload, you can test the container registry support by running a local registry configured to push to the SkyStore service and push `alpine` image to it.
 
