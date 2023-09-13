@@ -65,12 +65,6 @@ pub fn new_copy_object_request(
     builder.build().unwrap()
 }
 
-pub fn new_head_bucket_request(bucket: String) -> HeadBucketInput {
-    let mut builder = HeadBucketInput::builder();
-    builder.set_bucket(bucket);
-    builder.build().unwrap()
-}
-
 pub fn new_head_object_request(bucket: String, key: String) -> HeadObjectInput {
     let mut builder = HeadObjectInput::builder();
     builder.set_bucket(bucket);

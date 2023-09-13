@@ -54,13 +54,6 @@ impl ObjectStoreClient for S3ObjectStoreClient {
         return self.s3_proxy.delete_bucket(req).await;
     }
 
-    async fn head_bucket(
-        &self,
-        req: S3Request<HeadBucketInput>,
-    ) -> S3Result<S3Response<HeadBucketOutput>> {
-        return self.s3_proxy.head_bucket(req).await;
-    }
-
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

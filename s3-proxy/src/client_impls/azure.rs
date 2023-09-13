@@ -180,24 +180,6 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
-    async fn head_bucket(
-        &self,
-        req: S3Request<HeadBucketInput>,
-    ) -> S3Result<S3Response<HeadBucketOutput>> {
-        let req = req.input;
-        let container_name = req.bucket;
-
-        let container_client = self.container_client(&container_name);
-        let resp = container_client.get_properties().await;
-
-        match resp {
-            Ok(_) => Ok(S3Response::new(HeadBucketOutput::default())),
-            Err(err) => Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::InternalError,
-                format!("Request failed: {}", err),
-            )),
-        }
-    }
     // NOTE: in the current impl, we are just going to map bucket to
     // container and key to blob. Theoretically, bucket should be
     // mapped to storage account and key is mapped to container+blob.
