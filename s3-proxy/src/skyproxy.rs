@@ -321,7 +321,8 @@ impl S3 for SkyProxy {
                 .unwrap();
             });
         }
-
+        
+        // TODO: handle cleanup if create bucket fails 
         while let Some(result) = tasks.join_next().await {
             if let Err(err) = result {
                 return Err(s3s::S3Error::with_message(
