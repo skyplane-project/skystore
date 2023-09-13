@@ -49,13 +49,21 @@ impl SkyProxy {
 
             // if bucket not exists, create one
             let skystore_bucket_name = format!("skystore-{}", region);
-            let _ = client
+            match client
                 .create_bucket(S3Request::new(new_create_bucket_request(
                     skystore_bucket_name,
                     Some(r),
                 )))
                 .await
-                .unwrap();
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    if e.to_string().contains("BucketAlreadyExists") {
+                    } else {
+                        panic!("Failed to create bucket: {}", e);
+                    }
+                }
+            };
         }
 
         // Real object store configuration (regions: init regions)
