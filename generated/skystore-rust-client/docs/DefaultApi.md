@@ -5,15 +5,23 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**append_part**](DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
+[**complete_create_bucket**](DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
+[**complete_delete_bucket**](DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 [**complete_upload**](DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 [**continue_upload**](DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
+[**head_bucket**](DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
 [**head_object**](DefaultApi.md#head_object) | **POST** /head_object | Head Object
 [**healthz**](DefaultApi.md#healthz) | **GET** /healthz | Healthz
+[**list_buckets**](DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
 [**list_multipart_uploads**](DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
+[**locate_bucket**](DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
+[**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
+[**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
+[**start_delete_bucket**](DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
 [**start_upload**](DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 
 
@@ -29,6 +37,62 @@ Append Part
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **patch_upload_multipart_upload_part** | [**PatchUploadMultipartUploadPart**](PatchUploadMultipartUploadPart.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## complete_create_bucket
+
+> serde_json::Value complete_create_bucket(create_bucket_is_completed)
+Complete Create Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**create_bucket_is_completed** | [**CreateBucketIsCompleted**](CreateBucketIsCompleted.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## complete_delete_bucket
+
+> serde_json::Value complete_delete_bucket(delete_bucket_is_completed)
+Complete Delete Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**delete_bucket_is_completed** | [**DeleteBucketIsCompleted**](DeleteBucketIsCompleted.md) |  | [required] |
 
 ### Return type
 
@@ -102,6 +166,34 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## head_bucket
+
+> serde_json::Value head_bucket(head_bucket_request)
+Head Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**head_bucket_request** | [**HeadBucketRequest**](HeadBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## head_object
 
 > crate::models::HeadObjectResponse head_object(head_object_request)
@@ -142,6 +234,31 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**crate::models::HealthcheckResponse**](HealthcheckResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## list_buckets
+
+> Vec<crate::models::BucketResponse> list_buckets()
+List Buckets
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**Vec<crate::models::BucketResponse>**](BucketResponse.md)
 
 ### Authorization
 
@@ -239,6 +356,36 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## locate_bucket
+
+> crate::models::LocateBucketResponse locate_bucket(locate_bucket_request)
+Locate Bucket
+
+Given the bucket name, return one or zero physical bucket locators.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**locate_bucket_request** | [**LocateBucketRequest**](LocateBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::LocateBucketResponse**](LocateBucketResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## locate_object
 
 > crate::models::LocateObjectResponse locate_object(locate_object_request)
@@ -269,6 +416,34 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## register_buckets
+
+> serde_json::Value register_buckets(register_bucket_request)
+Register Buckets
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**register_bucket_request** | [**RegisterBucketRequest**](RegisterBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## set_multipart_id
 
 > serde_json::Value set_multipart_id(patch_upload_multipart_upload_id)
@@ -284,6 +459,62 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## start_create_bucket
+
+> crate::models::CreateBucketResponse start_create_bucket(create_bucket_request)
+Start Create Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**create_bucket_request** | [**CreateBucketRequest**](CreateBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::CreateBucketResponse**](CreateBucketResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## start_delete_bucket
+
+> crate::models::DeleteBucketResponse start_delete_bucket(delete_bucket_request)
+Start Delete Bucket
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**delete_bucket_request** | [**DeleteBucketRequest**](DeleteBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::DeleteBucketResponse**](DeleteBucketResponse.md)
 
 ### Authorization
 

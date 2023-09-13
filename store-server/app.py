@@ -1,30 +1,59 @@
-import enum
+from datetime import datetime
 import logging
 import uuid
-from datetime import datetime
-from typing import Annotated, List, Literal, Optional
+from utils import Base
+from typing import Annotated, List
+from sqlalchemy.orm import joinedload
 import os
-
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
 from rich.logging import RichHandler
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    String,
-    select,
-)
-from sqlalchemy.dialects.postgresql import BIGINT
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy_repr import RepresentableBase
+from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS
+from utils import Status
+from bucket_models import (
+    DBLogicalBucket,
+    DBPhysicalBucketLocator,
+    RegisterBucketRequest,
+    LocateBucketRequest,
+    LocateBucketResponse,
+    HeadBucketRequest,
+    BucketResponse,
+    CreateBucketRequest,
+    CreateBucketResponse,
+    CreateBucketIsCompleted,
+    DeleteBucketRequest,
+    DeleteBucketResponse,
+    DeleteBucketIsCompleted,
+)
 
-from conf import TEST_CONFIGURATION
+from object_models import (
+    DBLogicalObject,
+    DBPhysicalObjectLocator,
+    LocateObjectRequest,
+    LocateObjectResponse,
+    DBLogicalMultipartUploadPart,
+    DBPhysicalMultipartUploadPart,
+    StartUploadRequest,
+    StartUploadResponse,
+    PatchUploadIsCompleted,
+    PatchUploadMultipartUploadId,
+    PatchUploadMultipartUploadPart,
+    ContinueUploadRequest,
+    ContinueUploadPhysicalPart,
+    ContinueUploadResponse,
+    ListObjectRequest,
+    ObjectResponse,
+    HeadObjectRequest,
+    HeadObjectResponse,
+    MultipartResponse,
+    ListPartsRequest,
+    LogicalPartResponse,
+    HealthcheckResponse,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,12 +63,10 @@ logging.basicConfig(
     force=True,
 )
 
-
 LOG_SQL = os.environ.get("LOG_SQL", "false").lower() == "1"
 
 logger = logging.getLogger()
 
-Base = declarative_base(cls=RepresentableBase)
 engine = create_async_engine(
     "sqlite+aiosqlite:///skystore.db",
     echo=LOG_SQL,
@@ -54,102 +81,22 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
 conf = TEST_CONFIGURATION
+init_region_tags = DEFAULT_INIT_REGIONS
 
-
-class Status(str, enum.Enum):
-    pending = "pending"
-    ready = "ready"
-
-
-class DBLogicalObject(Base):
-    __tablename__ = "logical_objects"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    bucket = Column(String)
-    key = Column(String)
-
-    size = Column(BIGINT)
-    last_modified = Column(DateTime)
-    etag = Column(String)
-
-    status = Column(Enum(Status))
-
-    # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
-    multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship(
-        "DBLogicalMultipartUploadPart", back_populates="logical_object"
-    )
-
-    physical_object_locators = relationship(
-        "DBPhysicalObjectLocator", back_populates="logical_object"
-    )
-
-
-class DBLogicalMultipartUploadPart(Base):
-    __tablename__ = "logical_multipart_upload_parts"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    logical_object_id = Column(
-        Integer, ForeignKey("logical_objects.id"), nullable=False
-    )
-    logical_object = relationship(
-        "DBLogicalObject", back_populates="multipart_upload_parts"
-    )
-
-    part_number = Column(Integer)
-    etag = Column(String)
-    size = Column(BIGINT)
-
-
-class DBPhysicalObjectLocator(Base):
-    __tablename__ = "physical_object_locators"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    logical_object_id = Column(
-        Integer, ForeignKey("logical_objects.id"), nullable=False
-    )
-    logical_object = relationship(
-        "DBLogicalObject", back_populates="physical_object_locators"
-    )
-
-    location_tag = Column(String)
-    cloud = Column(String)
-    region = Column(String)
-    bucket = Column(String)
-    key = Column(String)
-
-    is_primary = Column(Boolean, nullable=False, default=False)
-
-    multipart_upload_id = Column(String)
-    multipart_upload_parts = relationship(
-        "DBPhysicalMultipartUploadPart", back_populates="physical_object_locator"
-    )
-
-    status = Column(Enum(Status))
-
-
-class DBPhysicalMultipartUploadPart(Base):
-    __tablename__ = "physical_multipart_upload_parts"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    physical_object_locator_id = Column(
-        Integer, ForeignKey("physical_object_locators.id"), nullable=False
-    )
-    physical_object_locator = relationship(
-        "DBPhysicalObjectLocator", back_populates="multipart_upload_parts"
-    )
-
-    part_number = Column(Integer)
-    etag = Column(String)
-    size = Column(Integer)
+load_dotenv()
 
 
 @app.on_event("startup")
 async def startup():
+    global init_region_tags
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
+
+    if os.getenv("INIT_REGIONS"):
+        init_region_tags = os.getenv("INIT_REGIONS").split(",")
 
 
 async def get_session() -> AsyncSession:
@@ -160,25 +107,315 @@ async def get_session() -> AsyncSession:
 DBSession = Annotated[AsyncSession, Depends(get_session)]
 
 
-class LocateObjectRequest(BaseModel):
-    bucket: str
-    key: str
-    client_from_region: str
+@app.post("/register_buckets")
+async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Response:
+    stmt = select(DBLogicalBucket).where(DBLogicalBucket.bucket == request.bucket)
+    existing_logical_bucket = await db.scalar(stmt)
+
+    if existing_logical_bucket:
+        logger.error("Bucket with this name already exists")
+        return Response(status_code=409, content="Conflict, bucket already exists")
+
+    logical_bucket = DBLogicalBucket(
+        bucket=request.bucket,
+        prefix="",  # TODO: integrate prefix
+        status=Status.ready,
+        creation_date=datetime.utcnow(),
+    )
+    db.add(logical_bucket)
+
+    added_loc_tags = set()
+    for location in request.config.physical_locations:
+        physical_bucket_locator = DBPhysicalBucketLocator(
+            logical_bucket=logical_bucket,
+            location_tag=location.name,
+            cloud=location.cloud,
+            region=location.region,
+            bucket=location.bucket,
+            prefix="",  # location.prefix + "/",
+            status=Status.ready,
+            is_primary=location.is_primary,  # TODO: assume one primary must be specified for now, need to enforce this
+            need_warmup=location.need_warmup,
+        )
+        db.add(physical_bucket_locator)
+        added_loc_tags.add(location.name)
+
+    for location_tag in init_region_tags:
+        if location_tag not in added_loc_tags:
+            cloud, region = location_tag.split(":")
+            physical_bucket_locator = DBPhysicalBucketLocator(
+                logical_bucket=logical_bucket,
+                location_tag=region,
+                cloud=cloud,
+                region=region,
+                bucket=f"skystore-{region}",
+                prefix="",  # TODO: integrate with prefix
+                status=Status.ready,
+                is_primary=False,
+                need_warmup=False,
+            )
+            db.add(physical_bucket_locator)
+
+    await db.commit()
+
+    return Response(
+        status_code=200,
+        content="Logical bucket and physical locations have been registered",
+    )
 
 
-class LocateObjectResponse(BaseModel):
-    id: int
+@app.post("/start_create_bucket")
+async def start_create_bucket(
+    request: CreateBucketRequest, db: DBSession
+) -> CreateBucketResponse:
+    stmt = select(DBLogicalBucket).where(DBLogicalBucket.bucket == request.bucket)
+    existing_logical_bucket = await db.scalar(stmt)
 
-    tag: str
+    if existing_logical_bucket:
+        logger.error("Bucket with this name already exists")
+        return Response(status_code=409, content="Conflict, bucket already exists")
 
-    cloud: str
-    bucket: str
-    region: str
-    key: str
+    logical_bucket = DBLogicalBucket(
+        bucket=request.bucket,
+        prefix="",  # TODO: integrate prefix
+        status=Status.pending,
+        creation_date=datetime.utcnow(),
+    )
+    db.add(logical_bucket)
 
-    size: Optional[PositiveInt] = Field(None, minimum=0, format="int64")
-    last_modified: Optional[datetime]
-    etag: Optional[str]
+    # warmup_regions: regions to upload warmup objects to upon writes
+    warmup_regions = request.warmup_regions if request.warmup_regions else []
+    upload_to_region_tags = list(
+        set(init_region_tags + [request.client_from_region] + warmup_regions)
+    )
+
+    bucket_locators = []
+
+    for region_tag in upload_to_region_tags:
+        cloud, region = region_tag.split(":")
+        physical_bucket_name = (
+            f"skystore-{region}"  # NOTE: might need another naming scheme
+        )
+
+        bucket_locator = DBPhysicalBucketLocator(
+            logical_bucket=logical_bucket,
+            location_tag=region_tag,
+            cloud=cloud,
+            region=region,
+            bucket=physical_bucket_name,
+            prefix="",  # TODO: integrate prefix, e.x. logical_bucket.bucket + "/"
+            status=Status.pending,
+            is_primary=(
+                region_tag == request.client_from_region
+            ),  # set primary where client is from
+            need_warmup=(region_tag in warmup_regions),
+        )
+        bucket_locators.append(bucket_locator)
+
+    db.add_all(bucket_locators)
+    await db.commit()
+
+    logger.debug(f"start_create_bucket: {request} -> {bucket_locators}")
+
+    return CreateBucketResponse(
+        locators=[
+            LocateBucketResponse(
+                id=locator.id,
+                tag=locator.location_tag,
+                cloud=locator.cloud,
+                bucket=locator.bucket,
+                region=locator.region,
+            )
+            for locator in bucket_locators
+        ],
+    )
+
+
+@app.patch("/complete_create_bucket")
+async def complete_create_bucket(request: CreateBucketIsCompleted, db: DBSession):
+    stmt = select(DBPhysicalBucketLocator).where(
+        DBPhysicalBucketLocator.id == request.id
+    )
+    physical_locator = await db.scalar(stmt)
+    if physical_locator is None:
+        logger.error(f"physical locator not found: {request}")
+        return Response(status_code=404, content="Physical Bucket Not Found")
+    await db.refresh(physical_locator, ["logical_bucket"])
+
+    logger.debug(f"complete_create_bucket: {request} -> {physical_locator}")
+
+    physical_locator.status = Status.ready
+    if physical_locator.is_primary:
+        physical_locator.logical_bucket.status = Status.ready
+        physical_locator.logical_bucket.creation_date = request.creation_date.replace(
+            tzinfo=None
+        )
+
+    await db.commit()
+
+
+@app.post("/start_delete_bucket")
+async def start_delete_bucket(
+    request: DeleteBucketRequest, db: DBSession
+) -> DeleteBucketResponse:
+    logical_bucket_stmt = (
+        select(DBLogicalBucket)
+        .options(joinedload(DBLogicalBucket.logical_objects))
+        .options(joinedload(DBLogicalBucket.physical_bucket_locators))
+        .where(DBLogicalBucket.bucket == request.bucket)
+    )
+    logical_bucket = await db.scalar(logical_bucket_stmt)
+
+    if logical_bucket is None:
+        return Response(status_code=404, content="Bucket not found")
+
+    if logical_bucket.status not in Status.ready or logical_bucket.logical_objects:
+        return Response(
+            status_code=409,
+            content="Bucket is not ready for deletion, or has objects in it",
+        )
+
+    locators = []
+    for locator in logical_bucket.physical_bucket_locators:
+        if locator.status not in Status.ready:
+            logger.error(
+                f"Cannot delete physical bucket. Current status is {locator.status}"
+            )
+            return Response(
+                status_code=409,
+                content="Cannot delete physical bucket in current state",
+            )
+
+        locator.status = Status.pending_deletion
+        locators.append(
+            LocateBucketResponse(
+                id=locator.id,
+                tag=locator.location_tag,
+                cloud=locator.cloud,
+                bucket=locator.bucket,
+                region=locator.region,
+            )
+        )
+
+    logical_bucket.status = Status.pending_deletion
+
+    try:
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Error occurred while committing changes: {e}")
+        return Response(status_code=500, content="Error committing changes")
+
+    logger.debug(f"start_delete_bucket: {request} -> {logical_bucket}")
+
+    return DeleteBucketResponse(locators=locators)
+
+
+@app.patch("/complete_delete_bucket")
+async def complete_delete_bucket(request: DeleteBucketIsCompleted, db: DBSession):
+    # TODO: need to deal with partial failures
+    physical_locator_stmt = select(DBPhysicalBucketLocator).where(
+        DBPhysicalBucketLocator.id == request.id
+    )
+    physical_locator = await db.scalar(physical_locator_stmt)
+
+    if physical_locator is None:
+        logger.error(f"physical locator not found: {request}")
+        return Response(status_code=404, content="Physical Bucket Not Found")
+
+    await db.refresh(physical_locator, ["logical_bucket"])
+
+    logger.debug(f"complete_delete_bucket: {request} -> {physical_locator}")
+
+    if physical_locator.status != Status.pending_deletion:
+        return Response(
+            status_code=409, content="Physical bucket is not marked for deletion"
+        )
+
+    # Delete the physical locator
+    await db.delete(physical_locator)
+
+    # Check if there are any remaining physical locators for the logical bucket
+    remaining_physical_locators_stmt = select(DBPhysicalBucketLocator).where(
+        DBPhysicalBucketLocator.logical_bucket_id == physical_locator.logical_bucket.id
+    )
+    remaining_physical_locators = await db.execute(remaining_physical_locators_stmt)
+    if not remaining_physical_locators.all():
+        await db.delete(physical_locator.logical_bucket)
+
+    try:
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Error occurred while committing changes: {e}")
+        return Response(status_code=500, content="Error committing changes")
+
+    return DeleteBucketIsCompleted(id=physical_locator.logical_bucket.id)
+
+
+@app.post("/head_bucket")
+async def head_bucket(request: HeadBucketRequest, db: DBSession):
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+
+    logger.debug(f"head_bucket: {request} -> {bucket}")
+
+    return Response(
+        status_code=200,
+        content="Bucket exists",
+    )
+
+
+@app.post(
+    "/locate_bucket",
+    responses={
+        status.HTTP_200_OK: {"model": LocateBucketResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "Bucket not found"},
+    },
+)
+async def locate_bucket(
+    request: LocateBucketRequest, db: DBSession
+) -> LocateBucketResponse:
+    """Given the bucket name, return one or zero physical bucket locators."""
+    stmt = (
+        select(DBPhysicalBucketLocator)
+        .join(DBLogicalBucket)
+        .where(DBLogicalBucket.name == request.bucket)
+        .where(DBLogicalBucket.status == Status.ready)
+    )
+    locators = (await db.scalars(stmt)).all()
+
+    if len(locators) == 0:
+        return Response(status_code=404, content="Bucket Not Found")
+
+    chosen_locator = None
+    reason = ""
+    for locator in locators:
+        if locator.location_tag == request.client_from_region:
+            chosen_locator = locator
+            reason = "exact match"
+            break
+    else:
+        # find the primary locator
+        chosen_locator = next(locator for locator in locators if locator.is_primary)
+        reason = "fallback to primary"
+
+    logger.debug(
+        f"locate_bucket: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
+    )
+
+    await db.refresh(chosen_locator, ["logical_bucket"])
+
+    return LocateBucketResponse(
+        id=chosen_locator.id,
+        tag=chosen_locator.location_tag,
+        cloud=chosen_locator.cloud,
+        bucket=chosen_locator.bucket,
+        region=chosen_locator.region,
+    )
 
 
 @app.post(
@@ -202,10 +439,15 @@ async def locate_object(
     locators = (await db.scalars(stmt)).all()
 
     if len(locators) == 0:
-        return Response(status_code=404, content="Not Found")
+        return Response(status_code=404, content="Object Not Found")
 
     chosen_locator = None
     reason = ""
+
+    # if request.get_primary:
+    #     chosen_locator = next(locator for locator in locators if locator.is_primary)
+    #     reason = "exact match (primary)"
+    # else:
     for locator in locators:
         if locator.location_tag == request.client_from_region:
             chosen_locator = locator
@@ -233,23 +475,6 @@ async def locate_object(
         last_modified=chosen_locator.logical_object.last_modified,
         etag=chosen_locator.logical_object.etag,
     )
-
-
-class StartUploadRequest(LocateObjectRequest):
-    is_multipart: bool
-    # If we are performing a copy, we want to locate the source object physical locations,
-    # and only return the locators in the same locations so the client can do "local bucket copy".
-    # NOTE: for future, consider whether the bucket is needed here. Should we only do intra-bucket copy?
-    copy_src_bucket: Optional[str]
-    copy_src_key: Optional[str]
-
-
-class StartUploadResponse(BaseModel):
-    locators: List[LocateObjectResponse]
-    multipart_upload_id: Optional[str]
-
-    copy_src_buckets: List[str]
-    copy_src_keys: List[str]
 
 
 @app.post("/start_upload")
@@ -312,9 +537,29 @@ async def start_upload(
         await db.refresh(existing_objects[0], ["logical_object"])
         logical_object = existing_objects[0].logical_object
 
-    upload_to_region_tags = [request.client_from_region] + conf.lookup(
-        request.client_from_region
-    ).broadcast_to
+    # Old version: look up config file
+    # upload_to_region_tags = [request.client_from_region] + conf.lookup(request.client_from_region).broadcast_to
+
+    logical_bucket = (
+        await db.execute(
+            select(DBLogicalBucket)
+            .options(selectinload(DBLogicalBucket.physical_bucket_locators))
+            .where(DBLogicalBucket.bucket == request.bucket)
+        )
+    ).scalar_one_or_none()
+    physical_bucket_locators = logical_bucket.physical_bucket_locators
+
+    if primary_exists:
+        # Assume that physical bucket locators for this region already exists and we don't need to create them
+        upload_to_region_tags = [request.client_from_region]
+    else:
+        # Push-based: upload to primary region and broadcast to other regions marked with need_warmup
+        upload_to_region_tags = [
+            locator.location_tag
+            for locator in physical_bucket_locators
+            if locator.is_primary or locator.need_warmup
+        ]
+
     copy_src_buckets = []
     copy_src_keys = []
     if copy_src_locations is not None:
@@ -348,20 +593,32 @@ async def start_upload(
         if region_tag in existing_tags:
             continue
 
-        location = conf.lookup(region_tag)
+        physical_bucket_locator = next(
+            (pbl for pbl in physical_bucket_locators if pbl.location_tag == region_tag),
+            None,
+        )
+        if physical_bucket_locator is None:
+            logger.error(
+                f"No physical bucket locator found for region tag: {region_tag}"
+            )
+            return Response(
+                status_code=500,
+                content=f"No physical bucket locator found for upload region tag {region_tag}",
+            )
+
         locators.append(
             DBPhysicalObjectLocator(
                 logical_object=logical_object,
                 location_tag=region_tag,
-                cloud=location.cloud,
-                region=location.region,
-                bucket=location.bucket,
-                key=location.prefix + request.key,
+                cloud=physical_bucket_locator.cloud,
+                region=physical_bucket_locator.region,
+                bucket=physical_bucket_locator.bucket,
+                key=physical_bucket_locator.prefix + request.key,
                 status=Status.pending,
+                is_primary=(region_tag == request.client_from_region)
+                and (not primary_exists),
             )
         )
-    if not primary_exists:
-        locators[0].is_primary = True
 
     db.add_all(locators)
     await db.commit()
@@ -384,28 +641,6 @@ async def start_upload(
         copy_src_buckets=copy_src_buckets,
         copy_src_keys=copy_src_keys,
     )
-
-
-class PatchUploadIsCompleted(BaseModel):
-    # This is called when the PUT operation finishes or upon CompleteMultipartUpload
-    id: int
-    size: NonNegativeInt = Field(..., minimum=0, format="int64")
-    etag: str
-    last_modified: datetime
-
-
-class PatchUploadMultipartUploadId(BaseModel):
-    # This is called when the CreateMultipartUpload operation finishes
-    id: int
-    multipart_upload_id: str
-
-
-class PatchUploadMultipartUploadPart(BaseModel):
-    # This is called when the UploadPart operation finishes
-    id: int
-    part_number: int
-    etag: str
-    size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
 
 @app.patch("/complete_upload")
@@ -491,29 +726,6 @@ async def append_part(request: PatchUploadMultipartUploadPart, db: DBSession):
     await db.commit()
 
 
-class ContinueUploadRequest(LocateObjectRequest):
-    multipart_upload_id: str
-
-    do_list_parts: bool = False
-
-    copy_src_bucket: Optional[str] = None
-    copy_src_key: Optional[str] = None
-
-
-class ContinueUploadPhysicalPart(BaseModel):
-    part_number: int
-    etag: str
-
-
-class ContinueUploadResponse(LocateObjectResponse):
-    multipart_upload_id: str
-
-    parts: Optional[List[ContinueUploadPhysicalPart]] = None
-
-    copy_src_bucket: Optional[str] = None
-    copy_src_key: Optional[str] = None
-
-
 @app.post("/continue_upload")
 async def continue_upload(
     request: ContinueUploadRequest, db: DBSession
@@ -589,31 +801,45 @@ async def continue_upload(
     ]
 
 
-class ListObjectRequest(BaseModel):
-    bucket: str
-    prefix: Optional[str] = None
+@app.post("/list_buckets")
+async def list_buckets(db: DBSession) -> List[BucketResponse]:
+    stmt = select(DBLogicalBucket).where(DBLogicalBucket.status == Status.ready)
+    buckets = (await db.scalars(stmt)).all()
 
+    logger.debug(f"list_buckets: -> {buckets}")
 
-class ObjectResponse(BaseModel):
-    bucket: str
-    key: str
-    size: NonNegativeInt = Field(..., minimum=0, format="int64")
-    etag: str
-    last_modified: datetime
+    return [
+        BucketResponse(
+            bucket=bucket.bucket,
+            creation_date=bucket.creation_date,
+        )
+        for bucket in buckets
+    ]
 
 
 @app.post("/list_objects")
 async def list_objects(
     request: ListObjectRequest, db: DBSession
 ) -> List[ObjectResponse]:
-    stmt = (
-        select(DBLogicalObject)
-        .where(DBLogicalObject.bucket == request.bucket)
-        .where(DBLogicalObject.status == Status.ready)
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    logical_bucket = await db.scalar(stmt)
+    if logical_bucket is None:
+        return Response(status_code=404, content="Bucket Not Found")
+
+    stmt = select(DBLogicalObject).where(
+        DBLogicalObject.bucket == logical_bucket.bucket,
+        DBLogicalObject.status == Status.ready,
     )
     if request.prefix is not None:
         stmt = stmt.where(DBLogicalObject.key.startswith(request.prefix))
-    objects = (await db.scalars(stmt)).all()
+
+    objects = await db.execute(stmt)
+    objects_all = objects.scalars().all()
+
+    if not objects_all:
+        return []
 
     logger.debug(f"list_objects: {request} -> {objects}")
 
@@ -625,21 +851,8 @@ async def list_objects(
             etag=obj.etag,
             last_modified=obj.last_modified,
         )
-        for obj in objects
+        for obj in objects_all
     ]
-
-
-class HeadObjectRequest(BaseModel):
-    bucket: str
-    key: str
-
-
-class HeadObjectResponse(BaseModel):
-    bucket: str
-    key: str
-    size: NonNegativeInt = Field(..., minimum=0, format="int64")
-    etag: str
-    last_modified: datetime
 
 
 @app.post("/head_object")
@@ -666,12 +879,6 @@ async def head_object(request: HeadObjectRequest, db: DBSession) -> HeadObjectRe
     )
 
 
-class MultipartResponse(BaseModel):
-    bucket: str
-    key: str
-    upload_id: str
-
-
 @app.post("/list_multipart_uploads")
 async def list_multipart_uploads(
     request: ListObjectRequest, db: DBSession
@@ -696,21 +903,6 @@ async def list_multipart_uploads(
     ]
 
 
-class ListPartsRequest(BaseModel):
-    bucket: str
-    key: str
-    upload_id: str
-
-    part_number: Optional[int] = None
-
-
-class LogicalPartResponse(BaseModel):
-    part_number: int
-    etag: str
-    # TODO: remove this size thing, it doesn't matter
-    size: NonNegativeInt = Field(..., minimum=0, format="int64")
-
-
 @app.post("/list_parts")
 async def list_parts(
     request: ListPartsRequest, db: DBSession
@@ -724,7 +916,7 @@ async def list_parts(
     )
     objects = (await db.scalars(stmt)).all()
     if len(objects) == 0:
-        return Response(status_code=404, content="Not Found")
+        return Response(status_code=404, content="Object Multipart Not Found")
 
     assert len(objects) == 1, "should only have one object"
     await db.refresh(objects[0], ["multipart_upload_parts"])
@@ -743,10 +935,6 @@ async def list_parts(
         for part in obj.multipart_upload_parts
         if request.part_number is None or part.part_number == request.part_number
     ]
-
-
-class HealthcheckResponse(BaseModel):
-    status: Literal["OK"]
 
 
 @app.get("/healthz")

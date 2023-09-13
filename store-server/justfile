@@ -23,6 +23,9 @@ run:
 test args='': clean
     pytest -v -s --show-capture=no . {{args}}
 
+register-config:
+    python register.py
+
 dump:
     sqlite3 skystore.db .dump
 

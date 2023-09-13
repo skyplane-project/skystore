@@ -1,6 +1,30 @@
 use s3s::dto::*;
 
 #[allow(dead_code)]
+pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> CreateBucketInput {
+    let mut builder = CreateBucketInput::builder();
+    builder.set_bucket(bucket);
+    if let Some(r) = region {
+        builder.set_create_bucket_configuration(Some(CreateBucketConfiguration {
+            location_constraint: Some(BucketLocationConstraint::from(r)),
+        }));
+    }
+    builder.build().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn new_delete_bucket_request(bucket: String) -> DeleteBucketInput {
+    let mut builder = DeleteBucketInput::builder();
+    builder.set_bucket(bucket);
+    builder.build().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn new_list_buckets_input() -> ListBucketsInput {
+    ListBucketsInput::default()
+}
+
+#[allow(dead_code)]
 pub fn new_list_objects_v2_input(bucket: String, prefix: Option<String>) -> ListObjectsV2Input {
     let mut builder = ListObjectsV2Input::builder();
     builder.set_bucket(bucket);

@@ -41,6 +41,8 @@ Run some sample commands using the AWS CLI:
 
 ```bash
 cd s3-proxy
+just run-cli-create-bucket
+just run-cli-list-buckets 
 just run-cli-put
 just run-cli-get
 just run-cli-list
@@ -59,6 +61,8 @@ cd store-server
 just generate-openapi
 just generate-rust
 ```
+
+
 ### Container Registry
 For a slightly more complicated workload, you can test the container registry support by running a local registry configured to push to the SkyStore service and push `alpine` image to it.
 

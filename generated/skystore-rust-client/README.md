@@ -26,29 +26,48 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**append_part**](docs/DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
+*DefaultApi* | [**complete_create_bucket**](docs/DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
+*DefaultApi* | [**complete_delete_bucket**](docs/DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 *DefaultApi* | [**complete_upload**](docs/DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 *DefaultApi* | [**continue_upload**](docs/DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
+*DefaultApi* | [**head_bucket**](docs/DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
 *DefaultApi* | [**head_object**](docs/DefaultApi.md#head_object) | **POST** /head_object | Head Object
 *DefaultApi* | [**healthz**](docs/DefaultApi.md#healthz) | **GET** /healthz | Healthz
+*DefaultApi* | [**list_buckets**](docs/DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
 *DefaultApi* | [**list_multipart_uploads**](docs/DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
+*DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
+*DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
+*DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
+*DefaultApi* | [**start_delete_bucket**](docs/DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
 *DefaultApi* | [**start_upload**](docs/DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 
 
 ## Documentation For Models
 
+ - [BucketResponse](docs/BucketResponse.md)
+ - [Configuration](docs/Configuration.md)
  - [ContinueUploadPhysicalPart](docs/ContinueUploadPhysicalPart.md)
  - [ContinueUploadRequest](docs/ContinueUploadRequest.md)
  - [ContinueUploadResponse](docs/ContinueUploadResponse.md)
+ - [CreateBucketIsCompleted](docs/CreateBucketIsCompleted.md)
+ - [CreateBucketRequest](docs/CreateBucketRequest.md)
+ - [CreateBucketResponse](docs/CreateBucketResponse.md)
+ - [DeleteBucketIsCompleted](docs/DeleteBucketIsCompleted.md)
+ - [DeleteBucketRequest](docs/DeleteBucketRequest.md)
+ - [DeleteBucketResponse](docs/DeleteBucketResponse.md)
+ - [HeadBucketRequest](docs/HeadBucketRequest.md)
  - [HeadObjectRequest](docs/HeadObjectRequest.md)
  - [HeadObjectResponse](docs/HeadObjectResponse.md)
  - [HealthcheckResponse](docs/HealthcheckResponse.md)
  - [HttpValidationError](docs/HttpValidationError.md)
  - [ListObjectRequest](docs/ListObjectRequest.md)
  - [ListPartsRequest](docs/ListPartsRequest.md)
+ - [LocateBucketRequest](docs/LocateBucketRequest.md)
+ - [LocateBucketResponse](docs/LocateBucketResponse.md)
  - [LocateObjectRequest](docs/LocateObjectRequest.md)
  - [LocateObjectResponse](docs/LocateObjectResponse.md)
  - [LocationInner](docs/LocationInner.md)
@@ -58,6 +77,8 @@ Class | Method | HTTP request | Description
  - [PatchUploadIsCompleted](docs/PatchUploadIsCompleted.md)
  - [PatchUploadMultipartUploadId](docs/PatchUploadMultipartUploadId.md)
  - [PatchUploadMultipartUploadPart](docs/PatchUploadMultipartUploadPart.md)
+ - [PhysicalLocation](docs/PhysicalLocation.md)
+ - [RegisterBucketRequest](docs/RegisterBucketRequest.md)
  - [StartUploadRequest](docs/StartUploadRequest.md)
  - [StartUploadResponse](docs/StartUploadResponse.md)
  - [ValidationError](docs/ValidationError.md)

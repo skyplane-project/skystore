@@ -2395,6 +2395,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
+ "lazy_static",
  "reqwest",
  "s3s",
  "s3s-aws",

@@ -1,6 +1,8 @@
 use crate::objstore_client::ObjectStoreClient;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
+use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
+use google_cloud_storage::http::buckets::insert::{BucketCreationConfig, InsertBucketRequest};
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
@@ -27,6 +29,50 @@ impl GCPObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for GCPObjectStoreClient {
+    async fn create_bucket(
+        &self,
+        req: S3Request<CreateBucketInput>,
+    ) -> S3Result<S3Response<CreateBucketOutput>> {
+        let req = req.input;
+        let bucket_name = req.bucket;
+
+        let bucket_config = BucketCreationConfig {
+            ..Default::default()
+        };
+
+        let res = self
+            .client
+            .insert_bucket(&InsertBucketRequest {
+                name: bucket_name,
+                bucket: bucket_config,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        Ok(S3Response::new(CreateBucketOutput {
+            location: Some(res.location),
+        }))
+    }
+
+    async fn delete_bucket(
+        &self,
+        req: S3Request<DeleteBucketInput>,
+    ) -> S3Result<S3Response<DeleteBucketOutput>> {
+        let req = req.input;
+        let bucket = req.bucket;
+
+        self.client
+            .delete_bucket(&DeleteBucketRequest {
+                bucket,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        Ok(S3Response::new(DeleteBucketOutput::default()))
+    }
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,
@@ -135,7 +181,8 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             bucket: source_bucket,
             key: source_object,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("Only bucket copy is supported");
         };
 
@@ -215,7 +262,8 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             bucket: source_bucket,
             key: source_object,
             version_id: _,
-        } = req.copy_source else {
+        } = req.copy_source
+        else {
             panic!("Only bucket copy is supported");
         };
 

@@ -9,10 +9,12 @@ class PhysicalLocation(BaseModel):
     bucket: str
     prefix: str = ""
 
-    broadcast_to: list[str] = Field(default_factory=list)
+    is_primary: bool = False
+    need_warmup: bool = False  # warmup on write
 
 
 class Configuration(BaseModel):
+    bucket_name: str = "default-skybucket"
     physical_locations: list[PhysicalLocation] = Field(default_factory=list)
 
     def lookup(self, location_name: str) -> PhysicalLocation:
@@ -28,26 +30,32 @@ TEST_CONFIGURATION = Configuration(
             name="aws:us-west-1",
             cloud="aws",
             region="us-west-1",
-            bucket="my-bucket-1",
-            prefix="my-prefix-1/",
-            broadcast_to=["aws:us-east-2"],
+            bucket="my-sky-bucket-1",
+            is_primary=True,
         ),
         PhysicalLocation(
             name="aws:us-east-2",
             cloud="aws",
             region="us-east-2",
-            bucket="my-bucket-2",
-            prefix="my-prefix-2/",
+            bucket="my-sky-bucket-2",
+            need_warmup=True,
         ),
         PhysicalLocation(
-            name="gcp:us-central-3",
+            name="gcp:us-west1",
             cloud="gcp",
-            region="us-central-3",
-            bucket="my-bucket-3",
-            prefix="my-prefix-3/",
+            region="us-west1",
+            bucket="my-sky-bucket-3",
+            need_warmup=True,
         ),
     ]
 )
+
+DEFAULT_INIT_REGIONS = [
+    "aws:us-west-1",
+    "aws:us-east-2",
+    # "gcp:us-west1",
+    # "aws:eu-central-1",
+]
 
 
 DEMO_CONFIGURATION = Configuration(
@@ -58,7 +66,7 @@ DEMO_CONFIGURATION = Configuration(
             region="westus3",
             bucket="sky-s3-backend",
             prefix="demo-dry-run/",
-            broadcast_to=["gcp:us-west1", "aws:us-west-2"],
+            # broadcast_to=["gcp:us-west1", "aws:us-west-2"],
         ),
         PhysicalLocation(
             name="gcp:us-west1",
@@ -66,6 +74,7 @@ DEMO_CONFIGURATION = Configuration(
             region="us-west1",
             bucket="sky-s3-backend",
             prefix="demo-dry-run/",
+            need_warmup=True,
         ),
         PhysicalLocation(
             name="aws:us-west-2",
@@ -73,6 +82,7 @@ DEMO_CONFIGURATION = Configuration(
             region="us-west-2",
             bucket="sky-s3-backend",
             prefix="demo-dry-run/",
+            need_warmup=True,
         ),
     ]
 )
