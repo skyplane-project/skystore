@@ -36,6 +36,8 @@ docs/PhysicalLocation.md
 docs/RegisterBucketRequest.md
 docs/StartUploadRequest.md
 docs/StartUploadResponse.md
+docs/StartWarmupRequest.md
+docs/StartWarmupResponse.md
 docs/ValidationError.md
 git_push.sh
 src/apis/configuration.rs
@@ -76,4 +78,6 @@ src/models/physical_location.rs
 src/models/register_bucket_request.rs
 src/models/start_upload_request.rs
 src/models/start_upload_response.rs
+src/models/start_warmup_request.rs
+src/models/start_warmup_response.rs
 src/models/validation_error.rs

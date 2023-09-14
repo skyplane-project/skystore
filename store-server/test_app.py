@@ -349,6 +349,79 @@ def test_get_object(client):
     assert location in {"us-west-1", "us-west1"}
 
 
+def test_warmup(client):
+    # init region in aws:us-west-1 and aws:us-east-2
+    resp = client.post(
+        "/start_create_bucket",
+        json={"bucket": "my-warmup-bucket", "client_from_region": "aws:us-east-2"},
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-warmup-bucket",
+            "key": "my-key-warmup",
+            "client_from_region": "aws:us-east-2",
+            "is_multipart": False,
+        },
+    )
+    for locator in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": locator["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00.000Z",
+            },
+        ).raise_for_status()
+
+    # warmup
+    resp = client.post(
+        "/start_warmup",
+        json={
+            "bucket": "my-warmup-bucket",
+            "key": "my-key-warmup",
+            "client_from_region": "aws:us-east-2",
+            "warmup_regions": ["aws:us-west-1"],
+        },
+    )
+    resp.raise_for_status()
+    for locator in resp.json()["dst_locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": locator["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00.000Z",
+            },
+        ).raise_for_status()
+
+    # try locate object from warmup region
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "my-warmup-bucket",
+            "key": "my-key-warmup",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    assert resp.json()["region"] == "us-west-1"
+
+
 def test_write_back(client):
     resp = client.post(
         "/start_create_bucket",

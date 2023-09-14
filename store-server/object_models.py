@@ -151,6 +151,15 @@ class StartUploadResponse(BaseModel):
     copy_src_keys: List[str]
 
 
+class StartWarmupRequest(LocateObjectRequest):
+    warmup_regions: List[str]
+
+
+class StartWarmupResponse(BaseModel):
+    src_locator: LocateObjectResponse
+    dst_locators: List[LocateObjectResponse]
+
+
 class PatchUploadIsCompleted(BaseModel):
     # This is called when the PUT operation finishes or upon CompleteMultipartUpload
     id: int

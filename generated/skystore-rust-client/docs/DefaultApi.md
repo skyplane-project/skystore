@@ -23,6 +23,7 @@ Method | HTTP request | Description
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
 [**start_delete_bucket**](DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
 [**start_upload**](DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
+[**start_warmup**](DefaultApi.md#start_warmup) | **POST** /start_warmup | Start Warmup
 
 
 
@@ -543,6 +544,36 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::StartUploadResponse**](StartUploadResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## start_warmup
+
+> crate::models::StartWarmupResponse start_warmup(start_warmup_request)
+Start Warmup
+
+Given the logical object information and warmup regions, return one or zero physical object locators.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**start_warmup_request** | [**StartWarmupRequest**](StartWarmupRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::StartWarmupResponse**](StartWarmupResponse.md)
 
 ### Authorization
 

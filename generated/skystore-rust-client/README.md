@@ -44,6 +44,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
 *DefaultApi* | [**start_delete_bucket**](docs/DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
 *DefaultApi* | [**start_upload**](docs/DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
+*DefaultApi* | [**start_warmup**](docs/DefaultApi.md#start_warmup) | **POST** /start_warmup | Start Warmup
 
 
 ## Documentation For Models
@@ -81,6 +82,8 @@ Class | Method | HTTP request | Description
  - [RegisterBucketRequest](docs/RegisterBucketRequest.md)
  - [StartUploadRequest](docs/StartUploadRequest.md)
  - [StartUploadResponse](docs/StartUploadResponse.md)
+ - [StartWarmupRequest](docs/StartWarmupRequest.md)
+ - [StartWarmupResponse](docs/StartWarmupResponse.md)
  - [ValidationError](docs/ValidationError.md)
 
 

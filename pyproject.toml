@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "skystore-cli"
+version = "0.1.0"
+description = "CLI for SkyStore"
+authors = ["Shu Liu <lshu@berkeley.edu>"]
+
+[tool.poetry.dependencies]
+python = "^3.8" 
+requests = "*"
+typer = "*"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+skystore = 'skystore_cli:app'
