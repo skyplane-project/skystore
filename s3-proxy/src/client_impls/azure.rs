@@ -276,6 +276,30 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
+    async fn delete_object(
+        &self,
+        req: S3Request<DeleteObjectInput>,
+    ) -> S3Result<S3Response<DeleteObjectOutput>> {
+        let req = req.input;
+        let container_name = req.bucket;
+        let blob_name = req.key;
+
+        let blob_client = self.blob_client(&container_name, &blob_name);
+        let resp = blob_client.delete().await;
+
+        match resp {
+            Ok(_resp) => Ok(S3Response::new(DeleteObjectOutput {
+                delete_marker: false, // TODO: add versioning support
+                version_id: None,
+                ..Default::default()
+            })),
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Request failed: {err}"),
+            )),
+        }
+    }
+
     async fn copy_object(
         &self,
         req: S3Request<CopyObjectInput>,

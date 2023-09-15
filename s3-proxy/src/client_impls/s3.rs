@@ -75,6 +75,13 @@ impl ObjectStoreClient for S3ObjectStoreClient {
         return self.s3_proxy.put_object(req).await;
     }
 
+    async fn delete_object(
+        &self,
+        req: S3Request<DeleteObjectInput>,
+    ) -> S3Result<S3Response<DeleteObjectOutput>> {
+        return self.s3_proxy.delete_object(req).await;
+    }
+
     async fn copy_object(
         &self,
         req: S3Request<CopyObjectInput>,

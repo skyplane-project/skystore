@@ -9,11 +9,90 @@ def client():
         yield client
 
 
-def test_bucket_create(client):
-    """Test that the `create_bucket` endpoint works."""
-    resp = client.post("/list_buckets")
+def test_delete_object(client):
+    """Test that the `delete_object` endpoint functions correctly."""
+
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-delete-object-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-west1"],
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-delete-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00",
+            },
+        ).raise_for_status()
+
+    resp = client.post(
+        "/list_objects",
+        json={
+            "bucket": "my-delete-object-bucket",
+        },
+    )
+    assert resp.json() != []
+
+    # delete object
+    resp = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-delete-object-bucket",
+            "keys": ["my-key"],
+        },
+    )
+
+    for key, physical_objects in resp.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={"ids": [physical_object["id"]]},
+            )
+            resp.raise_for_status()
+
+    resp = client.post(
+        "/list_objects",
+        json={
+            "bucket": "my-delete-object-bucket",
+        },
+    )
     assert resp.json() == []
 
+
+def test_create_bucket(client):
+    """Test that the `create_bucket` endpoint works."""
     resp = client.post(
         "/start_create_bucket",
         json={
@@ -50,12 +129,11 @@ def test_bucket_create(client):
 
     # list buckets
     resp = client.post("/list_buckets")
-    assert resp.json() == [
-        {
-            "bucket": "test-bucket-op",
-            "creation_date": "2020-01-01T00:00:00",
-        }
-    ]
+    target_bucket = {
+        "bucket": "test-bucket-op",
+        "creation_date": "2020-01-01T00:00:00",
+    }
+    assert target_bucket in resp.json()
 
     # delete bucket
     resp = client.post(
@@ -73,10 +151,10 @@ def test_bucket_create(client):
         resp.raise_for_status()
 
     resp = client.post("/list_buckets")
-    assert resp.json() == []
+    assert target_bucket not in resp.json()
 
 
-def test_bucket_register(client):
+def test_register_bucket(client):
     resp = client.post(
         "/register_buckets",
         json={

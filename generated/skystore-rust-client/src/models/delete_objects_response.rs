@@ -12,14 +12,14 @@
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct DeleteBucketResponse {
+pub struct DeleteObjectsResponse {
     #[serde(rename = "locators")]
-    pub locators: Vec<crate::models::LocateBucketResponse>,
+    pub locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>,
 }
 
-impl DeleteBucketResponse {
-    pub fn new(locators: Vec<crate::models::LocateBucketResponse>) -> DeleteBucketResponse {
-        DeleteBucketResponse {
+impl DeleteObjectsResponse {
+    pub fn new(locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>) -> DeleteObjectsResponse {
+        DeleteObjectsResponse {
             locators,
         }
     }

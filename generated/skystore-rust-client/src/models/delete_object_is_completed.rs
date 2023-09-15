@@ -11,15 +11,15 @@
 
 
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct DeleteBucketIsCompleted {
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct DeleteObjectIsCompleted {
     #[serde(rename = "id")]
     pub id: i32,
 }
 
-impl DeleteBucketIsCompleted {
-    pub fn new(id: i32) -> DeleteBucketIsCompleted {
-        DeleteBucketIsCompleted {
+impl DeleteObjectIsCompleted {
+    pub fn new(id: i32) -> DeleteObjectIsCompleted {
+        DeleteObjectIsCompleted {
             id,
         }
     }

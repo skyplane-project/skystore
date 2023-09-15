@@ -48,6 +48,20 @@ pub fn new_get_object_request(bucket: String, key: String) -> GetObjectInput {
     builder.build().unwrap()
 }
 
+pub fn new_delete_object_request(bucket: String, key: String) -> DeleteObjectInput {
+    let mut builder = DeleteObjectInput::builder();
+    builder.set_bucket(bucket);
+    builder.set_key(key);
+    builder.build().unwrap()
+}
+
+pub fn new_delete_objects_request(bucket: String, delete: Delete) -> DeleteObjectsInput {
+    let mut builder = DeleteObjectsInput::builder();
+    builder.set_bucket(bucket);
+    builder.set_delete(delete);
+    builder.build().unwrap()
+}
+
 pub fn new_copy_object_request(
     src_bucket: String,
     src_key: String,

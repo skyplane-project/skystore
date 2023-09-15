@@ -11,19 +11,19 @@
 
 
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ListObjectRequest {
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct DeleteObjectRequest {
     #[serde(rename = "bucket")]
     pub bucket: String,
-    #[serde(rename = "prefix", skip_serializing_if = "Option::is_none")]
-    pub prefix: Option<String>,
+    #[serde(rename = "key")]
+    pub key: String,
 }
 
-impl ListObjectRequest {
-    pub fn new(bucket: String) -> ListObjectRequest {
-        ListObjectRequest {
+impl DeleteObjectRequest {
+    pub fn new(bucket: String, key: String) -> DeleteObjectRequest {
+        DeleteObjectRequest {
             bucket,
-            prefix: None,
+            key,
         }
     }
 }

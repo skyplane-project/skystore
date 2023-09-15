@@ -12,18 +12,15 @@
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct HeadObjectRequest {
-    #[serde(rename = "bucket")]
-    pub bucket: String,
-    #[serde(rename = "key")]
-    pub key: String,
+pub struct DeleteObjectsIsCompleted {
+    #[serde(rename = "ids")]
+    pub ids: Vec<i32>,
 }
 
-impl HeadObjectRequest {
-    pub fn new(bucket: String, key: String) -> HeadObjectRequest {
-        HeadObjectRequest {
-            bucket,
-            key,
+impl DeleteObjectsIsCompleted {
+    pub fn new(ids: Vec<i32>) -> DeleteObjectsIsCompleted {
+        DeleteObjectsIsCompleted {
+            ids,
         }
     }
 }

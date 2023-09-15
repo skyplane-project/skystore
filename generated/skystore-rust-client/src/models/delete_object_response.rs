@@ -11,15 +11,15 @@
 
 
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct DeleteBucketResponse {
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct DeleteObjectResponse {
     #[serde(rename = "locators")]
-    pub locators: Vec<crate::models::LocateBucketResponse>,
+    pub locators: Vec<crate::models::LocateObjectResponse>,
 }
 
-impl DeleteBucketResponse {
-    pub fn new(locators: Vec<crate::models::LocateBucketResponse>) -> DeleteBucketResponse {
-        DeleteBucketResponse {
+impl DeleteObjectResponse {
+    pub fn new(locators: Vec<crate::models::LocateObjectResponse>) -> DeleteObjectResponse {
+        DeleteObjectResponse {
             locators,
         }
     }
