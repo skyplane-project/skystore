@@ -433,7 +433,7 @@ async def complete_delete_objects(request: DeleteObjectsIsCompleted, db: DBSessi
             )
 
         await db.delete(physical_locator)
-        
+
         remaining_physical_locators_stmt = select(DBPhysicalObjectLocator).where(
             DBPhysicalObjectLocator.logical_object_id
             == physical_locator.logical_object.id
