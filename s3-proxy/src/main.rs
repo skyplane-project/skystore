@@ -44,10 +44,9 @@ async fn main() {
     // let client_from_region = "aws:us-west-1".to_string();
 
     let init_regions: Vec<String> = env::var("INIT_REGIONS")
-        .expect("INIT_REGIONS must be set")
-        .split(',')
-        .map(|s| s.to_string())
-        .collect();
+        .map(|s| s.split(',').map(|s| s.to_string()).collect())
+        .unwrap_or_else(|_| vec!["aws:us-east-1".to_string()]);
+
     let client_from_region: String =
         env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
 
@@ -58,7 +57,6 @@ async fn main() {
     // https://github.com/Nugine/s3s/blob/b0b6878dafee0e08a876bec5239425fc40c01271/crates/s3s-fs/src/main.rs#L58-L66
 
     // let s3_service = S3ServiceBuilder::new(proxy).build().into_shared();
-    // TODO: hardcode for now for mount test
     let mut s3_service = {
         // let mut b = S3ServiceBuilder::new(proxy);
         let mut b = S3ServiceBuilder::new(proxy.clone());
@@ -96,13 +94,9 @@ async fn main() {
         .service_fn(move |req: hyper::Request<hyper::Body>| {
             let proxy_clone = proxy.clone();
 
-            println!("req.uri().path(): {:?}", req.uri().path());
-
             if req.uri().path() == "/warmup_object" {
                 async move {
                     if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
-                        // print body
-                        println!("body: {:?}", body);
                         let warmup_req: WarmupRequest = serde_json::from_slice(&body).unwrap();
 
                         let resp_body = match proxy_clone

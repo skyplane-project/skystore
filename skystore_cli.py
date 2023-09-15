@@ -1,5 +1,4 @@
 from typing import List
-from time import sleep
 import typer
 import json
 import subprocess
@@ -10,6 +9,10 @@ import requests
 app = typer.Typer(name="skystore")
 env = os.environ.copy()
 
+DEFAULT_SKY_S3_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "target/debug/sky-s3"
+)
+
 
 @app.command()
 def init(
@@ -18,6 +21,9 @@ def init(
     ),
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
+    ),
+    sky_s3_binary_path: str = typer.Option(
+        DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
 ):
     with open(config_file, "r") as f:
@@ -40,7 +46,10 @@ def init(
         subprocess.check_call(["mkdir", "-p", "/tmp/s3-local-cache"], env=env)
         subprocess.Popen(
             [
-                f"RUST_LOG=s3s_fs=DEBUG s3s-fs --host localhost --port 8014 --access-key {env['AWS_ACCESS_KEY_ID']} --secret-key {env['AWS_SECRET_ACCESS_KEY']} --domain-name localhost:8014 /tmp/s3-local-cache"
+                f"""RUST_LOG=s3s_fs=DEBUG s3s-fs --host localhost --port 8014 
+                --access-key {env['AWS_ACCESS_KEY_ID']} 
+                --secret-key {env['AWS_SECRET_ACCESS_KEY']} 
+                --domain-name localhost:8014 /tmp/s3-local-cache"""
             ],
             shell=True,
             env=env,
@@ -61,8 +70,7 @@ def init(
 
     # Start the s3-proxy
     subprocess.Popen(
-        ["cargo", "run"],
-        cwd="s3-proxy",
+        [sky_s3_binary_path],
         env=env,
         # stdout=subprocess.DEVNULL,
         # stderr=subprocess.DEVNULL,
