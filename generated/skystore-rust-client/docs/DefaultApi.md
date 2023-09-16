@@ -7,6 +7,7 @@ Method | HTTP request | Description
 [**append_part**](DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
 [**complete_create_bucket**](DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
 [**complete_delete_bucket**](DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
+[**complete_delete_objects**](DefaultApi.md#complete_delete_objects) | **PATCH** /complete_delete_objects | Complete Delete Objects
 [**complete_upload**](DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 [**continue_upload**](DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
 [**head_bucket**](DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
@@ -22,6 +23,7 @@ Method | HTTP request | Description
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
 [**start_delete_bucket**](DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
+[**start_delete_objects**](DefaultApi.md#start_delete_objects) | **POST** /start_delete_objects | Start Delete Objects
 [**start_upload**](DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 
 
@@ -93,6 +95,34 @@ Complete Delete Bucket
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **delete_bucket_is_completed** | [**DeleteBucketIsCompleted**](DeleteBucketIsCompleted.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## complete_delete_objects
+
+> serde_json::Value complete_delete_objects(delete_objects_is_completed)
+Complete Delete Objects
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**delete_objects_is_completed** | [**DeleteObjectsIsCompleted**](DeleteObjectsIsCompleted.md) |  | [required] |
 
 ### Return type
 
@@ -515,6 +545,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::DeleteBucketResponse**](DeleteBucketResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## start_delete_objects
+
+> crate::models::DeleteObjectsResponse start_delete_objects(delete_objects_request)
+Start Delete Objects
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**delete_objects_request** | [**DeleteObjectsRequest**](DeleteObjectsRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::DeleteObjectsResponse**](DeleteObjectsResponse.md)
 
 ### Authorization
 

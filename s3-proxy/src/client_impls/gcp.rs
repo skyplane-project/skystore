@@ -5,6 +5,7 @@ use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
 use google_cloud_storage::http::buckets::insert::{BucketCreationConfig, InsertBucketRequest};
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
+use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
@@ -165,6 +166,30 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         Ok(S3Response::new(PutObjectOutput {
             e_tag: Some(res.etag),
+            ..Default::default()
+        }))
+    }
+
+    async fn delete_object(
+        &self,
+        req: S3Request<DeleteObjectInput>,
+    ) -> S3Result<S3Response<DeleteObjectOutput>> {
+        let req = req.input;
+        let bucket = req.bucket;
+        let object = req.key;
+
+        self.client
+            .delete_object(&DeleteObjectRequest {
+                bucket,
+                object,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        Ok(S3Response::new(DeleteObjectOutput {
+            delete_marker: false, // TODO: add versioning support
+            version_id: None,
             ..Default::default()
         }))
     }

@@ -9,18 +9,15 @@
  */
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LocateBucketRequest {
+pub struct DeleteObjectsRequest {
     #[serde(rename = "bucket")]
     pub bucket: String,
-    #[serde(rename = "client_from_region")]
-    pub client_from_region: String,
+    #[serde(rename = "keys")]
+    pub keys: Vec<String>,
 }
 
-impl LocateBucketRequest {
-    pub fn new(bucket: String, client_from_region: String) -> LocateBucketRequest {
-        LocateBucketRequest {
-            bucket,
-            client_from_region,
-        }
+impl DeleteObjectsRequest {
+    pub fn new(bucket: String, keys: Vec<String>) -> DeleteObjectsRequest {
+        DeleteObjectsRequest { bucket, keys }
     }
 }

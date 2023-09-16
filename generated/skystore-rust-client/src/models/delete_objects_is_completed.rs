@@ -9,16 +9,13 @@
  */
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LocationInner {}
-
-impl LocationInner {
-    pub fn new() -> LocationInner {
-        LocationInner {}
-    }
+pub struct DeleteObjectsIsCompleted {
+    #[serde(rename = "ids")]
+    pub ids: Vec<i32>,
 }
 
-impl Default for LocationInner {
-    fn default() -> Self {
-        Self::new()
+impl DeleteObjectsIsCompleted {
+    pub fn new(ids: Vec<i32>) -> DeleteObjectsIsCompleted {
+        DeleteObjectsIsCompleted { ids }
     }
 }
