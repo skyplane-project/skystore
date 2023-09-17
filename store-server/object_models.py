@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
 from utils import Base, Status
 from sqlalchemy.dialects.postgresql import BIGINT
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 
 class DBLogicalObject(Base):
@@ -54,6 +54,7 @@ class DBPhysicalObjectLocator(Base):
     bucket = Column(
         String, ForeignKey("physical_bucket_locators.bucket")
     )  # added ForeignKey
+
     physical_bucket = relationship(
         "DBPhysicalBucketLocator",
         back_populates="physical_object_locators",
@@ -254,3 +255,16 @@ class LogicalPartResponse(BaseModel):
 
 class HealthcheckResponse(BaseModel):
     status: Literal["OK"]
+
+
+class DeleteObjectsRequest(BaseModel):
+    bucket: str
+    keys: List[str]
+
+
+class DeleteObjectsResponse(BaseModel):
+    locators: Dict[str, List[LocateObjectResponse]]
+
+
+class DeleteObjectsIsCompleted(BaseModel):
+    ids: List[int]

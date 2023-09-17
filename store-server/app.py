@@ -55,6 +55,9 @@ from object_models import (
     ListPartsRequest,
     LogicalPartResponse,
     HealthcheckResponse,
+    DeleteObjectsRequest,
+    DeleteObjectsResponse,
+    DeleteObjectsIsCompleted,
 )
 
 logging.basicConfig(
@@ -350,7 +353,102 @@ async def complete_delete_bucket(request: DeleteBucketIsCompleted, db: DBSession
         logger.error(f"Error occurred while committing changes: {e}")
         return Response(status_code=500, content="Error committing changes")
 
-    return DeleteBucketIsCompleted(id=physical_locator.logical_bucket.id)
+
+@app.post("/start_delete_objects")
+async def start_delete_objects(
+    request: DeleteObjectsRequest, db: DBSession
+) -> DeleteObjectsResponse:
+    locator_dict = {}
+    for key in request.keys:
+        stmt = (
+            select(DBLogicalObject)
+            .options(joinedload(DBLogicalObject.physical_object_locators))
+            .where(DBLogicalObject.bucket == request.bucket)
+            .where(DBLogicalObject.key == key)
+            .where(DBLogicalObject.status == Status.ready)
+        )
+        logical_obj = await db.scalar(stmt)
+        if logical_obj is None:
+            return Response(status_code=404, content="Object not found")
+
+        locators = []
+        for physical_locator in logical_obj.physical_object_locators:
+            if physical_locator.status not in Status.ready:
+                logger.error(
+                    f"Cannot delete physical object. Current status is {physical_locator.status}"
+                )
+                return Response(
+                    status_code=409,
+                    content="Cannot delete physical object in current state",
+                )
+
+            physical_locator.status = Status.pending_deletion
+            locators.append(
+                LocateObjectResponse(
+                    id=physical_locator.id,
+                    tag=physical_locator.location_tag,
+                    cloud=physical_locator.cloud,
+                    bucket=physical_locator.bucket,
+                    region=physical_locator.region,
+                    key=physical_locator.key,
+                    size=physical_locator.logical_object.size,
+                    last_modified=physical_locator.logical_object.last_modified,
+                    etag=physical_locator.logical_object.etag,
+                )
+            )
+
+        logical_obj.status = Status.pending_deletion
+
+        try:
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Error occurred while committing changes: {e}")
+            return Response(status_code=500, content="Error committing changes")
+
+        logger.debug(f"start_delete_object: {request} -> {logical_obj}")
+
+        locator_dict[key] = locators
+
+    return DeleteObjectsResponse(locators=locator_dict)
+
+
+@app.patch("/complete_delete_objects")
+async def complete_delete_objects(request: DeleteObjectsIsCompleted, db: DBSession):
+    # TODO: need to deal with partial failures
+    for id in request.ids:
+        physical_locator_stmt = select(DBPhysicalObjectLocator).where(
+            DBPhysicalObjectLocator.id == id
+        )
+        physical_locator = await db.scalar(physical_locator_stmt)
+
+        if physical_locator is None:
+            logger.error(f"physical locator not found: {request}")
+            return Response(status_code=404, content="Physical Object Not Found")
+
+        await db.refresh(physical_locator, ["logical_object"])
+
+        logger.debug(f"complete_delete_object: {request} -> {physical_locator}")
+
+        if physical_locator.status != Status.pending_deletion:
+            return Response(
+                status_code=409, content="Physical object is not marked for deletion"
+            )
+
+        await db.delete(physical_locator)
+
+        remaining_physical_locators_stmt = select(DBPhysicalObjectLocator).where(
+            DBPhysicalObjectLocator.logical_object_id
+            == physical_locator.logical_object.id
+        )
+        remaining_physical_locators = await db.execute(remaining_physical_locators_stmt)
+        if not remaining_physical_locators.all():
+            await db.delete(physical_locator.logical_object)
+
+        try:
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Error occurred while committing changes: {e}")
+            return Response(status_code=500, content="Error committing changes")
 
 
 @app.post("/head_bucket")

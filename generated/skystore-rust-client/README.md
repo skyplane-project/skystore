@@ -28,6 +28,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**append_part**](docs/DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
 *DefaultApi* | [**complete_create_bucket**](docs/DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
 *DefaultApi* | [**complete_delete_bucket**](docs/DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
+*DefaultApi* | [**complete_delete_objects**](docs/DefaultApi.md#complete_delete_objects) | **PATCH** /complete_delete_objects | Complete Delete Objects
 *DefaultApi* | [**complete_upload**](docs/DefaultApi.md#complete_upload) | **PATCH** /complete_upload | Complete Upload
 *DefaultApi* | [**continue_upload**](docs/DefaultApi.md#continue_upload) | **POST** /continue_upload | Continue Upload
 *DefaultApi* | [**head_bucket**](docs/DefaultApi.md#head_bucket) | **POST** /head_bucket | Head Bucket
@@ -43,6 +44,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 *DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
 *DefaultApi* | [**start_delete_bucket**](docs/DefaultApi.md#start_delete_bucket) | **POST** /start_delete_bucket | Start Delete Bucket
+*DefaultApi* | [**start_delete_objects**](docs/DefaultApi.md#start_delete_objects) | **POST** /start_delete_objects | Start Delete Objects
 *DefaultApi* | [**start_upload**](docs/DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 *DefaultApi* | [**start_warmup**](docs/DefaultApi.md#start_warmup) | **POST** /start_warmup | Start Warmup
 
@@ -60,6 +62,9 @@ Class | Method | HTTP request | Description
  - [DeleteBucketIsCompleted](docs/DeleteBucketIsCompleted.md)
  - [DeleteBucketRequest](docs/DeleteBucketRequest.md)
  - [DeleteBucketResponse](docs/DeleteBucketResponse.md)
+ - [DeleteObjectsIsCompleted](docs/DeleteObjectsIsCompleted.md)
+ - [DeleteObjectsRequest](docs/DeleteObjectsRequest.md)
+ - [DeleteObjectsResponse](docs/DeleteObjectsResponse.md)
  - [HeadBucketRequest](docs/HeadBucketRequest.md)
  - [HeadObjectRequest](docs/HeadObjectRequest.md)
  - [HeadObjectResponse](docs/HeadObjectResponse.md)
