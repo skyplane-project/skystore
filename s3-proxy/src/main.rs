@@ -4,7 +4,6 @@ use s3s::service::S3ServiceBuilder;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 use tracing::info;
-
 mod client_impls;
 mod objstore_client;
 mod skyproxy;
@@ -12,9 +11,9 @@ mod stream_utils;
 mod type_utils;
 
 use crate::skyproxy::SkyProxy;
-use futures::FutureExt;
-use hyper::{Body as HyperBody, Response, StatusCode};
+use futures::future::{self, FutureExt};
 use std::env;
+use std::str::FromStr;
 use tower::Service;
 
 #[derive(serde::Deserialize)]
@@ -57,7 +56,7 @@ async fn main() {
     // https://github.com/Nugine/s3s/blob/b0b6878dafee0e08a876bec5239425fc40c01271/crates/s3s-fs/src/main.rs#L58-L66
 
     // let s3_service = S3ServiceBuilder::new(proxy).build().into_shared();
-    let mut s3_service = {
+    let s3_service = {
         // let mut b = S3ServiceBuilder::new(proxy);
         let mut b = S3ServiceBuilder::new(proxy.clone());
         // Enable authentication
@@ -92,39 +91,48 @@ async fn main() {
                 ),
         )
         .service_fn(move |req: hyper::Request<hyper::Body>| {
-            let proxy_clone = proxy.clone();
+            let mut s3_service = s3_service.clone();
 
             if req.uri().path() == "/warmup_object" {
-                async move {
+                let fut = async move {
                     if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
                         let warmup_req: WarmupRequest = serde_json::from_slice(&body).unwrap();
 
-                        let resp_body = match proxy_clone
-                            .warmup_object(
-                                warmup_req.bucket,
-                                warmup_req.key,
-                                warmup_req.warmup_regions,
+                        let mut new_req = hyper::Request::builder()
+                            .method(hyper::Method::HEAD)
+                            .uri(
+                                hyper::Uri::from_str(&format!(
+                                    "/{}{}",
+                                    warmup_req.bucket, warmup_req.key
+                                ))
+                                .expect("Failed to construct URI"),
                             )
-                            .await
-                        {
-                            Ok(_) => "Warmup completed.",
-                            Err(_) => "Warmup failed.",
-                        };
+                            .body(hyper::Body::empty())
+                            .expect("Failed to construct request");
 
-                        let s3s_body = s3s::Body::from(HyperBody::from(resp_body));
-                        Ok(Response::new(s3s_body))
+                        // Add warmup header
+                        {
+                            let headers = new_req.headers_mut();
+                            headers.insert(
+                                "X-SKYSTORE-WARMUP",
+                                warmup_req.warmup_regions.join(",").parse().unwrap(),
+                            );
+                        }
+
+                        // Forward the new request to the S3 service
+                        s3_service.call(new_req).await
                     } else {
-                        let error_body =
-                            s3s::Body::from(HyperBody::from("Failed to parse request."));
-                        Ok(Response::builder()
-                            .status(StatusCode::BAD_REQUEST)
-                            .body(error_body)
-                            .unwrap())
+                        let res = hyper::Response::builder()
+                            .status(hyper::StatusCode::BAD_REQUEST)
+                            .body(s3s::Body::from("Bad request".to_string()))
+                            .expect("Failed to construct the response");
+
+                        future::ok(res).await
                     }
-                }
-                .boxed()
+                };
+                Box::pin(fut)
             } else {
-                s3_service.call(req)
+                s3_service.call(req).boxed()
             }
         });
 
