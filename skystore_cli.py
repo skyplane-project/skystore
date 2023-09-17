@@ -13,6 +13,10 @@ DEFAULT_SKY_S3_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "target/debug/sky-s3"
 )
 
+DEFAULT_STORE_SERVER_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "store-server"
+)
+
 
 @app.command()
 def init(
@@ -44,26 +48,26 @@ def init(
     # Local test: start local s3
     if local_test:
         subprocess.check_call(["mkdir", "-p", "/tmp/s3-local-cache"], env=env)
+        s3s_fs_command = (
+            "RUST_LOG=s3s_fs=DEBUG s3s-fs --host localhost --port 8014"
+            f" --access-key {env['AWS_ACCESS_KEY_ID']} "
+            f"--secret-key {env['AWS_SECRET_ACCESS_KEY']} "
+            "--domain-name localhost:8014 /tmp/s3-local-cache"
+        )
         subprocess.Popen(
-            [
-                f"""RUST_LOG=s3s_fs=DEBUG s3s-fs --host localhost --port 8014 
-                --access-key {env['AWS_ACCESS_KEY_ID']} 
-                --secret-key {env['AWS_SECRET_ACCESS_KEY']} 
-                --domain-name localhost:8014 /tmp/s3-local-cache"""
-            ],
+            [s3s_fs_command],
             shell=True,
             env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
         )
 
     # Start the skystore server
     subprocess.Popen(
-        ["cd store-server; rm skystore.db; uvicorn app:app --reload --port 3000"],
+        [
+            f"cd {DEFAULT_STORE_SERVER_PATH}; "
+            "rm skystore.db; uvicorn app:app --reload --port 3000"
+        ],
         shell=True,
         env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
     )
 
     time.sleep(2)
