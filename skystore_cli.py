@@ -44,6 +44,7 @@ def init(
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
     }
+    env = {k: v for k, v in env.items() if v is not None}
 
     # Local test: start local s3
     if local_test:
@@ -62,10 +63,8 @@ def init(
 
     # Start the skystore server
     subprocess.Popen(
-        [
-            f"cd {DEFAULT_STORE_SERVER_PATH}; "
-            "rm skystore.db; uvicorn app:app --reload --port 3000"
-        ],
+        f"cd {DEFAULT_STORE_SERVER_PATH}; "
+        "rm skystore.db; uvicorn app:app --reload --port 3000",
         shell=True,
         env=env,
     )
@@ -73,12 +72,16 @@ def init(
     time.sleep(2)
 
     # Start the s3-proxy
-    subprocess.Popen(
-        [sky_s3_binary_path],
-        env=env,
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.DEVNULL,
-    )
+    if os.path.exists(sky_s3_binary_path):
+        subprocess.Popen(
+            sky_s3_binary_path,
+            env=env,
+        )
+    else:
+        subprocess.Popen(
+            ["cargo", "run"],
+            env=env,
+        )
     typer.secho(f"SkyStore initialized at: {'http://127.0.0.1:8002'}", fg="green")
 
 
