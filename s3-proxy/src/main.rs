@@ -49,7 +49,11 @@ async fn main() {
     let client_from_region: String =
         env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
 
-    let proxy = SkyProxy::new(init_regions, client_from_region).await;
+    let local_run: bool = env::var("LOCAL")
+        .map(|s| s.parse::<bool>().unwrap())
+        .unwrap_or(true);
+
+    let proxy = SkyProxy::new(init_regions, client_from_region, local_run).await;
 
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain

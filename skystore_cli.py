@@ -34,7 +34,6 @@ def init(
         config = json.load(f)
 
     init_regions_str = ",".join(config["init_regions"])
-
     env = {
         **os.environ,
         "INIT_REGIONS": init_regions_str,
@@ -43,6 +42,7 @@ def init(
         "RUST_BACKTRACE": "full",
         "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID"),
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        "LOCAL": str(local_test).lower(),
     }
 
     # Local test: start local s3

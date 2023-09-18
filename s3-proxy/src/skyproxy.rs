@@ -22,121 +22,92 @@ pub struct SkyProxy {
 }
 
 impl SkyProxy {
-    pub async fn new(regions: Vec<String>, client_from_region: String) -> Self {
+    pub async fn new(regions: Vec<String>, client_from_region: String, local: bool) -> Self {
         let mut store_clients = HashMap::new();
 
-        //// Test Configuration, hard coded from conf.py
-        // let regions = vec![
-        //     "aws:us-west-1",
-        //     "aws:us-east-2",
-        //     "gcp:us-west1",
-        //     "aws:eu-central-1",
-        // ];
+        if local {
+            // Local test configuration
+            for r in regions {
+                let split: Vec<&str> = r.splitn(2, ':').collect();
+                let (_, region) = (split[0], split[1]);
 
-        // Local test configuration
-        for r in regions {
-            let split: Vec<&str> = r.splitn(2, ':').collect();
-            let (_, region) = (split[0], split[1]);
+                let client = Arc::new(Box::new(
+                    crate::client_impls::s3::S3ObjectStoreClient::new(
+                        "http://localhost:8014".to_string(),
+                    )
+                    .await,
+                ) as Box<dyn ObjectStoreClient>);
 
-            let client = Arc::new(Box::new(
-                crate::client_impls::s3::S3ObjectStoreClient::new(
-                    "http://localhost:8014".to_string(),
-                )
-                .await,
-            ) as Box<dyn ObjectStoreClient>);
+                store_clients.insert(r.to_string(), client.clone());
 
-            store_clients.insert(r.to_string(), client.clone());
-
-            // if bucket not exists, create one
-            let skystore_bucket_name = format!("skystore-{}", region);
-            match client
-                .create_bucket(S3Request::new(new_create_bucket_request(
-                    skystore_bucket_name,
-                    Some(r),
-                )))
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    if e.to_string().contains("BucketAlreadyExists") {
-                    } else {
-                        panic!("Failed to create bucket: {}", e);
+                // if bucket not exists, create one
+                let skystore_bucket_name = format!("skystore-{}", region);
+                match client
+                    .create_bucket(S3Request::new(new_create_bucket_request(
+                        skystore_bucket_name,
+                        Some(r),
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.to_string().contains("BucketAlreadyExists") {
+                        } else {
+                            panic!("Failed to create bucket: {}", e);
+                        }
                     }
-                }
-            };
+                };
+            }
+        } else {
+            // Real object store configuration (regions: init regions)
+            for r in regions {
+                let split: Vec<&str> = r.splitn(2, ':').collect();
+                let (provider, region) = (split[0], split[1]);
+
+                let client: Box<dyn ObjectStoreClient> = match provider {
+                    "azure" => {
+                        Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+                    }
+                    "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
+                    "aws" => Box::new(
+                        crate::client_impls::s3::S3ObjectStoreClient::new(format!(
+                            "https://s3.{}.amazonaws.com",
+                            region
+                        ))
+                        .await,
+                    ),
+                    _ => panic!("Unknown provider: {}", provider),
+                };
+
+                let client_arc = Arc::new(client);
+                store_clients.insert(r.to_string(), client_arc.clone());
+
+                // if bucket not exists, create one
+                let skystore_bucket_name = format!("skystore-{}", region);
+                let bucket_region = if provider == "aws" {
+                    Some(region.to_string())
+                } else {
+                    None
+                };
+
+                match client_arc
+                    .create_bucket(S3Request::new(new_create_bucket_request(
+                        skystore_bucket_name.clone(),
+                        bucket_region,
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.to_string().contains("BucketAlreadyOwnedByYou") {
+                            // Bucket already exists, no action needed
+                        } else {
+                            panic!("Failed to create bucket: {}", e);
+                        }
+                    }
+                };
+            }
         }
-
-        // Real object store configuration (regions: init regions)
-        // for r in regions {
-        //     let split: Vec<&str> = r.splitn(2, ':').collect();
-        //     let (provider, region) = (split[0], split[1]);
-
-        //     let client: Box<dyn ObjectStoreClient> = match provider {
-        //         "azure" => {
-        //             Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-        //         }
-        //         "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
-        //         "aws" => Box::new(
-        //             crate::client_impls::s3::S3ObjectStoreClient::new(format!(
-        //                 "https://s3.{}.amazonaws.com",
-        //                 region
-        //             ))
-        //             .await,
-        //         ),
-        //         _ => panic!("Unknown provider: {}", provider),
-        //     };
-
-        //     let client_arc = Arc::new(client);
-        //     store_clients.insert(r.to_string(), client_arc.clone());
-
-        //     // TODO: might need to fix this, create bucket in INIT_REGIONS at startup in the dataplane for now
-        //     let skystore_bucket_name = format!("skystore-{}", region);
-        //     let bucket_region = if provider == "aws" && region != "us-east-1" {
-        //         Some(region.to_string())
-        //     } else {
-        //         None
-        //     };
-        //     match client
-        //         .create_bucket(S3Request::new(new_create_bucket_request(
-        //             skystore_bucket_name,
-        //             bucket_region,
-        //         )))
-        //         .await
-        //     {
-        //         Ok(_) => {}
-        //         Err(e) => {
-        //             if e.to_string().contains("BucketAlreadyExists") {
-        //             } else {
-        //                 panic!("Failed to create bucket: {}", e);
-        //             }
-        //         }
-        //     };
-        // }
-
-        //// Demo Configuration
-        // store_clients.insert(
-        //     "azure:westus3".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "gcp:us-west1".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "aws:us-west-2".to_string(),
-        //     Arc::new(Box::new(
-        //         crate::client_impls::s3::S3ObjectStoreClient::new(
-        //             "https://s3.us-west-2.amazonaws.com".to_string(),
-        //         )
-        //         .await,
-        //     ) as Box<dyn ObjectStoreClient>),
-        // );
 
         let dir_conf = Configuration {
             base_path: "http://localhost:3000".to_string(),
@@ -1403,14 +1374,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_constructor() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
         assert!(!proxy.store_clients.is_empty());
     }
 
     #[tokio::test]
     #[serial]
     async fn test_list_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1427,7 +1398,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_then_get() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1477,7 +1448,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_copy_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1536,7 +1507,7 @@ mod tests {
     #[serial]
     #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1694,7 +1665,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_many_parts() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
