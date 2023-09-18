@@ -140,7 +140,7 @@ def warmup(
 ):
     try:
         resp = requests.post(
-            "http://127.0.0.1:8002/warmup_object",
+            "http://127.0.0.1:8002/_/warmup_object",
             json={
                 "bucket": bucket,
                 "key": key,

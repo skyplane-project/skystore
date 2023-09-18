@@ -97,7 +97,7 @@ async fn main() {
         .service_fn(move |req: hyper::Request<hyper::Body>| {
             let mut s3_service = s3_service.clone();
 
-            if req.uri().path() == "/warmup_object" {
+            if req.uri().path() == "/_/warmup_object" {
                 let fut = async move {
                     if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
                         let warmup_req: WarmupRequest = serde_json::from_slice(&body).unwrap();
