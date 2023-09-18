@@ -205,24 +205,6 @@ impl S3 for SkyProxy {
     }
 
     #[tracing::instrument(level = "info")]
-    async fn delete_object(
-        &self,
-        _req: S3Request<DeleteObjectInput>,
-    ) -> S3Result<S3Response<DeleteObjectOutput>> {
-        // todo!("delete_object");
-        // HACK: just returning okay now
-        return Ok(S3Response::new(DeleteObjectOutput::default()));
-    }
-
-    #[tracing::instrument(level = "info")]
-    async fn delete_objects(
-        &self,
-        _req: S3Request<DeleteObjectsInput>,
-    ) -> S3Result<S3Response<DeleteObjectsOutput>> {
-        return Ok(S3Response::new(DeleteObjectsOutput::default()));
-    }
-
-    #[tracing::instrument(level = "info")]
     async fn abort_multipart_upload(
         &self,
         _req: S3Request<AbortMultipartUploadInput>,
@@ -816,6 +798,168 @@ impl S3 for SkyProxy {
             e_tag: e_tags.pop(),
             ..Default::default()
         }))
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn delete_objects(
+        &self,
+        req: S3Request<DeleteObjectsInput>,
+    ) -> S3Result<S3Response<DeleteObjectsOutput>> {
+        // Send start delete objects request
+        let keys: Vec<_> = req
+            .input
+            .delete
+            .objects
+            .iter()
+            .map(|obj| obj.key.clone())
+            .collect();
+        let delete_objects_resp = apis::start_delete_objects(
+            &self.dir_conf,
+            models::DeleteObjectsRequest {
+                bucket: req.input.bucket.clone(),
+                keys,
+            },
+        )
+        .await
+        .unwrap();
+
+        // Delete objects in actual storages
+        let mut tasks = tokio::task::JoinSet::new();
+        for (key, locators) in delete_objects_resp.locators {
+            for locator in locators {
+                let client: Arc<Box<dyn ObjectStoreClient>> =
+                    self.store_clients.get(&locator.tag).unwrap().clone();
+                let bucket_name = locator.bucket.clone();
+                let key_clone = key.clone(); // Clone the key here
+
+                tasks.spawn(async move {
+                    let delete_object_response = client
+                        .delete_object(S3Request::new(new_delete_object_request(
+                            bucket_name.clone(),
+                            locator.key,
+                        )))
+                        .await;
+
+                    match delete_object_response {
+                        Ok(_resp) => Ok((key_clone.clone(), locator.id)),
+                        Err(_) => Err((
+                            key_clone.clone(),
+                            format!("Failed to delete object with key: {}", key_clone),
+                        )),
+                    }
+                });
+            }
+        }
+
+        // Collect results and complete delete objects
+        let mut key_to_results: HashMap<String, Vec<Result<i32, String>>> = HashMap::new();
+        while let Some(result) = tasks.join_next().await {
+            match result {
+                Ok(res) => match res {
+                    Ok((key, id)) => {
+                        key_to_results.entry(key).or_default().push(Ok(id));
+                    }
+                    Err((key, err)) => {
+                        key_to_results.entry(key).or_default().push(Err(err));
+                    }
+                },
+                // TODO: how to handle this?
+                Err(err) => {
+                    return Err(s3s::S3Error::with_message(
+                        s3s::S3ErrorCode::InternalError,
+                        format!("Error deleting objects: {}", err),
+                    ));
+                }
+            }
+        }
+
+        let mut deleted_objects = DeletedObjects::default();
+        let mut errors = Errors::default();
+
+        for (key, results) in key_to_results {
+            let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
+
+            // complete delete objects
+            let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
+            if !completed_ids.is_empty() {
+                apis::complete_delete_objects(
+                    &self.dir_conf,
+                    models::DeleteObjectsIsCompleted { ids: completed_ids },
+                )
+                .await
+                .unwrap();
+            }
+
+            if fails.is_empty() {
+                deleted_objects.push(DeletedObject {
+                    key: Some(key),
+                    delete_marker: false, // TODO: add versioning support
+                    ..Default::default()
+                });
+            } else {
+                errors.push(Error {
+                    key: Some(key),
+                    code: Some("InternalError".to_string()),
+                    message: Some(fails.into_iter().map(Result::unwrap_err).collect()),
+                    ..Default::default()
+                });
+            }
+        }
+
+        Ok(S3Response::new(DeleteObjectsOutput {
+            deleted: Some(deleted_objects),
+            errors: if errors.is_empty() {
+                None
+            } else {
+                Some(errors)
+            },
+            ..Default::default()
+        }))
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn delete_object(
+        &self,
+        req: S3Request<DeleteObjectInput>,
+    ) -> S3Result<S3Response<DeleteObjectOutput>> {
+        let delete = Delete {
+            objects: vec![ObjectIdentifier {
+                key: req.input.key.clone(),
+                version_id: req.input.version_id.clone(),
+            }],
+            ..Default::default()
+        };
+
+        let delete_object_input = new_delete_objects_request(req.input.bucket.clone(), delete);
+        let delete_object_req = S3Request::new(delete_object_input);
+
+        match self.delete_objects(delete_object_req).await {
+            Ok(delete_objects_resp) => {
+                if delete_objects_resp
+                    .output
+                    .deleted
+                    .and_then(|objs| {
+                        objs.into_iter()
+                            .find(|obj| obj.key.as_ref() == Some(&req.input.key))
+                    })
+                    .is_some()
+                {
+                    Ok(S3Response::new(DeleteObjectOutput {
+                        delete_marker: false, // TODO: add versioning support
+                        ..Default::default()
+                    }))
+                } else {
+                    Err(s3s::S3Error::with_message(
+                        s3s::S3ErrorCode::InternalError,
+                        "Object not deleted successfully".to_string(),
+                    ))
+                }
+            }
+            Err(e) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Error deleting object: {}", e),
+            )),
+        }
     }
 
     #[tracing::instrument(level = "info")]
@@ -1443,6 +1587,93 @@ mod tests {
             let body = result_bytes.concat();
             assert!(body == "abcdefg".to_string().into_bytes());
         }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_objects() {
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        for i in 0..3 {
+            let mut request =
+                new_put_object_request(bucket_name.to_string(), format!("my-key-{}", i));
+            let body = format!("data-{}", i).into_bytes();
+            request.body = Some(s3s::Body::from(body).into());
+
+            let req = S3Request::new(request);
+            proxy.put_object(req).await.unwrap().output;
+        }
+
+        let delete = Delete {
+            objects: vec![
+                ObjectIdentifier {
+                    key: "my-key-0".to_string(),
+                    version_id: None,
+                },
+                ObjectIdentifier {
+                    key: "my-key-1".to_string(),
+                    version_id: None,
+                },
+            ],
+            ..Default::default()
+        };
+
+        let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
+        let delete_objects_req = S3Request::new(delete_objects_input);
+        proxy
+            .delete_objects(delete_objects_req)
+            .await
+            .unwrap()
+            .output;
+
+        // Verify objects are deleted
+        let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
+        let list_resp = proxy
+            .list_objects_v2(S3Request::new(list_request))
+            .await
+            .unwrap()
+            .output;
+        assert!(list_resp.contents.unwrap().len() == 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_object() {
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        {
+            let mut request =
+                new_put_object_request(bucket_name.to_string(), "my-single-key".to_string());
+            let body = "single-data".to_string().into_bytes();
+            request.body = Some(s3s::Body::from(body).into());
+
+            let req = S3Request::new(request);
+            proxy.put_object(req).await.unwrap().output;
+        }
+
+        let delete_object_input =
+            new_delete_object_request(bucket_name.to_string(), "my-single-key".to_string());
+        let delete_object_req = S3Request::new(delete_object_input);
+        proxy.delete_object(delete_object_req).await.unwrap().output;
+
+        // Verify a single object was deleted
+        let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
+        let list_resp = proxy
+            .list_objects_v2(S3Request::new(list_request))
+            .await
+            .unwrap()
+            .output;
+        assert!(list_resp.contents.unwrap().is_empty());
     }
 
     #[tokio::test]

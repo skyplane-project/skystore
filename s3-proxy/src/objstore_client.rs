@@ -28,6 +28,11 @@ pub trait ObjectStoreClient: Send + Sync + 'static {
         req: S3Request<PutObjectInput>,
     ) -> S3Result<S3Response<PutObjectOutput>>;
 
+    async fn delete_object(
+        &self,
+        req: S3Request<DeleteObjectInput>,
+    ) -> S3Result<S3Response<DeleteObjectOutput>>;
+
     async fn copy_object(
         &self,
         req: S3Request<CopyObjectInput>,
