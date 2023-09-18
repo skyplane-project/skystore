@@ -1592,7 +1592,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1644,7 +1644,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
