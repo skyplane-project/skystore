@@ -9,7 +9,7 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import relationship
-from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, Field, NonNegativeInt
 from utils import Base, Status
 from sqlalchemy.dialects.postgresql import BIGINT
 from typing import Dict, List, Literal, Optional
@@ -98,7 +98,7 @@ class LocateObjectResponse(BaseModel):
     region: str
     key: str
 
-    size: Optional[PositiveInt] = Field(None, minimum=0, format="int64")
+    size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
 

@@ -813,15 +813,38 @@ impl S3 for SkyProxy {
             .iter()
             .map(|obj| obj.key.clone())
             .collect();
-        let delete_objects_resp = apis::start_delete_objects(
+        let delete_objects_resp = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
-                keys,
+                keys: keys.clone(),
             },
         )
         .await
-        .unwrap();
+        {
+            Ok(resp) => resp,
+            Err(_) => {
+                // TODO: fail silent (assume object exists error), fix this
+                // 1) Error handling
+                //      404: return delete success
+                //      Other errors: return delete failures
+                // 2) Partial Failure: some object can be deleted, some not
+                //      Deal with it on server & dataplane side
+                return Ok(S3Response::new(DeleteObjectsOutput {
+                    deleted: Some(
+                        keys.iter()
+                            .map(|key| DeletedObject {
+                                key: Some(key.clone()),
+                                delete_marker: false,
+                                ..Default::default()
+                            })
+                            .collect(),
+                    ),
+                    errors: None,
+                    ..Default::default()
+                }));
+            }
+        };
 
         // Delete objects in actual storages
         let mut tasks = tokio::task::JoinSet::new();
