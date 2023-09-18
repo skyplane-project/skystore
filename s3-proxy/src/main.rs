@@ -1,5 +1,6 @@
 use s3s::auth::SimpleAuth;
 use s3s::service::S3ServiceBuilder;
+use s3s::{S3Request, S3};
 
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -11,9 +12,10 @@ mod stream_utils;
 mod type_utils;
 
 use crate::skyproxy::SkyProxy;
-use futures::future::{self, FutureExt};
+use crate::type_utils::new_head_object_request;
+use futures::future::FutureExt;
+use s3s::S3Error;
 use std::env;
-use std::str::FromStr;
 use tower::Service;
 
 #[derive(serde::Deserialize)]
@@ -96,42 +98,38 @@ async fn main() {
         )
         .service_fn(move |req: hyper::Request<hyper::Body>| {
             let mut s3_service = s3_service.clone();
+            let proxy_clone = proxy.clone();
 
             if req.uri().path() == "/_/warmup_object" {
                 let fut = async move {
                     if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
                         let warmup_req: WarmupRequest = serde_json::from_slice(&body).unwrap();
 
-                        let mut new_req = hyper::Request::builder()
-                            .method(hyper::Method::HEAD)
-                            .uri(
-                                hyper::Uri::from_str(&format!(
-                                    "/{}{}",
-                                    warmup_req.bucket, warmup_req.key
-                                ))
-                                .expect("Failed to construct URI"),
-                            )
-                            .body(hyper::Body::empty())
-                            .expect("Failed to construct request");
+                        let head_object_input = new_head_object_request(
+                            warmup_req.bucket.clone(),
+                            warmup_req.key.clone(),
+                        );
 
-                        // Add warmup header
-                        {
-                            let headers = new_req.headers_mut();
-                            headers.insert(
-                                "X-SKYSTORE-WARMUP",
-                                warmup_req.warmup_regions.join(",").parse().unwrap(),
-                            );
-                        }
+                        let mut new_req = S3Request::new(head_object_input);
 
-                        // Forward the new request to the S3 service
-                        s3_service.call(new_req).await
+                        new_req.headers.insert(
+                            "X-SKYSTORE-WARMUP",
+                            warmup_req.warmup_regions.join(",").parse().unwrap(),
+                        );
+
+                        proxy_clone
+                            .head_object(new_req)
+                            .await
+                            .map_err(S3Error::internal_error)?;
+
+                        Ok::<_, S3Error>(hyper::Response::new(s3s::Body::from(Vec::new())))
                     } else {
                         let res = hyper::Response::builder()
                             .status(hyper::StatusCode::BAD_REQUEST)
                             .body(s3s::Body::from("Bad request".to_string()))
                             .expect("Failed to construct the response");
 
-                        future::ok(res).await
+                        Ok::<_, S3Error>(res)
                     }
                 };
                 Box::pin(fut)
