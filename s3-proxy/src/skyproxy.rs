@@ -22,124 +22,92 @@ pub struct SkyProxy {
 }
 
 impl SkyProxy {
-    pub async fn new(regions: Vec<String>, client_from_region: String) -> Self {
+    pub async fn new(regions: Vec<String>, client_from_region: String, local: bool) -> Self {
         let mut store_clients = HashMap::new();
 
-        //// Test Configuration, hard coded from conf.py
-        // let regions = vec![
-        //     "aws:us-west-1",
-        //     "aws:us-east-2",
-        //     "gcp:us-west1",
-        //     "aws:eu-central-1",
-        // ];
+        if local {
+            // Local test configuration
+            for r in regions {
+                let split: Vec<&str> = r.splitn(2, ':').collect();
+                let (_, region) = (split[0], split[1]);
 
-        // Local test configuration
-        for r in regions {
-            let split: Vec<&str> = r.splitn(2, ':').collect();
-            let (_, region) = (split[0], split[1]);
+                let client = Arc::new(Box::new(
+                    crate::client_impls::s3::S3ObjectStoreClient::new(
+                        "http://localhost:8014".to_string(),
+                    )
+                    .await,
+                ) as Box<dyn ObjectStoreClient>);
 
-            let client = Arc::new(Box::new(
-                crate::client_impls::s3::S3ObjectStoreClient::new(
-                    "http://localhost:8014".to_string(),
-                )
-                .await,
-            ) as Box<dyn ObjectStoreClient>);
+                store_clients.insert(r.to_string(), client.clone());
 
-            store_clients.insert(r.to_string(), client.clone());
-
-            // if bucket not exists, create one
-            let skystore_bucket_name = format!("skystore-{}", region);
-            match client
-                .create_bucket(S3Request::new(new_create_bucket_request(
-                    skystore_bucket_name,
-                    Some(r),
-                )))
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    if e.to_string().contains("BucketAlreadyExists") {
-                    } else {
-                        panic!("Failed to create bucket: {}", e);
+                // if bucket not exists, create one
+                let skystore_bucket_name = format!("skystore-{}", region);
+                match client
+                    .create_bucket(S3Request::new(new_create_bucket_request(
+                        skystore_bucket_name,
+                        Some(r),
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.to_string().contains("BucketAlreadyExists") {
+                        } else {
+                            panic!("Failed to create bucket: {}", e);
+                        }
                     }
-                }
-            };
+                };
+            }
+        } else {
+            // Real object store configuration (regions: init regions)
+            for r in regions {
+                let split: Vec<&str> = r.splitn(2, ':').collect();
+                let (provider, region) = (split[0], split[1]);
+
+                let client: Box<dyn ObjectStoreClient> = match provider {
+                    "azure" => {
+                        Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+                    }
+                    "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
+                    "aws" => Box::new(
+                        crate::client_impls::s3::S3ObjectStoreClient::new(format!(
+                            "https://s3.{}.amazonaws.com",
+                            region
+                        ))
+                        .await,
+                    ),
+                    _ => panic!("Unknown provider: {}", provider),
+                };
+
+                let client_arc = Arc::new(client);
+                store_clients.insert(r.to_string(), client_arc.clone());
+
+                // if bucket not exists, create one
+                let skystore_bucket_name = format!("skystore-{}", region);
+                let bucket_region = if provider == "aws" {
+                    Some(region.to_string())
+                } else {
+                    None
+                };
+
+                match client_arc
+                    .create_bucket(S3Request::new(new_create_bucket_request(
+                        skystore_bucket_name.clone(),
+                        bucket_region,
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.to_string().contains("BucketAlreadyOwnedByYou") {
+                            // Bucket already exists, no action needed
+                        } else {
+                            panic!("Failed to create bucket: {}", e);
+                        }
+                    }
+                };
+            }
         }
-
-        // Real object store configuration (regions: init regions)
-        // for r in regions {
-        //     let split: Vec<&str> = r.splitn(2, ':').collect();
-        //     let (provider, region) = (split[0], split[1]);
-
-        //     let client: Box<dyn ObjectStoreClient> = match provider {
-        //         "azure" => {
-        //             Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-        //         }
-        //         "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
-        //         "aws" => Box::new(
-        //             crate::client_impls::s3::S3ObjectStoreClient::new(format!(
-        //                 "https://s3.{}.amazonaws.com",
-        //                 region
-        //             ))
-        //             .await,
-        //         ),
-        //         _ => panic!("Unknown provider: {}", provider),
-        //     };
-
-        //     let client_arc = Arc::new(client);
-        //     store_clients.insert(r.to_string(), client_arc.clone());
-
-        //     // TODO: might need to fix this, create bucket in INIT_REGIONS at startup in the dataplane for now
-        //     let skystore_bucket_name = format!("skystore-{}", region);
-        //     let res = client_arc
-        //         .head_bucket(S3Request::new(new_head_bucket_request(
-        //             skystore_bucket_name.clone(),
-        //         )))
-        //         .await;
-
-        //     match res {
-        //         Ok(_) => (),
-        //         Err(_) => {
-        //             let bucket_region = if provider == "aws" {
-        //                 Some(region.to_string())
-        //             } else {
-        //                 None
-        //             };
-        //             let _ = client_arc
-        //                 .create_bucket(S3Request::new(new_create_bucket_request(
-        //                     skystore_bucket_name,
-        //                     bucket_region,
-        //                 )))
-        //                 .await
-        //                 .unwrap();
-        //         }
-        //     }
-        // }
-
-        //// Demo Configuration
-        // store_clients.insert(
-        //     "azure:westus3".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "gcp:us-west1".to_string(),
-        //     Arc::new(
-        //         Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await)
-        //             as Box<dyn ObjectStoreClient>,
-        //     ),
-        // );
-        // store_clients.insert(
-        //     "aws:us-west-2".to_string(),
-        //     Arc::new(Box::new(
-        //         crate::client_impls::s3::S3ObjectStoreClient::new(
-        //             "https://s3.us-west-2.amazonaws.com".to_string(),
-        //         )
-        //         .await,
-        //     ) as Box<dyn ObjectStoreClient>),
-        // );
 
         let dir_conf = Configuration {
             base_path: "http://localhost:3000".to_string(),
@@ -154,6 +122,16 @@ impl SkyProxy {
             store_clients,
             dir_conf,
             client_from_region,
+        }
+    }
+}
+
+impl Clone for SkyProxy {
+    fn clone(&self) -> Self {
+        Self {
+            store_clients: self.store_clients.clone(),
+            dir_conf: self.dir_conf.clone(),
+            client_from_region: self.client_from_region.clone(),
         }
     }
 }
@@ -304,7 +282,6 @@ impl S3 for SkyProxy {
             });
         }
 
-        // TODO: handle cleanup if create bucket fails
         while let Some(result) = tasks.join_next().await {
             if let Err(err) = result {
                 return Err(s3s::S3Error::with_message(
@@ -455,7 +432,7 @@ impl S3 for SkyProxy {
             .locate_object(req.input.bucket.clone(), req.input.key.clone())
             .await?;
 
-        match locator {
+        let mut head_object_response = match locator {
             Some(locator) => {
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
@@ -467,21 +444,108 @@ impl S3 for SkyProxy {
                     )))
                     .await
                 {
-                    Ok(resp) => Ok(resp),
+                    Ok(resp) => resp,
                     Err(err) => {
                         error!("head_object failed: {:?}", err);
-                        Err(s3s::S3Error::with_message(
+                        return Err(s3s::S3Error::with_message(
                             s3s::S3ErrorCode::InternalError,
                             "head_object failed",
-                        ))
+                        ));
                     }
                 }
             }
-            None => Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "No such key",
-            )),
+            None => {
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::NoSuchKey,
+                    "No such key",
+                ))
+            }
+        };
+
+        // warmup logic
+        if let Some(warmup_header) = req.headers.get("X-SKYSTORE-WARMUP") {
+            let warmup_regions: Vec<String> = warmup_header
+                .to_str()
+                .unwrap()
+                .split(',')
+                .map(|s| s.to_string())
+                .collect();
+
+            let warmup_resp = apis::start_warmup(
+                &self.dir_conf,
+                models::StartWarmupRequest {
+                    bucket: req.input.bucket.clone(),
+                    key: req.input.key.clone(),
+                    client_from_region: self.client_from_region.clone(),
+                    warmup_regions,
+                },
+            )
+            .await
+            .unwrap();
+
+            let src_locator = warmup_resp.src_locator;
+            let mut tasks = tokio::task::JoinSet::new();
+
+            for locator in warmup_resp.dst_locators {
+                let conf = self.dir_conf.clone();
+                let client: Arc<Box<dyn ObjectStoreClient>> =
+                    self.store_clients.get(&locator.tag).unwrap().clone();
+
+                let src_bucket = src_locator.bucket.clone();
+                let src_key = src_locator.key.clone();
+
+                tasks.spawn(async move {
+                    let copy_resp = client
+                        .copy_object(S3Request::new(new_copy_object_request(
+                            src_bucket,
+                            src_key,
+                            locator.bucket.clone(),
+                            locator.key.clone(),
+                        )))
+                        .await
+                        .unwrap();
+
+                    let etag = copy_resp.output.copy_object_result.unwrap().e_tag.unwrap();
+
+                    let head_output = client
+                        .head_object(S3Request::new(new_head_object_request(
+                            locator.bucket.clone(),
+                            locator.key.clone(),
+                        )))
+                        .await
+                        .unwrap();
+
+                    apis::complete_upload(
+                        &conf,
+                        models::PatchUploadIsCompleted {
+                            id: locator.id,
+                            size: head_output.output.content_length as u64,
+                            etag: etag.clone(),
+                            last_modified: timestamp_to_string(
+                                head_output.output.last_modified.unwrap(),
+                            ),
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                    etag
+                });
+            }
+
+            let mut e_tags = Vec::new();
+            while let Some(Ok(e_tag)) = tasks.join_next().await {
+                e_tags.push(e_tag);
+            }
+            let e_tags_str = e_tags.join(",");
+
+            // Add custom headers
+            head_object_response
+                .headers
+                .insert("X-SKYSTORE-WARMUP-ETAGS", e_tags_str.parse().unwrap());
         }
+
+        Ok(head_object_response)
     }
 
     #[tracing::instrument(level = "info")]
@@ -511,6 +575,135 @@ impl S3 for SkyProxy {
             )),
         }
     }
+
+    // Pull-based: Copy on get
+    // #[tracing::instrument(level = "info")]
+    // async fn get_object(
+    //     &self,
+    //     req: S3Request<GetObjectInput>,
+    // ) -> S3Result<S3Response<GetObjectOutput>> {
+    //     let bucket = req.input.bucket.clone();
+    //     let key = req.input.key.clone();
+
+    //     let locator = self.locate_object(bucket.clone(), key.clone()).await?;
+
+    //     match locator {
+    //         Some(location) => {
+    //             // If the object isn't in the desired region, fetch it and create a cache copy
+    //             if location.tag != self.client_from_region {
+    //                 let get_resp = self
+    //                     .store_clients
+    //                     .get(&location.tag)
+    //                     .unwrap()
+    //                     .get_object(req.map_input(|mut input: GetObjectInput| {
+    //                         input.bucket = location.bucket;
+    //                         input.key = location.key;
+    //                         input
+    //                     }))
+    //                     .await?;
+    //                 let data = get_resp.output.body.unwrap();
+
+    //                 let start_upload_resp = apis::start_upload(
+    //                     &self.dir_conf,
+    //                     models::StartUploadRequest {
+    //                         bucket: bucket.clone(),
+    //                         key: key.clone(),
+    //                         client_from_region: self.client_from_region.clone(),
+    //                         is_multipart: false,
+    //                         copy_src_bucket: None,
+    //                         copy_src_key: None,
+    //                     },
+    //                 )
+    //                 .await
+    //                 .unwrap();
+
+    //                 // let mut tasks = tokio::task::JoinSet::new();
+    //                 let locators = start_upload_resp.locators;
+    //                 let request_template = clone_put_object_request(
+    //                     &new_put_object_request(bucket.clone(), key.clone()),
+    //                     None,
+    //                 );
+    //                 // Split the data_stream
+    //                 let mut input_blobs = split_streaming_blob(data, locators.len() + 1);
+    //                 let response_blob = input_blobs.pop();
+
+    //                 locators.into_iter().zip(input_blobs.into_iter()).for_each(
+    //                     |(locator, input_blob)| {
+    //                         let conf = self.dir_conf.clone();
+    //                         let client: Arc<Box<dyn ObjectStoreClient>> =
+    //                             self.store_clients.get(&locator.tag).unwrap().clone();
+    //                         let req = S3Request::new(clone_put_object_request(
+    //                             &request_template,
+    //                             Some(input_blob),
+    //                         ))
+    //                         .map_input(|mut input| {
+    //                             input.bucket = locator.bucket.clone();
+    //                             input.key = locator.key.clone();
+    //                             input
+    //                         });
+
+    //                         tokio::spawn(async move {
+    //                             let put_resp = client.put_object(req).await.unwrap();
+    //                             let e_tag = put_resp.output.e_tag.unwrap();
+
+    //                             // Retrieve the object metatada through HEAD request.
+    //                             // So we get the proper size, etag, and last_modified from the object store pov.
+    //                             let head_resp = client
+    //                                 .head_object(S3Request::new(new_head_object_request(
+    //                                     locator.bucket.clone(),
+    //                                     locator.key.clone(),
+    //                                 )))
+    //                                 .await
+    //                                 .unwrap();
+
+    //                             apis::complete_upload(
+    //                                 &conf,
+    //                                 models::PatchUploadIsCompleted {
+    //                                     id: locator.id,
+    //                                     size: head_resp.output.content_length as u64,
+    //                                     etag: e_tag.clone(),
+    //                                     last_modified: timestamp_to_string(
+    //                                         head_resp.output.last_modified.unwrap(),
+    //                                     ),
+    //                                 },
+    //                             )
+    //                             .await
+    //                             .unwrap();
+    //                         });
+    //                     },
+    //                 );
+
+    //                 // Return the response immediately without waiting for uploads to finish
+    //                 // NOTE: fix?
+    //                 let response = S3Response::new(GetObjectOutput {
+    //                     body: Some(response_blob.unwrap()),
+    //                     bucket_key_enabled: get_resp.output.bucket_key_enabled,
+    //                     content_length: get_resp.output.content_length,
+    //                     delete_marker: get_resp.output.delete_marker,
+    //                     missing_meta: get_resp.output.missing_meta,
+    //                     parts_count: get_resp.output.parts_count,
+    //                     tag_count: get_resp.output.tag_count,
+    //                     ..Default::default()
+    //                 });
+    //                 return Ok(response);
+    //             } else {
+    //                 self.store_clients
+    //                     .get(&self.client_from_region)
+    //                     .unwrap()
+    //                     .get_object(req.map_input(|mut input: GetObjectInput| {
+    //                         input.bucket = location.bucket;
+    //                         input.key = location.key;
+    //                         input
+    //                     }))
+    //                     .await
+    //             }
+    //         }
+    //         None => Err(s3s::S3Error::with_message(
+    //             s3s::S3ErrorCode::NoSuchKey,
+    //             "Object not found",
+    //         )),
+    //     }
+    // }
 
     #[tracing::instrument(level = "info")]
     async fn put_object(
@@ -620,15 +813,38 @@ impl S3 for SkyProxy {
             .iter()
             .map(|obj| obj.key.clone())
             .collect();
-        let delete_objects_resp = apis::start_delete_objects(
+        let delete_objects_resp = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
-                keys,
+                keys: keys.clone(),
             },
         )
         .await
-        .unwrap();
+        {
+            Ok(resp) => resp,
+            Err(_) => {
+                // TODO: fail silent (assume object exists error), fix this
+                // 1) Error handling
+                //      404: return delete success
+                //      Other errors: return delete failures
+                // 2) Partial Failure: some object can be deleted, some not
+                //      Deal with it on server & dataplane side
+                return Ok(S3Response::new(DeleteObjectsOutput {
+                    deleted: Some(
+                        keys.iter()
+                            .map(|key| DeletedObject {
+                                key: Some(key.clone()),
+                                delete_marker: false,
+                                ..Default::default()
+                            })
+                            .collect(),
+                    ),
+                    errors: None,
+                    ..Default::default()
+                }));
+            }
+        };
 
         // Delete objects in actual storages
         let mut tasks = tokio::task::JoinSet::new();
@@ -1325,14 +1541,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_constructor() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
         assert!(!proxy.store_clients.is_empty());
     }
 
     #[tokio::test]
     #[serial]
     async fn test_list_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1349,7 +1565,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_then_get() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1399,7 +1615,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1451,7 +1667,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1486,7 +1702,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_copy_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1545,7 +1761,7 @@ mod tests {
     #[serial]
     #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1703,7 +1919,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_many_parts() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone()).await;
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();

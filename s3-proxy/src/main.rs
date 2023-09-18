@@ -1,10 +1,10 @@
 use s3s::auth::SimpleAuth;
 use s3s::service::S3ServiceBuilder;
+use s3s::{S3Request, S3};
 
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 use tracing::info;
-
 mod client_impls;
 mod objstore_client;
 mod skyproxy;
@@ -12,6 +12,19 @@ mod stream_utils;
 mod type_utils;
 
 use crate::skyproxy::SkyProxy;
+use crate::type_utils::new_head_object_request;
+use futures::future::FutureExt;
+use s3s::S3Error;
+use std::env;
+use tower::Service;
+
+#[derive(serde::Deserialize)]
+struct WarmupRequest {
+    bucket: String,
+    key: String,
+    warmup_regions: Vec<String>,
+}
+
 #[tokio::main]
 async fn main() {
     // Exit the process upon panic, this is used for debugging purpose.
@@ -28,28 +41,30 @@ async fn main() {
         .init();
 
     // Setup our proxy object
-    // Hard code config for now
-    let init_regions = vec!["aws:us-west-1".to_string(), "aws:us-east-2".to_string()];
-    let client_from_region = "aws:us-west-1".to_string();
+    // let init_regions = vec!["aws:us-west-1".to_string(), "aws:us-east-2".to_string()];
+    // let client_from_region = "aws:us-west-1".to_string();
 
-    // let init_regions: Vec<String> = env::var("INIT_REGIONS")
-    //     .expect("INIT_REGIONS must be set")
-    //     .split(',')
-    //     .map(|s| s.to_string())
-    //     .collect();
-    // let client_from_region: String =
-    //     env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
+    let init_regions: Vec<String> = env::var("INIT_REGIONS")
+        .map(|s| s.split(',').map(|s| s.to_string()).collect())
+        .unwrap_or_else(|_| vec!["aws:us-east-1".to_string()]);
 
-    let proxy = SkyProxy::new(init_regions, client_from_region).await;
+    let client_from_region: String =
+        env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
+
+    let local_run: bool = env::var("LOCAL")
+        .map(|s| s.parse::<bool>().unwrap())
+        .unwrap_or(true);
+
+    let proxy = SkyProxy::new(init_regions, client_from_region, local_run).await;
 
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain
     // https://github.com/Nugine/s3s/blob/b0b6878dafee0e08a876bec5239425fc40c01271/crates/s3s-fs/src/main.rs#L58-L66
 
     // let s3_service = S3ServiceBuilder::new(proxy).build().into_shared();
-    // TODO: hardcode for now for mount test
     let s3_service = {
-        let mut b = S3ServiceBuilder::new(proxy);
+        // let mut b = S3ServiceBuilder::new(proxy);
+        let mut b = S3ServiceBuilder::new(proxy.clone());
         // Enable authentication
         let access_key = std::env::var("AWS_ACCESS_KEY_ID").expect("ACCESS_KEY must be set");
         let secret_key = std::env::var("AWS_SECRET_ACCESS_KEY").expect("SECRET_KEY must be set");
@@ -81,7 +96,47 @@ async fn main() {
                     },
                 ),
         )
-        .service(s3_service);
+        .service_fn(move |req: hyper::Request<hyper::Body>| {
+            let mut s3_service = s3_service.clone();
+            let proxy_clone = proxy.clone();
+
+            if req.uri().path() == "/_/warmup_object" {
+                let fut = async move {
+                    if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
+                        let warmup_req: WarmupRequest = serde_json::from_slice(&body).unwrap();
+
+                        let head_object_input = new_head_object_request(
+                            warmup_req.bucket.clone(),
+                            warmup_req.key.clone(),
+                        );
+
+                        let mut new_req = S3Request::new(head_object_input);
+
+                        new_req.headers.insert(
+                            "X-SKYSTORE-WARMUP",
+                            warmup_req.warmup_regions.join(",").parse().unwrap(),
+                        );
+
+                        proxy_clone
+                            .head_object(new_req)
+                            .await
+                            .map_err(S3Error::internal_error)?;
+
+                        Ok::<_, S3Error>(hyper::Response::new(s3s::Body::from(Vec::new())))
+                    } else {
+                        let res = hyper::Response::builder()
+                            .status(hyper::StatusCode::BAD_REQUEST)
+                            .body(s3s::Body::from("Bad request".to_string()))
+                            .expect("Failed to construct the response");
+
+                        Ok::<_, S3Error>(res)
+                    }
+                };
+                Box::pin(fut)
+            } else {
+                s3_service.call(req).boxed()
+            }
+        });
 
     // Run server
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 8002));
