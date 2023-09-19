@@ -9,3 +9,4 @@ sqlalchemy>=2.0
 sqlalchemy_repr
 rich
 jq
+greenlet
