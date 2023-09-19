@@ -203,14 +203,6 @@ impl S3 for SkyProxy {
         };
         Ok(S3Response::new(output))
     }
-
-    #[tracing::instrument(level = "info")]
-    async fn abort_multipart_upload(
-        &self,
-        _req: S3Request<AbortMultipartUploadInput>,
-    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
-        return Ok(S3Response::new(AbortMultipartUploadOutput::default()));
-    }
     ///////////////////////////////////////////////////////////////////////////
 
     #[tracing::instrument(level = "info")]
@@ -242,7 +234,7 @@ impl S3 for SkyProxy {
             let dir_conf = self.dir_conf.clone();
 
             // TODO: fix
-            // if buckt name starts with skystore-, then it's a skybucket already created during initialization
+            // if bucket name starts with skystore-, then it's a skybucket already created during initialization
             // so we don't need to create it again
             if bucket_name.starts_with("skystore-") {
                 let system_time: SystemTime = Utc::now().into();
@@ -818,6 +810,7 @@ impl S3 for SkyProxy {
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
                 keys: keys.clone(),
+                multipart_upload_ids: None,
             },
         )
         .await
@@ -907,7 +900,10 @@ impl S3 for SkyProxy {
             if !completed_ids.is_empty() {
                 apis::complete_delete_objects(
                     &self.dir_conf,
-                    models::DeleteObjectsIsCompleted { ids: completed_ids },
+                    models::DeleteObjectsIsCompleted {
+                        ids: completed_ids,
+                        multipart_upload_ids: None,
+                    },
                 )
                 .await
                 .unwrap();
@@ -1170,6 +1166,50 @@ impl S3 for SkyProxy {
             upload_id: upload_resp.multipart_upload_id,
             ..Default::default()
         }))
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn abort_multipart_upload(
+        &self,
+        req: S3Request<AbortMultipartUploadInput>,
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        let delete_start_response = apis::start_delete_objects(
+            &self.dir_conf,
+            models::DeleteObjectsRequest {
+                bucket: req.input.bucket.clone(),
+                keys: vec![req.input.key.clone()],
+                multipart_upload_ids: Some(vec![req.input.upload_id.clone()]),
+            },
+        )
+        .await
+        .unwrap();
+
+        for locators in delete_start_response.locators.values() {
+            for locator in locators {
+                let client = self.store_clients.get(&locator.tag).unwrap().clone();
+
+                client
+                    .abort_multipart_upload(S3Request::new(new_abort_multipart_upload_request(
+                        locator.bucket.clone(),
+                        locator.key.clone(),
+                        locator.multipart_upload_id.as_ref().cloned().unwrap(),
+                    )))
+                    .await
+                    .unwrap();
+
+                apis::complete_delete_objects(
+                    &self.dir_conf,
+                    models::DeleteObjectsIsCompleted {
+                        ids: vec![locator.id],
+                        multipart_upload_ids: Some(vec![req.input.upload_id.clone()]), // Assuming all locators share the same upload ID
+                    },
+                )
+                .await
+                .unwrap();
+            }
+        }
+
+        Ok(S3Response::new(AbortMultipartUploadOutput::default()))
     }
 
     #[tracing::instrument(level = "info")]
@@ -2004,6 +2044,96 @@ mod tests {
 
             let body = result_bytes.concat();
             assert!(body.len() == 40 * 5 * 1024 * 1024);
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_abort_multipart_upload() {
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        let upload_id = {
+            let request = new_create_multipart_upload_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.create_multipart_upload(req).await.unwrap().output;
+            assert!(resp.upload_id.is_some());
+            resp.upload_id.unwrap()
+        };
+
+        let _ = {
+            let mut request = new_upload_part_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+                1,
+            );
+            let body: Vec<u8> = vec![0; 5 * 1024 * 1024]; // 5MB, minimum size for a part
+            request.body = Some(s3s::Body::from(body).into());
+
+            let req = S3Request::new(request);
+            let resp = proxy.upload_part(req).await.unwrap().output;
+
+            resp.e_tag.unwrap()
+        };
+
+        // Abort the multipart upload
+        {
+            let request = new_abort_multipart_upload_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+            );
+            let req = S3Request::new(request);
+
+            // PROBLEM: abort multipart upload not implemented??
+            proxy.abort_multipart_upload(req).await.unwrap().output;
+        };
+
+        // Check that the upload ID is no longer listed
+        {
+            let request = new_list_multipart_uploads_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.list_multipart_uploads(req).await.unwrap().output;
+            assert!(resp.uploads.is_some());
+            let uploads = resp.uploads.unwrap();
+            let found_upload = uploads
+                .iter()
+                .find(|upload: &&MultipartUpload| upload.upload_id == Some(upload_id.clone()));
+            assert!(found_upload.is_none());
+        }
+
+        // Check that we can't list parts using the upload ID
+        {
+            let request = new_list_parts_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.list_parts(req).await;
+            assert!(resp.is_err());
+        }
+
+        // Check that we can't get the object
+        {
+            let request = new_get_object_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await;
+            assert!(resp.is_err());
         }
     }
 }

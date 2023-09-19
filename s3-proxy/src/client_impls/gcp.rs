@@ -8,6 +8,7 @@ use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
+use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::objects::SourceObjects;
 
@@ -394,5 +395,43 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             e_tag: Some(res.etag),
             ..Default::default()
         }))
+    }
+
+    async fn abort_multipart_upload(
+        &self,
+        req: S3Request<AbortMultipartUploadInput>,
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        let req = req.input;
+        let bucket = req.bucket;
+        let object = req.key;
+        let upload_id = req.upload_id;
+
+        // List all objects with the prefix
+        let prefix = format!("{}.sky-upload-{}.", object, upload_id);
+        let objects_to_delete = self
+            .client
+            .list_objects(&ListObjectsRequest {
+                bucket: bucket.clone(),
+                prefix: Some(prefix.clone()),
+                ..Default::default()
+            })
+            .await
+            .unwrap()
+            .items
+            .unwrap_or_default();
+
+        // Delete all the objects that were listed as parts of this upload
+        for obj in objects_to_delete {
+            self.client
+                .delete_object(&DeleteObjectRequest {
+                    bucket: bucket.clone(),
+                    object: obj.name,
+                    ..Default::default()
+                })
+                .await
+                .unwrap();
+        }
+
+        Ok(S3Response::new(AbortMultipartUploadOutput::default()))
     }
 }

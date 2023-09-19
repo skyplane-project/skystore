@@ -389,6 +389,7 @@ def test_get_object(client):
         "size": 100,
         "etag": "123",
         "last_modified": "2020-01-01T00:00:00",
+        "multipart_upload_id": None,
     }
 
     # 404

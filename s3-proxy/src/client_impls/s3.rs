@@ -116,4 +116,11 @@ impl ObjectStoreClient for S3ObjectStoreClient {
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
         return self.s3_proxy.complete_multipart_upload(req).await;
     }
+
+    async fn abort_multipart_upload(
+        &self,
+        req: S3Request<AbortMultipartUploadInput>,
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        return self.s3_proxy.abort_multipart_upload(req).await;
+    }
 }

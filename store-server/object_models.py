@@ -101,6 +101,7 @@ class LocateObjectResponse(BaseModel):
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
+    multipart_upload_id: Optional[str] = None
 
 
 class DBLogicalMultipartUploadPart(Base):
@@ -260,6 +261,7 @@ class HealthcheckResponse(BaseModel):
 class DeleteObjectsRequest(BaseModel):
     bucket: str
     keys: List[str]
+    multipart_upload_ids: Optional[List[str]] = None
 
 
 class DeleteObjectsResponse(BaseModel):
@@ -268,3 +270,4 @@ class DeleteObjectsResponse(BaseModel):
 
 class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
+    multipart_upload_ids: Optional[List[str]] = None
