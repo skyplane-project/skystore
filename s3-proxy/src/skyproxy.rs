@@ -1201,7 +1201,11 @@ impl S3 for SkyProxy {
                     &self.dir_conf,
                     models::DeleteObjectsIsCompleted {
                         ids: vec![locator.id],
-                        multipart_upload_ids: Some(vec![req.input.upload_id.clone()]), // Assuming all locators share the same upload ID
+                        multipart_upload_ids: Some(vec![locator
+                            .multipart_upload_id
+                            .as_ref()
+                            .cloned()
+                            .unwrap()]),
                     },
                 )
                 .await
@@ -1248,7 +1252,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListPartsInput>,
     ) -> S3Result<S3Response<ListPartsOutput>> {
-        let resp = apis::list_parts(
+        match apis::list_parts(
             &self.dir_conf,
             models::ListPartsRequest {
                 bucket: req.input.bucket.clone(),
@@ -1258,24 +1262,28 @@ impl S3 for SkyProxy {
             },
         )
         .await
-        .unwrap();
-
-        Ok(S3Response::new(ListPartsOutput {
-            parts: Some(
-                resp.into_iter()
-                    .map(|p| Part {
-                        part_number: p.part_number,
-                        size: p.size as i64,
-                        e_tag: Some(p.etag),
-                        ..Default::default()
-                    })
-                    .collect(),
-            ),
-            bucket: Some(req.input.bucket.clone()),
-            key: Some(req.input.key.clone()),
-            upload_id: Some(req.input.upload_id.clone()),
-            ..Default::default()
-        }))
+        {
+            Ok(resp) => Ok(S3Response::new(ListPartsOutput {
+                parts: Some(
+                    resp.into_iter()
+                        .map(|p| Part {
+                            part_number: p.part_number,
+                            size: p.size as i64,
+                            e_tag: Some(p.etag),
+                            ..Default::default()
+                        })
+                        .collect(),
+                ),
+                bucket: Some(req.input.bucket.clone()),
+                key: Some(req.input.key.clone()),
+                upload_id: Some(req.input.upload_id.clone()),
+                ..Default::default()
+            })),
+            Err(_) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::NoSuchKey,
+                "Object Multipart Failed or Not Found",
+            )),
+        }
     }
 
     #[tracing::instrument(level = "info")]
@@ -2093,7 +2101,6 @@ mod tests {
             );
             let req = S3Request::new(request);
 
-            // PROBLEM: abort multipart upload not implemented??
             proxy.abort_multipart_upload(req).await.unwrap().output;
         };
 

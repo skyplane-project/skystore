@@ -33,7 +33,9 @@ class DBLogicalObject(Base):
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
-        "DBLogicalMultipartUploadPart", back_populates="logical_object"
+        "DBLogicalMultipartUploadPart",
+        back_populates="logical_object",
+        cascade="all, delete, delete-orphan",
     )
 
     # Add relationship to physical object
@@ -71,7 +73,9 @@ class DBPhysicalObjectLocator(Base):
 
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
-        "DBPhysicalMultipartUploadPart", back_populates="physical_object_locator"
+        "DBPhysicalMultipartUploadPart",
+        back_populates="physical_object_locator",
+        cascade="all, delete, delete-orphan",
     )
 
     # Add relationship to logical object

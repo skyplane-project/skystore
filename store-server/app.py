@@ -418,7 +418,7 @@ async def start_delete_objects(
                     size=physical_locator.logical_object.size,
                     last_modified=physical_locator.logical_object.last_modified,
                     etag=physical_locator.logical_object.etag,
-                    multipart_upload_id=physical_locator.logical_object.multipart_upload_id,
+                    multipart_upload_id=physical_locator.multipart_upload_id,
                 )
             )
 
