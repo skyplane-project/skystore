@@ -1279,10 +1279,13 @@ impl S3 for SkyProxy {
                 upload_id: Some(req.input.upload_id.clone()),
                 ..Default::default()
             })),
-            Err(_) => Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Object Multipart Failed or Not Found",
-            )),
+            Err(err) => {
+                error!("list_parts failed: {:?}", err);
+                Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "list_parts failed",
+                ))
+            }
         }
     }
 
@@ -1467,7 +1470,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
-        let locators = apis::continue_upload(
+        let locators = match apis::continue_upload(
             &self.dir_conf,
             models::ContinueUploadRequest {
                 bucket: req.input.bucket.clone(),
@@ -1480,7 +1483,16 @@ impl S3 for SkyProxy {
             },
         )
         .await
-        .unwrap();
+        {
+            Ok(resp) => resp,
+            Err(err) => {
+                error!("continue upload failed: {:?}", err);
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "continue upload failed",
+                ));
+            }
+        };
 
         let logical_parts_set = req
             .input

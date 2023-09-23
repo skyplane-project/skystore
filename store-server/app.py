@@ -942,23 +942,50 @@ async def append_part(request: PatchUploadMultipartUploadPart, db: DBSession):
     logger.debug(f"append_part: {request} -> {physical_locator}")
 
     await db.refresh(physical_locator, ["multipart_upload_parts"])
-    physical_locator.multipart_upload_parts.append(
-        DBPhysicalMultipartUploadPart(
-            part_number=request.part_number,
-            etag=request.etag,
-            size=request.size,
-        )
+
+    existing_physical_part = next(
+        (
+            part
+            for part in physical_locator.multipart_upload_parts
+            if part.part_number == request.part_number
+        ),
+        None,
     )
 
-    if physical_locator.is_primary:
-        await db.refresh(physical_locator.logical_object, ["multipart_upload_parts"])
-        physical_locator.logical_object.multipart_upload_parts.append(
-            DBLogicalMultipartUploadPart(
+    if existing_physical_part:
+        existing_physical_part.etag = request.etag
+        existing_physical_part.size = request.size
+    else:
+        physical_locator.multipart_upload_parts.append(
+            DBPhysicalMultipartUploadPart(
                 part_number=request.part_number,
                 etag=request.etag,
                 size=request.size,
             )
         )
+
+    if physical_locator.is_primary:
+        await db.refresh(physical_locator.logical_object, ["multipart_upload_parts"])
+        existing_logical_part = next(
+            (
+                part
+                for part in physical_locator.logical_object.multipart_upload_parts
+                if part.part_number == request.part_number
+            ),
+            None,
+        )
+
+        if existing_logical_part:
+            existing_logical_part.etag = request.etag
+            existing_logical_part.size = request.size
+        else:
+            physical_locator.logical_object.multipart_upload_parts.append(
+                DBLogicalMultipartUploadPart(
+                    part_number=request.part_number,
+                    etag=request.etag,
+                    size=request.size,
+                )
+            )
 
     await db.commit()
 
