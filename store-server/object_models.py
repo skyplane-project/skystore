@@ -214,6 +214,8 @@ class ContinueUploadResponse(LocateObjectResponse):
 class ListObjectRequest(BaseModel):
     bucket: str
     prefix: Optional[str] = None
+    start_after: Optional[str] = None
+    max_keys: Optional[int] = None
 
 
 class ObjectResponse(BaseModel):

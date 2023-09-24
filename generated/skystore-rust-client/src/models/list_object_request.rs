@@ -14,6 +14,10 @@ pub struct ListObjectRequest {
     pub bucket: String,
     #[serde(rename = "prefix", skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
+    #[serde(rename = "start_after", skip_serializing_if = "Option::is_none")]
+    pub start_after: Option<String>,
+    #[serde(rename = "max_keys", skip_serializing_if = "Option::is_none")]
+    pub max_keys: Option<i32>,
 }
 
 impl ListObjectRequest {
@@ -21,6 +25,8 @@ impl ListObjectRequest {
         ListObjectRequest {
             bucket,
             prefix: None,
+            start_after: None,
+            max_keys: None,
         }
     }
 }

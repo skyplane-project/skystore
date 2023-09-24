@@ -634,8 +634,6 @@ async def start_warmup(
     )
     locators = (await db.scalars(stmt)).all()
 
-    # Find and print all physical locator
-
     if not locators:
         return Response(status_code=404, content="Object Not Found")
 
@@ -1098,6 +1096,15 @@ async def list_objects(
     )
     if request.prefix is not None:
         stmt = stmt.where(DBLogicalObject.key.startswith(request.prefix))
+    if request.start_after is not None:
+        stmt = stmt.where(DBLogicalObject.key > request.start_after)
+
+    # Sort keys before return
+    stmt = stmt.order_by(DBLogicalObject.key)
+
+    # Limit the number of returned objects if specified
+    if request.max_keys is not None:
+        stmt = stmt.limit(request.max_keys)
 
     objects = await db.execute(stmt)
     objects_all = objects.scalars().all()
@@ -1105,7 +1112,7 @@ async def list_objects(
     if not objects_all:
         return []
 
-    logger.debug(f"list_objects: {request} -> {objects}")
+    logger.debug(f"list_objects: {request} -> {objects_all}")
 
     return [
         ObjectResponse(

@@ -7,6 +7,7 @@ use s3s::stream::ByteStream;
 use s3s::{S3Request, S3Response, S3Result, S3};
 
 use chrono::Utc;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
@@ -383,6 +384,8 @@ impl S3 for SkyProxy {
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
                 prefix: req.input.prefix.clone(),
+                start_after: req.input.start_after.clone(),
+                max_keys: req.input.max_keys,
             },
         )
         .await;
@@ -391,19 +394,28 @@ impl S3 for SkyProxy {
             Ok(resp) => {
                 let mut objects: Vec<Object> = Vec::new();
 
+                // to deal with special key
                 for obj in resp {
+                    let key = match &req.input.encoding_type {
+                        Some(encoding) if encoding.as_str() == EncodingType::URL => {
+                            utf8_percent_encode(&obj.key, NON_ALPHANUMERIC).to_string()
+                        }
+                        _ => obj.key.clone(),
+                    };
+
                     objects.push(Object {
-                        key: Some(obj.key),
+                        key: Some(key),
                         size: obj.size as i64,
                         last_modified: Some(string_to_timestamp(&obj.last_modified)),
                         ..Default::default()
                     })
                 }
 
-                Ok(S3Response::new(ListObjectsV2Output {
+                let output = ListObjectsV2Output {
                     contents: Some(objects),
                     ..Default::default()
-                }))
+                };
+                Ok(S3Response::new(output))
             }
             Err(err) => {
                 error!("list_objects_v2 failed: {:?}", err);
@@ -1226,6 +1238,8 @@ impl S3 for SkyProxy {
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
                 prefix: req.input.prefix.clone(),
+                start_after: None,
+                max_keys: None,
             },
         )
         .await
