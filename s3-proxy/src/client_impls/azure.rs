@@ -495,7 +495,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                     blocks: blocks_to_retain,
                 };
 
-                // Not include the blocks with the matching prefix
+                // Not include the blocks with the matching prefix. Azure doesn't have a delete block API. 
                 let put_block_list_result = blob_client.put_block_list(block_list).await;
 
                 match put_block_list_result {
