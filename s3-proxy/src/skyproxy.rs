@@ -394,7 +394,8 @@ impl S3 for SkyProxy {
             Ok(resp) => {
                 let mut objects: Vec<Object> = Vec::new();
 
-                // to deal with special key
+                // To deal with special key: encode key name in response if encoding type is url
+                // NOTE: not related to actual encoding type of the object 
                 for obj in resp {
                     let key = match &req.input.encoding_type {
                         Some(encoding) if encoding.as_str() == EncodingType::URL => {
