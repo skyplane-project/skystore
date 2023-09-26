@@ -469,8 +469,12 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let upload_id = req.upload_id;
         let blob_client = self.blob_client(&container_name, &blob_name);
 
-        // List all the blocks associated with the upload ID
-        let block_list_result = blob_client.get_block_list().await;
+        // List all the uncommitted blocks associated with the upload ID
+        let block_list_result = blob_client
+            .get_block_list()
+            .block_list_type(BlockListType::Uncommitted)
+            .await;
+
         match block_list_result {
             Ok(block_list) => {
                 let blocks_to_retain: Vec<_> = block_list
@@ -478,6 +482,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                     .blocks
                     .iter()
                     .filter(|block_with_size| {
+                        // Extract block ID and check if it starts with the upload ID
                         if let BlobBlockType::Uncommitted(block_id) =
                             &block_with_size.block_list_type
                         {
@@ -495,7 +500,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                     blocks: blocks_to_retain,
                 };
 
-                // Not include the blocks with the matching prefix. Azure doesn't have a delete block API. 
+                // Not include the blocks with the matching prefix. Azure doesn't have a delete block API.
                 let put_block_list_result = blob_client.put_block_list(block_list).await;
 
                 match put_block_list_result {

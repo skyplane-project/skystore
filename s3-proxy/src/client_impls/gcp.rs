@@ -429,7 +429,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                     ..Default::default()
                 })
                 .await
-                .unwrap();
+                .unwrap(); // TODO: error handlings
         }
 
         Ok(S3Response::new(AbortMultipartUploadOutput::default()))
