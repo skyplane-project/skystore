@@ -7,6 +7,7 @@ use s3s::stream::ByteStream;
 use s3s::{S3Request, S3Response, S3Result, S3};
 
 use chrono::Utc;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
@@ -203,14 +204,6 @@ impl S3 for SkyProxy {
         };
         Ok(S3Response::new(output))
     }
-
-    #[tracing::instrument(level = "info")]
-    async fn abort_multipart_upload(
-        &self,
-        _req: S3Request<AbortMultipartUploadInput>,
-    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
-        return Ok(S3Response::new(AbortMultipartUploadOutput::default()));
-    }
     ///////////////////////////////////////////////////////////////////////////
 
     #[tracing::instrument(level = "info")]
@@ -242,7 +235,7 @@ impl S3 for SkyProxy {
             let dir_conf = self.dir_conf.clone();
 
             // TODO: fix
-            // if buckt name starts with skystore-, then it's a skybucket already created during initialization
+            // if bucket name starts with skystore-, then it's a skybucket already created during initialization
             // so we don't need to create it again
             if bucket_name.starts_with("skystore-") {
                 let system_time: SystemTime = Utc::now().into();
@@ -391,6 +384,8 @@ impl S3 for SkyProxy {
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
                 prefix: req.input.prefix.clone(),
+                start_after: req.input.start_after.clone(),
+                max_keys: req.input.max_keys,
             },
         )
         .await;
@@ -399,19 +394,29 @@ impl S3 for SkyProxy {
             Ok(resp) => {
                 let mut objects: Vec<Object> = Vec::new();
 
+                // To deal with special key: encode key name in response if encoding type is url
+                // NOTE: not related to actual encoding type of the object
                 for obj in resp {
+                    let key = match &req.input.encoding_type {
+                        Some(encoding) if encoding.as_str() == EncodingType::URL => {
+                            utf8_percent_encode(&obj.key, NON_ALPHANUMERIC).to_string()
+                        }
+                        _ => obj.key.clone(),
+                    };
+
                     objects.push(Object {
-                        key: Some(obj.key),
+                        key: Some(key),
                         size: obj.size as i64,
                         last_modified: Some(string_to_timestamp(&obj.last_modified)),
                         ..Default::default()
                     })
                 }
 
-                Ok(S3Response::new(ListObjectsV2Output {
+                let output = ListObjectsV2Output {
                     contents: Some(objects),
                     ..Default::default()
-                }))
+                };
+                Ok(S3Response::new(output))
             }
             Err(err) => {
                 error!("list_objects_v2 failed: {:?}", err);
@@ -818,6 +823,7 @@ impl S3 for SkyProxy {
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
                 keys: keys.clone(),
+                multipart_upload_ids: None,
             },
         )
         .await
@@ -907,7 +913,10 @@ impl S3 for SkyProxy {
             if !completed_ids.is_empty() {
                 apis::complete_delete_objects(
                     &self.dir_conf,
-                    models::DeleteObjectsIsCompleted { ids: completed_ids },
+                    models::DeleteObjectsIsCompleted {
+                        ids: completed_ids,
+                        multipart_upload_ids: None,
+                    },
                 )
                 .await
                 .unwrap();
@@ -1173,6 +1182,54 @@ impl S3 for SkyProxy {
     }
 
     #[tracing::instrument(level = "info")]
+    async fn abort_multipart_upload(
+        &self,
+        req: S3Request<AbortMultipartUploadInput>,
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        let delete_start_response = apis::start_delete_objects(
+            &self.dir_conf,
+            models::DeleteObjectsRequest {
+                bucket: req.input.bucket.clone(),
+                keys: vec![req.input.key.clone()],
+                multipart_upload_ids: Some(vec![req.input.upload_id.clone()]),
+            },
+        )
+        .await
+        .unwrap();
+
+        for locators in delete_start_response.locators.values() {
+            for locator in locators {
+                let client = self.store_clients.get(&locator.tag).unwrap().clone();
+
+                client
+                    .abort_multipart_upload(S3Request::new(new_abort_multipart_upload_request(
+                        locator.bucket.clone(),
+                        locator.key.clone(),
+                        locator.multipart_upload_id.as_ref().cloned().unwrap(),
+                    )))
+                    .await
+                    .unwrap();
+
+                apis::complete_delete_objects(
+                    &self.dir_conf,
+                    models::DeleteObjectsIsCompleted {
+                        ids: vec![locator.id],
+                        multipart_upload_ids: Some(vec![locator
+                            .multipart_upload_id
+                            .as_ref()
+                            .cloned()
+                            .unwrap()]),
+                    },
+                )
+                .await
+                .unwrap();
+            }
+        }
+
+        Ok(S3Response::new(AbortMultipartUploadOutput::default()))
+    }
+
+    #[tracing::instrument(level = "info")]
     async fn list_multipart_uploads(
         &self,
         req: S3Request<ListMultipartUploadsInput>,
@@ -1182,6 +1239,8 @@ impl S3 for SkyProxy {
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
                 prefix: req.input.prefix.clone(),
+                start_after: None,
+                max_keys: None,
             },
         )
         .await
@@ -1208,7 +1267,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListPartsInput>,
     ) -> S3Result<S3Response<ListPartsOutput>> {
-        let resp = apis::list_parts(
+        match apis::list_parts(
             &self.dir_conf,
             models::ListPartsRequest {
                 bucket: req.input.bucket.clone(),
@@ -1218,24 +1277,31 @@ impl S3 for SkyProxy {
             },
         )
         .await
-        .unwrap();
-
-        Ok(S3Response::new(ListPartsOutput {
-            parts: Some(
-                resp.into_iter()
-                    .map(|p| Part {
-                        part_number: p.part_number,
-                        size: p.size as i64,
-                        e_tag: Some(p.etag),
-                        ..Default::default()
-                    })
-                    .collect(),
-            ),
-            bucket: Some(req.input.bucket.clone()),
-            key: Some(req.input.key.clone()),
-            upload_id: Some(req.input.upload_id.clone()),
-            ..Default::default()
-        }))
+        {
+            Ok(resp) => Ok(S3Response::new(ListPartsOutput {
+                parts: Some(
+                    resp.into_iter()
+                        .map(|p| Part {
+                            part_number: p.part_number,
+                            size: p.size as i64,
+                            e_tag: Some(p.etag),
+                            ..Default::default()
+                        })
+                        .collect(),
+                ),
+                bucket: Some(req.input.bucket.clone()),
+                key: Some(req.input.key.clone()),
+                upload_id: Some(req.input.upload_id.clone()),
+                ..Default::default()
+            })),
+            Err(err) => {
+                error!("list_parts failed: {:?}", err);
+                Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "list_parts failed",
+                ))
+            }
+        }
     }
 
     #[tracing::instrument(level = "info")]
@@ -1419,7 +1485,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
-        let locators = apis::continue_upload(
+        let locators = match apis::continue_upload(
             &self.dir_conf,
             models::ContinueUploadRequest {
                 bucket: req.input.bucket.clone(),
@@ -1432,7 +1498,16 @@ impl S3 for SkyProxy {
             },
         )
         .await
-        .unwrap();
+        {
+            Ok(resp) => resp,
+            Err(err) => {
+                error!("continue upload failed: {:?}", err);
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "continue upload failed",
+                ));
+            }
+        };
 
         let logical_parts_set = req
             .input
@@ -2004,6 +2079,95 @@ mod tests {
 
             let body = result_bytes.concat();
             assert!(body.len() == 40 * 5 * 1024 * 1024);
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_abort_multipart_upload() {
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        let upload_id = {
+            let request = new_create_multipart_upload_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.create_multipart_upload(req).await.unwrap().output;
+            assert!(resp.upload_id.is_some());
+            resp.upload_id.unwrap()
+        };
+
+        let _ = {
+            let mut request = new_upload_part_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+                1,
+            );
+            let body: Vec<u8> = vec![0; 5 * 1024 * 1024]; // 5MB, minimum size for a part
+            request.body = Some(s3s::Body::from(body).into());
+
+            let req = S3Request::new(request);
+            let resp = proxy.upload_part(req).await.unwrap().output;
+
+            resp.e_tag.unwrap()
+        };
+
+        // Abort the multipart upload
+        {
+            let request = new_abort_multipart_upload_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+            );
+            let req = S3Request::new(request);
+
+            proxy.abort_multipart_upload(req).await.unwrap().output;
+        };
+
+        // Check that the upload ID is no longer listed
+        {
+            let request = new_list_multipart_uploads_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.list_multipart_uploads(req).await.unwrap().output;
+            assert!(resp.uploads.is_some());
+            let uploads = resp.uploads.unwrap();
+            let found_upload = uploads
+                .iter()
+                .find(|upload: &&MultipartUpload| upload.upload_id == Some(upload_id.clone()));
+            assert!(found_upload.is_none());
+        }
+
+        // Check that we can't list parts using the upload ID
+        {
+            let request = new_list_parts_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+                upload_id.clone(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.list_parts(req).await;
+            assert!(resp.is_err());
+        }
+
+        // Check that we can't get the object
+        {
+            let request = new_get_object_request(
+                bucket_name.to_string(),
+                "my-abort-multipart-test-key".to_string(),
+            );
+            let req = S3Request::new(request);
+            let resp = proxy.get_object(req).await;
+            assert!(resp.is_err());
         }
     }
 }

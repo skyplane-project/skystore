@@ -33,7 +33,9 @@ class DBLogicalObject(Base):
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
-        "DBLogicalMultipartUploadPart", back_populates="logical_object"
+        "DBLogicalMultipartUploadPart",
+        back_populates="logical_object",
+        cascade="all, delete, delete-orphan",
     )
 
     # Add relationship to physical object
@@ -71,7 +73,9 @@ class DBPhysicalObjectLocator(Base):
 
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
-        "DBPhysicalMultipartUploadPart", back_populates="physical_object_locator"
+        "DBPhysicalMultipartUploadPart",
+        back_populates="physical_object_locator",
+        cascade="all, delete, delete-orphan",
     )
 
     # Add relationship to logical object
@@ -101,6 +105,7 @@ class LocateObjectResponse(BaseModel):
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
+    multipart_upload_id: Optional[str] = None
 
 
 class DBLogicalMultipartUploadPart(Base):
@@ -209,6 +214,8 @@ class ContinueUploadResponse(LocateObjectResponse):
 class ListObjectRequest(BaseModel):
     bucket: str
     prefix: Optional[str] = None
+    start_after: Optional[str] = None
+    max_keys: Optional[int] = None
 
 
 class ObjectResponse(BaseModel):
@@ -260,6 +267,7 @@ class HealthcheckResponse(BaseModel):
 class DeleteObjectsRequest(BaseModel):
     bucket: str
     keys: List[str]
+    multipart_upload_ids: Optional[List[str]] = None
 
 
 class DeleteObjectsResponse(BaseModel):
@@ -268,3 +276,4 @@ class DeleteObjectsResponse(BaseModel):
 
 class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
+    multipart_upload_ids: Optional[List[str]] = None

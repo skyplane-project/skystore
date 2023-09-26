@@ -12,10 +12,18 @@
 pub struct DeleteObjectsIsCompleted {
     #[serde(rename = "ids")]
     pub ids: Vec<i32>,
+    #[serde(
+        rename = "multipart_upload_ids",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub multipart_upload_ids: Option<Vec<String>>,
 }
 
 impl DeleteObjectsIsCompleted {
     pub fn new(ids: Vec<i32>) -> DeleteObjectsIsCompleted {
-        DeleteObjectsIsCompleted { ids }
+        DeleteObjectsIsCompleted {
+            ids,
+            multipart_upload_ids: None,
+        }
     }
 }

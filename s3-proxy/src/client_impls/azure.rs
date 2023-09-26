@@ -458,4 +458,65 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             ..Default::default()
         }))
     }
+
+    async fn abort_multipart_upload(
+        &self,
+        req: S3Request<AbortMultipartUploadInput>,
+    ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        let req = req.input;
+        let container_name = req.bucket;
+        let blob_name = req.key;
+        let upload_id = req.upload_id;
+        let blob_client = self.blob_client(&container_name, &blob_name);
+
+        // List all the uncommitted blocks associated with the upload ID
+        let block_list_result = blob_client
+            .get_block_list()
+            .block_list_type(BlockListType::Uncommitted)
+            .await;
+
+        match block_list_result {
+            Ok(block_list) => {
+                let blocks_to_retain: Vec<_> = block_list
+                    .block_with_size_list
+                    .blocks
+                    .iter()
+                    .filter(|block_with_size| {
+                        // Extract block ID and check if it starts with the upload ID
+                        if let BlobBlockType::Uncommitted(block_id) =
+                            &block_with_size.block_list_type
+                        {
+                            let block_id_str =
+                                String::from_utf8(block_id.bytes().to_vec()).unwrap_or_default();
+                            !block_id_str.starts_with(&format!("{}-", upload_id))
+                        } else {
+                            true
+                        }
+                    })
+                    .map(|block_with_size| block_with_size.block_list_type.clone())
+                    .collect();
+
+                let block_list = BlockList {
+                    blocks: blocks_to_retain,
+                };
+
+                // Not include the blocks with the matching prefix. Azure doesn't have a delete block API.
+                let put_block_list_result = blob_client.put_block_list(block_list).await;
+
+                match put_block_list_result {
+                    Ok(_) => Ok(S3Response::new(AbortMultipartUploadOutput {
+                        ..Default::default()
+                    })),
+                    Err(err) => Err(s3s::S3Error::with_message(
+                        s3s::S3ErrorCode::InternalError,
+                        format!("Failed to update block list: {}", err),
+                    )),
+                }
+            }
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Failed to get block list: {}", err),
+            )),
+        }
+    }
 }

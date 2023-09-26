@@ -96,6 +96,18 @@ pub fn new_create_multipart_upload_request(
     builder.build().unwrap()
 }
 
+pub fn new_abort_multipart_upload_request(
+    bucket: String,
+    key: String,
+    upload_id: String,
+) -> AbortMultipartUploadInput {
+    let mut builder = AbortMultipartUploadInput::builder();
+    builder.set_bucket(bucket);
+    builder.set_key(key);
+    builder.set_upload_id(upload_id);
+    builder.build().unwrap()
+}
+
 #[allow(dead_code)]
 pub fn new_list_multipart_uploads_request(
     bucket: String,

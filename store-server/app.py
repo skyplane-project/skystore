@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.routing import APIRoute
 from rich.logging import RichHandler
+from itertools import zip_longest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -358,22 +359,45 @@ async def complete_delete_bucket(request: DeleteBucketIsCompleted, db: DBSession
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: DBSession
 ) -> DeleteObjectsResponse:
-    locator_dict = {}
-    for key in request.keys:
-        stmt = (
-            select(DBLogicalObject)
-            .options(joinedload(DBLogicalObject.physical_object_locators))
-            .where(DBLogicalObject.bucket == request.bucket)
-            .where(DBLogicalObject.key == key)
-            .where(DBLogicalObject.status == Status.ready)
+    if request.multipart_upload_ids and len(request.keys) != len(
+        request.multipart_upload_ids
+    ):
+        return Response(
+            status_code=400,
+            content="Mismatched lengths for ids and multipart_upload_ids",
         )
+
+    locator_dict = {}
+    for key, multipart_upload_id in zip_longest(
+        request.keys, request.multipart_upload_ids or []
+    ):
+        if multipart_upload_id:
+            stmt = (
+                select(DBLogicalObject)
+                .options(joinedload(DBLogicalObject.physical_object_locators))
+                .where(DBLogicalObject.bucket == request.bucket)
+                .where(DBLogicalObject.key == key)
+                .where(
+                    DBLogicalObject.status == Status.ready
+                    or DBLogicalObject.status == Status.pending
+                )
+                .where(DBLogicalObject.multipart_upload_id == multipart_upload_id)
+            )
+        else:
+            stmt = (
+                select(DBLogicalObject)
+                .options(joinedload(DBLogicalObject.physical_object_locators))
+                .where(DBLogicalObject.bucket == request.bucket)
+                .where(DBLogicalObject.key == key)
+                .where(DBLogicalObject.status == Status.ready)
+            )
         logical_obj = await db.scalar(stmt)
         if logical_obj is None:
             return Response(status_code=404, content="Object not found")
 
         locators = []
         for physical_locator in logical_obj.physical_object_locators:
-            if physical_locator.status not in Status.ready:
+            if physical_locator.status not in Status.ready and not multipart_upload_id:
                 logger.error(
                     f"Cannot delete physical object. Current status is {physical_locator.status}"
                 )
@@ -394,6 +418,7 @@ async def start_delete_objects(
                     size=physical_locator.logical_object.size,
                     last_modified=physical_locator.logical_object.last_modified,
                     etag=physical_locator.logical_object.etag,
+                    multipart_upload_id=physical_locator.multipart_upload_id,
                 )
             )
 
@@ -415,10 +440,27 @@ async def start_delete_objects(
 @app.patch("/complete_delete_objects")
 async def complete_delete_objects(request: DeleteObjectsIsCompleted, db: DBSession):
     # TODO: need to deal with partial failures
-    for id in request.ids:
-        physical_locator_stmt = select(DBPhysicalObjectLocator).where(
-            DBPhysicalObjectLocator.id == id
+    if request.multipart_upload_ids and len(request.ids) != len(
+        request.multipart_upload_ids
+    ):
+        return Response(
+            status_code=400,
+            content="Mismatched lengths for ids and multipart_upload_ids",
         )
+
+    for id, multipart_upload_id in zip_longest(
+        request.ids, request.multipart_upload_ids or []
+    ):
+        physical_locator_stmt = (
+            select(DBPhysicalObjectLocator)
+            .where(DBPhysicalObjectLocator.id == id)
+            .where(
+                DBPhysicalObjectLocator.multipart_upload_id == multipart_upload_id
+                if multipart_upload_id
+                else True
+            )
+        )
+
         physical_locator = await db.scalar(physical_locator_stmt)
 
         if physical_locator is None:
@@ -591,8 +633,6 @@ async def start_warmup(
         .where(DBLogicalObject.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
-
-    # Find and print all physical locator
 
     if not locators:
         return Response(status_code=404, content="Object Not Found")
@@ -900,23 +940,50 @@ async def append_part(request: PatchUploadMultipartUploadPart, db: DBSession):
     logger.debug(f"append_part: {request} -> {physical_locator}")
 
     await db.refresh(physical_locator, ["multipart_upload_parts"])
-    physical_locator.multipart_upload_parts.append(
-        DBPhysicalMultipartUploadPart(
-            part_number=request.part_number,
-            etag=request.etag,
-            size=request.size,
-        )
+
+    existing_physical_part = next(
+        (
+            part
+            for part in physical_locator.multipart_upload_parts
+            if part.part_number == request.part_number
+        ),
+        None,
     )
 
-    if physical_locator.is_primary:
-        await db.refresh(physical_locator.logical_object, ["multipart_upload_parts"])
-        physical_locator.logical_object.multipart_upload_parts.append(
-            DBLogicalMultipartUploadPart(
+    if existing_physical_part:
+        existing_physical_part.etag = request.etag
+        existing_physical_part.size = request.size
+    else:
+        physical_locator.multipart_upload_parts.append(
+            DBPhysicalMultipartUploadPart(
                 part_number=request.part_number,
                 etag=request.etag,
                 size=request.size,
             )
         )
+
+    if physical_locator.is_primary:
+        await db.refresh(physical_locator.logical_object, ["multipart_upload_parts"])
+        existing_logical_part = next(
+            (
+                part
+                for part in physical_locator.logical_object.multipart_upload_parts
+                if part.part_number == request.part_number
+            ),
+            None,
+        )
+
+        if existing_logical_part:
+            existing_logical_part.etag = request.etag
+            existing_logical_part.size = request.size
+        else:
+            physical_locator.logical_object.multipart_upload_parts.append(
+                DBLogicalMultipartUploadPart(
+                    part_number=request.part_number,
+                    etag=request.etag,
+                    size=request.size,
+                )
+            )
 
     await db.commit()
 
@@ -1029,6 +1096,15 @@ async def list_objects(
     )
     if request.prefix is not None:
         stmt = stmt.where(DBLogicalObject.key.startswith(request.prefix))
+    if request.start_after is not None:
+        stmt = stmt.where(DBLogicalObject.key > request.start_after)
+
+    # Sort keys before return
+    stmt = stmt.order_by(DBLogicalObject.key)
+
+    # Limit the number of returned objects if specified
+    if request.max_keys is not None:
+        stmt = stmt.limit(request.max_keys)
 
     objects = await db.execute(stmt)
     objects_all = objects.scalars().all()
@@ -1036,7 +1112,7 @@ async def list_objects(
     if not objects_all:
         return []
 
-    logger.debug(f"list_objects: {request} -> {objects}")
+    logger.debug(f"list_objects: {request} -> {objects_all}")
 
     return [
         ObjectResponse(

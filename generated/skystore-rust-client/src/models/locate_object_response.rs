@@ -28,6 +28,11 @@ pub struct LocateObjectResponse {
     pub last_modified: Option<String>,
     #[serde(rename = "etag", skip_serializing_if = "Option::is_none")]
     pub etag: Option<String>,
+    #[serde(
+        rename = "multipart_upload_id",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub multipart_upload_id: Option<String>,
 }
 
 impl LocateObjectResponse {
@@ -49,6 +54,7 @@ impl LocateObjectResponse {
             size: None,
             last_modified: None,
             etag: None,
+            multipart_upload_id: None,
         }
     }
 }
