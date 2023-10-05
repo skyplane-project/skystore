@@ -251,6 +251,13 @@ pub fn clone_upload_part_request(
     }
 }
 
+pub fn current_timestamp_string() -> String {
+    let formatted_string = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
+    formatted_string.to_string()
+}
+
 pub fn clone_timestamp(timestamp: &Timestamp) -> Timestamp {
     let mut buf: Vec<u8> = Vec::new();
     timestamp

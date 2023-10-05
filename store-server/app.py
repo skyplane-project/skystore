@@ -717,20 +717,6 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
-    stmt = (
-        select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
-        .where(DBLogicalObject.bucket == request.bucket)
-        .where(DBLogicalObject.key == request.key)
-        .where(DBLogicalObject.status == Status.ready)
-        .where(DBPhysicalObjectLocator.location_tag == request.client_from_region)
-    )
-    object_already_exists = len((await db.scalars(stmt)).all()) > 0
-
-    if object_already_exists:
-        logger.error("This exact object already exists")
-        return Response(status_code=409, content="Conflict, object already exists")
-
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -739,6 +725,15 @@ async def start_upload(
         .where(DBLogicalObject.status == Status.ready)
     )
     existing_objects = (await db.scalars(existing_objects_stmt)).all()
+    # Parse results for the object_already_exists check
+    object_already_exists = any(
+        locator.location_tag == request.client_from_region
+        for locator in existing_objects
+    )
+
+    if object_already_exists:
+        logger.error("This exact object already exists")
+        return Response(status_code=409, content="Conflict, object already exists")
     existing_tags = set(locator.location_tag for locator in existing_objects)
     primary_exists = any(locator.is_primary for locator in existing_objects)
 
@@ -883,24 +878,24 @@ async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
+        .options(joinedload(DBPhysicalObjectLocator.logical_object))
         .where(DBPhysicalObjectLocator.id == request.id)
     )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
         logger.error(f"physical locator not found: {request}")
         return Response(status_code=404, content="Not Found")
-    await db.refresh(physical_locator, ["logical_object"])
 
     logger.debug(f"complete_upload: {request} -> {physical_locator}")
 
     physical_locator.status = Status.ready
     if physical_locator.is_primary:
-        physical_locator.logical_object.status = Status.ready
-        physical_locator.logical_object.size = request.size
-        physical_locator.logical_object.etag = request.etag
-        physical_locator.logical_object.last_modified = request.last_modified.replace(
-            tzinfo=None
-        )
+        # await db.refresh(physical_locator, ["logical_object"])
+        logical_object = physical_locator.logical_object
+        logical_object.status = Status.ready
+        logical_object.size = request.size
+        logical_object.etag = request.etag
+        logical_object.last_modified = request.last_modified.replace(tzinfo=None)
     await db.commit()
 
 

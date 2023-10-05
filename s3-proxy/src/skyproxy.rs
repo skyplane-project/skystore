@@ -433,39 +433,31 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<HeadObjectInput>,
     ) -> S3Result<S3Response<HeadObjectOutput>> {
-        let locator = self
-            .locate_object(req.input.bucket.clone(), req.input.key.clone())
-            .await?;
+        // Directly call the control plane instead of going through the object store
+        let head_resp = apis::head_object(
+            &self.dir_conf,
+            models::HeadObjectRequest {
+                bucket: req.input.bucket.clone(),
+                key: req.input.key.clone(),
+            },
+        )
+        .await;
 
-        let mut head_object_response = match locator {
-            Some(locator) => {
-                let client: Arc<Box<dyn ObjectStoreClient>> =
-                    self.store_clients.get(&locator.tag).unwrap().clone();
-
-                match client
-                    .head_object(S3Request::new(new_head_object_request(
-                        locator.bucket.clone(),
-                        locator.key.clone(),
-                    )))
-                    .await
-                {
-                    Ok(resp) => resp,
-                    Err(err) => {
-                        error!("head_object failed: {:?}", err);
-                        return Err(s3s::S3Error::with_message(
-                            s3s::S3ErrorCode::InternalError,
-                            "head_object failed",
-                        ));
-                    }
-                }
-            }
-            None => {
+        let output = match head_resp {
+            Ok(resp) => HeadObjectOutput {
+                content_length: resp.size as i64,
+                e_tag: Some(resp.etag),
+                last_modified: Some(string_to_timestamp(&resp.last_modified)),
+                ..Default::default()
+            },
+            Err(_) => {
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::NoSuchKey,
                     "No such key",
                 ))
             }
         };
+        let mut head_object_response = S3Response::new(output);
 
         // warmup logic
         if let Some(warmup_header) = req.headers.get("X-SKYSTORE-WARMUP") {
@@ -762,29 +754,41 @@ impl S3 for SkyProxy {
                     input
                 });
 
+                let (content_length, bucket, key) = (
+                    req.input.content_length,
+                    locator.bucket.clone(),
+                    locator.key.clone(),
+                );
+
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
 
                     // Retrieve the object metatada through HEAD request.
-                    // So we get the proper size, etag, and last_modified from the object store pov.
-                    let head_resp = client
-                        .head_object(S3Request::new(new_head_object_request(
-                            locator.bucket.clone(),
-                            locator.key.clone(),
-                        )))
-                        .await
-                        .unwrap();
+                    // So we get the proper size, etag, and last_modified.
+                    // No need to fetch from S3 if content length is provided, assume (size = input.content_length, last_modified=current time)
+                    let (size_to_set, last_modified) = match content_length {
+                        Some(length) => (length, current_timestamp_string()),
+                        None => {
+                            // Fetch from S3 when content_length is not provided
+                            let head_resp = client
+                                .head_object(S3Request::new(new_head_object_request(bucket, key)))
+                                .await
+                                .unwrap();
+                            (
+                                head_resp.output.content_length,
+                                timestamp_to_string(head_resp.output.last_modified.unwrap()),
+                            )
+                        }
+                    };
 
                     apis::complete_upload(
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: head_resp.output.content_length as u64,
+                            size: size_to_set as u64,
                             etag: e_tag.clone(),
-                            last_modified: timestamp_to_string(
-                                head_resp.output.last_modified.unwrap(),
-                            ),
+                            last_modified,
                         },
                     )
                     .await
