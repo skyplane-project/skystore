@@ -19,8 +19,8 @@ pub struct ListPartsRequest {
     pub key: String,
     #[serde(rename = "upload_id")]
     pub upload_id: String,
-    #[serde(rename = "part_number", skip_serializing_if = "Option::is_none")]
-    pub part_number: Option<i32>,
+    #[serde(rename = "part_number", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub part_number: Option<Option<i32>>,
 }
 
 impl ListPartsRequest {

@@ -17,8 +17,8 @@ pub struct DeleteObjectsRequest {
     pub bucket: String,
     #[serde(rename = "keys")]
     pub keys: Vec<String>,
-    #[serde(rename = "multipart_upload_ids", skip_serializing_if = "Option::is_none")]
-    pub multipart_upload_ids: Option<Vec<String>>,
+    #[serde(rename = "multipart_upload_ids", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub multipart_upload_ids: Option<Option<Vec<String>>>,
 }
 
 impl DeleteObjectsRequest {

@@ -25,20 +25,22 @@ pub struct ContinueUploadResponse {
     pub region: String,
     #[serde(rename = "key")]
     pub key: String,
-    #[serde(rename = "size", skip_serializing_if = "Option::is_none")]
-    pub size: Option<u64>,
-    #[serde(rename = "last_modified", skip_serializing_if = "Option::is_none")]
-    pub last_modified: Option<String>,
-    #[serde(rename = "etag", skip_serializing_if = "Option::is_none")]
-    pub etag: Option<String>,
+    #[serde(rename = "status", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub status: Option<Option<crate::models::Status>>,
+    #[serde(rename = "size", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub size: Option<Option<u32>>,
+    #[serde(rename = "last_modified", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub last_modified: Option<Option<String>>,
+    #[serde(rename = "etag", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub etag: Option<Option<String>>,
     #[serde(rename = "multipart_upload_id")]
     pub multipart_upload_id: String,
-    #[serde(rename = "parts", skip_serializing_if = "Option::is_none")]
-    pub parts: Option<Vec<crate::models::ContinueUploadPhysicalPart>>,
-    #[serde(rename = "copy_src_bucket", skip_serializing_if = "Option::is_none")]
-    pub copy_src_bucket: Option<String>,
-    #[serde(rename = "copy_src_key", skip_serializing_if = "Option::is_none")]
-    pub copy_src_key: Option<String>,
+    #[serde(rename = "parts", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub parts: Option<Option<Vec<crate::models::ContinueUploadPhysicalPart>>>,
+    #[serde(rename = "copy_src_bucket", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub copy_src_bucket: Option<Option<String>>,
+    #[serde(rename = "copy_src_key", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub copy_src_key: Option<Option<String>>,
 }
 
 impl ContinueUploadResponse {
@@ -50,6 +52,7 @@ impl ContinueUploadResponse {
             bucket,
             region,
             key,
+            status: None,
             size: None,
             last_modified: None,
             etag: None,

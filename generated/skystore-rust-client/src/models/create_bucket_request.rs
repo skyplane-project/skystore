@@ -17,8 +17,8 @@ pub struct CreateBucketRequest {
     pub bucket: String,
     #[serde(rename = "client_from_region")]
     pub client_from_region: String,
-    #[serde(rename = "warmup_regions", skip_serializing_if = "Option::is_none")]
-    pub warmup_regions: Option<Vec<String>>,
+    #[serde(rename = "warmup_regions", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub warmup_regions: Option<Option<Vec<String>>>,
 }
 
 impl CreateBucketRequest {

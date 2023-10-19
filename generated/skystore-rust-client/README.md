@@ -89,6 +89,7 @@ Class | Method | HTTP request | Description
  - [StartUploadResponse](docs/StartUploadResponse.md)
  - [StartWarmupRequest](docs/StartWarmupRequest.md)
  - [StartWarmupResponse](docs/StartWarmupResponse.md)
+ - [Status](docs/Status.md)
  - [ValidationError](docs/ValidationError.md)
 
 

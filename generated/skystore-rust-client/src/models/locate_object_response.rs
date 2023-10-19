@@ -25,14 +25,16 @@ pub struct LocateObjectResponse {
     pub region: String,
     #[serde(rename = "key")]
     pub key: String,
-    #[serde(rename = "size", skip_serializing_if = "Option::is_none")]
-    pub size: Option<u64>,
-    #[serde(rename = "last_modified", skip_serializing_if = "Option::is_none")]
-    pub last_modified: Option<String>,
-    #[serde(rename = "etag", skip_serializing_if = "Option::is_none")]
-    pub etag: Option<String>,
-    #[serde(rename = "multipart_upload_id", skip_serializing_if = "Option::is_none")]
-    pub multipart_upload_id: Option<String>,
+    #[serde(rename = "status", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub status: Option<Option<crate::models::Status>>,
+    #[serde(rename = "size", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub size: Option<Option<u32>>,
+    #[serde(rename = "last_modified", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub last_modified: Option<Option<String>>,
+    #[serde(rename = "etag", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub etag: Option<Option<String>>,
+    #[serde(rename = "multipart_upload_id", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub multipart_upload_id: Option<Option<String>>,
 }
 
 impl LocateObjectResponse {
@@ -44,6 +46,7 @@ impl LocateObjectResponse {
             bucket,
             region,
             key,
+            status: None,
             size: None,
             last_modified: None,
             etag: None,

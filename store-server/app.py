@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 import os
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Response, status
+from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
 from rich.logging import RichHandler
 from itertools import zip_longest
@@ -87,11 +88,13 @@ engine = create_async_engine(
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
+app.openapi_version = "3.0.2"
 conf = TEST_CONFIGURATION
 init_region_tags = DEFAULT_INIT_REGIONS
 
 load_dotenv()
 
+stop_task_flag = asyncio.Event()
 
 @app.on_event("startup")
 async def startup():
@@ -108,6 +111,10 @@ async def startup():
     if os.getenv("INIT_REGIONS"):
         init_region_tags = os.getenv("INIT_REGIONS").split(",")
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Set the flag to signal the background task to stop
+    stop_task_flag.set()
 
 async def get_session() -> AsyncSession:
     async with async_session() as session:
@@ -892,81 +899,89 @@ async def rm_lock_on_timeout(minutes, testing=False):
     # initial wait to prevent first check which should never run
     if not testing:
         await asyncio.sleep(minutes)
-    async with engine.begin() as db:
-        # db.begin()
+    while not stop_task_flag.is_set() or testing:
+        async with engine.begin() as db:
+            # db.begin()
 
-        # calculate time for which we can timeout. Anything before or equal to 10 minutes ago will timeout
-        cutoff_time = datetime.utcnow() - timedelta(minutes)
-        
-        # time out Physical objects that have been running for more than 10 minutes
-        stmt_timeout_physical_objects = (update(DBPhysicalObjectLocator)
-                .where(DBPhysicalObjectLocator.lock_acquired_at <= cutoff_time)
-                .values(status=Status.ready, lock_acquired_at=None)
-            )
-        await db.execute(stmt_timeout_physical_objects)
-        
-        # time out Physical buckets that have been running for more than 10 minutes
-        stmt_timeout_physical_buckets = (update(DBPhysicalBucketLocator)
-                .where(DBPhysicalBucketLocator.lock_acquired_at <= cutoff_time)
-                .values(status=Status.ready, lock_acquired_at=None)
-            )
-        await db.execute(stmt_timeout_physical_buckets)
-        
-        # find Logical objects that are pending
-        stmt_find_pending_logical_objs = (
-            select(DBLogicalObject)
-            .where(DBLogicalObject.status == Status.pending)
-        )
-        pendingLogicalObjs = (await db.execute(stmt_find_pending_logical_objs)).fetchall()
-        
-        if pendingLogicalObjs != None:
-            # loop through list of pending logical objects
-            for logical_obj in pendingLogicalObjs:
-                # get all physical objects corresponding to a given logical object
-                stmt3 = (select(DBPhysicalObjectLocator)
-                    .join(DBLogicalObject)
-                    .where(logical_obj.id == DBPhysicalObjectLocator.logical_object_id)
+            # calculate time for which we can timeout. Anything before or equal to 10 minutes ago will timeout
+            cutoff_time = datetime.utcnow() - timedelta(minutes)
+            
+            # time out Physical objects that have been running for more than 10 minutes
+            stmt_timeout_physical_objects = (update(DBPhysicalObjectLocator)
+                    .where(DBPhysicalObjectLocator.lock_acquired_at <= cutoff_time)
+                    .values(status=Status.ready, lock_acquired_at=None)
                 )
-                objects = (await db.execute(stmt3)).fetchall()
-
-                # set logical objects status to "Ready" if all of its physical objects are "Ready"
-                if all([Status.ready == obj.status for obj in objects]):
-                    edit_logical_obj_stmt = (
-                        update(DBLogicalObject)
-                        .where(objects[0].logical_object_id == logical_obj.id)
-                        .values(status=Status.ready)
-                    )
-                    await db.execute(edit_logical_obj_stmt)
-
-            #await db.commit()
-
-        # find Logical buckets that are pending
-        stmt_find_pending_logical_buckets = (
-            select(DBLogicalBucket)
-            .where(DBLogicalBucket.status == Status.pending)
-        )
-        pendingLogicalBuckets = (await db.execute(stmt_find_pending_logical_buckets)).fetchall()
-        
-        if pendingLogicalBuckets != None:
-            # loop through list of pending logical buckets
-            for logical_bucket in pendingLogicalBuckets:
-                # get all physical buckets corresponding to a given logical object
-                stmt3 = (select(DBPhysicalBucketLocator)
-                    .join(DBLogicalBucket)
-                    .where(logical_bucket.id == DBPhysicalBucketLocator.logical_bucket_id)
+            await db.execute(stmt_timeout_physical_objects)
+            
+            # time out Physical buckets that have been running for more than 10 minutes
+            stmt_timeout_physical_buckets = (update(DBPhysicalBucketLocator)
+                    .where(DBPhysicalBucketLocator.lock_acquired_at <= cutoff_time)
+                    .values(status=Status.ready, lock_acquired_at=None)
                 )
-                buckets = (await db.execute(stmt3)).fetchall()
-
-                # set logical buckets status to "Ready" if all of its physical buckets are "Ready"
-                if all([Status.ready == bucket.status for bucket in buckets]):
-                    edit_logical_bucket_stmt = (
-                        update(DBLogicalBucket)
-                        .where(buckets[0].logical_bucket_id == logical_bucket.id)
-                        .values(status=Status.ready)
+            await db.execute(stmt_timeout_physical_buckets)
+            
+            # find Logical objects that are pending
+            stmt_find_pending_logical_objs = (
+                select(DBLogicalObject)
+                .where(DBLogicalObject.status == Status.pending)
+            )
+            pendingLogicalObjs = (await db.execute(stmt_find_pending_logical_objs)).fetchall()
+            
+            if pendingLogicalObjs != None:
+                # loop through list of pending logical objects
+                for logical_obj in pendingLogicalObjs:
+                    # get all physical objects corresponding to a given logical object
+                    stmt3 = (select(DBPhysicalObjectLocator)
+                        .join(DBLogicalObject)
+                        .where(logical_obj.id == DBPhysicalObjectLocator.logical_object_id)
                     )
-                    await db.execute(edit_logical_bucket_stmt)
+                    objects = (await db.execute(stmt3)).fetchall()
 
-        await db.commit()
+                    # set logical objects status to "Ready" if all of its physical objects are "Ready"
+                    if all([Status.ready == obj.status for obj in objects]):
+                        edit_logical_obj_stmt = (
+                            update(DBLogicalObject)
+                            .where(objects[0].logical_object_id == logical_obj.id)
+                            .values(status=Status.ready)
+                        )
+                        await db.execute(edit_logical_obj_stmt)
+
+                #await db.commit()
+
+            # find Logical buckets that are pending
+            stmt_find_pending_logical_buckets = (
+                select(DBLogicalBucket)
+                .where(DBLogicalBucket.status == Status.pending)
+            )
+            pendingLogicalBuckets = (await db.execute(stmt_find_pending_logical_buckets)).fetchall()
+            
+            if pendingLogicalBuckets != None:
+                # loop through list of pending logical buckets
+                for logical_bucket in pendingLogicalBuckets:
+                    # get all physical buckets corresponding to a given logical object
+                    stmt3 = (select(DBPhysicalBucketLocator)
+                        .join(DBLogicalBucket)
+                        .where(logical_bucket.id == DBPhysicalBucketLocator.logical_bucket_id)
+                    )
+                    buckets = (await db.execute(stmt3)).fetchall()
+
+                    # set logical buckets status to "Ready" if all of its physical buckets are "Ready"
+                    if all([Status.ready == bucket.status for bucket in buckets]):
+                        edit_logical_bucket_stmt = (
+                            update(DBLogicalBucket)
+                            .where(buckets[0].logical_bucket_id == logical_bucket.id)
+                            .values(status=Status.ready)
+                        )
+                        await db.execute(edit_logical_bucket_stmt)
+
+            await db.commit()
+
+        if testing:
+            break
+        
+        await asyncio.sleep(minutes * 60)
+
+    
             
 
 @app.patch("/complete_upload")
@@ -1305,6 +1320,24 @@ async def list_parts(
 async def healthz() -> HealthcheckResponse:
     return HealthcheckResponse(status="OK")
 
+# def custom_openapi():
+#     if app.openapi_schema:
+#         return app.openapi_schema
+#     openapi_schema = get_openapi(
+#         title="Custom title",
+#         version="3.0.2",
+#         summary="This is a very custom OpenAPI schema",
+#         description="Here's a longer description of the custom **OpenAPI** schema",
+#         routes=app.routes,
+#     )
+#     # openapi_schema["info"]["x-logo"] = {
+#     #     "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
+#     # }
+#     app.openapi_schema = openapi_schema
+#     return app.openapi_schema
+
+
+# app.openapi = custom_openapi
 
 ## Add routes above this function
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

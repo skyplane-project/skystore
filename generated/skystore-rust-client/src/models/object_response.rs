@@ -21,6 +21,8 @@ pub struct ObjectResponse {
     pub size: u64,
     #[serde(rename = "etag")]
     pub etag: String,
+    #[serde(rename = "status", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub status: Option<Option<crate::models::Status>>,
     #[serde(rename = "last_modified")]
     pub last_modified: String,
 }
@@ -32,6 +34,7 @@ impl ObjectResponse {
             key,
             size,
             etag,
+            status: None,
             last_modified,
         }
     }

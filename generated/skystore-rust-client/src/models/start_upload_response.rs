@@ -15,8 +15,8 @@
 pub struct StartUploadResponse {
     #[serde(rename = "locators")]
     pub locators: Vec<crate::models::LocateObjectResponse>,
-    #[serde(rename = "multipart_upload_id", skip_serializing_if = "Option::is_none")]
-    pub multipart_upload_id: Option<String>,
+    #[serde(rename = "multipart_upload_id", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub multipart_upload_id: Option<Option<String>>,
     #[serde(rename = "copy_src_buckets")]
     pub copy_src_buckets: Vec<String>,
     #[serde(rename = "copy_src_keys")]

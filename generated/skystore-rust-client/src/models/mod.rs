@@ -74,5 +74,7 @@ pub mod start_warmup_request;
 pub use self::start_warmup_request::StartWarmupRequest;
 pub mod start_warmup_response;
 pub use self::start_warmup_response::StartWarmupResponse;
+pub mod status;
+pub use self::status::Status;
 pub mod validation_error;
 pub use self::validation_error::ValidationError;

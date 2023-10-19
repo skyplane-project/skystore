@@ -21,10 +21,10 @@ pub struct StartUploadRequest {
     pub client_from_region: String,
     #[serde(rename = "is_multipart")]
     pub is_multipart: bool,
-    #[serde(rename = "copy_src_bucket", skip_serializing_if = "Option::is_none")]
-    pub copy_src_bucket: Option<String>,
-    #[serde(rename = "copy_src_key", skip_serializing_if = "Option::is_none")]
-    pub copy_src_key: Option<String>,
+    #[serde(rename = "copy_src_bucket", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub copy_src_bucket: Option<Option<String>>,
+    #[serde(rename = "copy_src_key", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
+    pub copy_src_key: Option<Option<String>>,
 }
 
 impl StartUploadRequest {
