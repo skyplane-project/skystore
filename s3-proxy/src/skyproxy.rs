@@ -383,9 +383,9 @@ impl S3 for SkyProxy {
             &self.dir_conf,
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
-                prefix: req.input.prefix.clone(),
-                start_after: req.input.start_after.clone(),
-                max_keys: req.input.max_keys,
+                prefix: Some(req.input.prefix.clone()),
+                start_after: Some(req.input.start_after.clone()),
+                max_keys: Some(req.input.max_keys),
             },
         )
         .await;
@@ -713,7 +713,7 @@ impl S3 for SkyProxy {
             .await?;
         if let Some(locator) = locator {
             return Ok(S3Response::new(PutObjectOutput {
-                e_tag: locator.etag,
+                e_tag: locator.etag.unwrap(),
                 ..Default::default()
             }));
         }
@@ -1028,9 +1028,9 @@ impl S3 for SkyProxy {
         if let Some(dst_locator) = dst_locator {
             return Ok(S3Response::new(CopyObjectOutput {
                 copy_object_result: Some(CopyObjectResult {
-                    e_tag: dst_locator.etag,
+                    e_tag: dst_locator.etag.unwrap(),
                     last_modified: Some(string_to_timestamp(
-                        dst_locator.last_modified.as_ref().unwrap(),
+                        dst_locator.last_modified.clone().unwrap().unwrap().as_str(),
                     )),
                     ..Default::default()
                 }),
@@ -1045,8 +1045,8 @@ impl S3 for SkyProxy {
                 key: dst_key.to_string(),
                 client_from_region: self.client_from_region.clone(),
                 is_multipart: false,
-                copy_src_bucket: Some(src_bucket.to_string()),
-                copy_src_key: Some(src_key.to_string()),
+                copy_src_bucket: Some(Some(src_bucket.to_string())),
+                copy_src_key: Some(Some(src_key.to_string())),
             },
         )
         .await
@@ -1180,7 +1180,7 @@ impl S3 for SkyProxy {
         Ok(S3Response::new(CreateMultipartUploadOutput {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
-            upload_id: upload_resp.multipart_upload_id,
+            upload_id: upload_resp.multipart_upload_id.unwrap(),
             ..Default::default()
         }))
     }
@@ -1195,7 +1195,7 @@ impl S3 for SkyProxy {
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
                 keys: vec![req.input.key.clone()],
-                multipart_upload_ids: Some(vec![req.input.upload_id.clone()]),
+                multipart_upload_ids: Some(Some(vec![req.input.upload_id.clone()])),
             },
         )
         .await
@@ -1209,7 +1209,7 @@ impl S3 for SkyProxy {
                     .abort_multipart_upload(S3Request::new(new_abort_multipart_upload_request(
                         locator.bucket.clone(),
                         locator.key.clone(),
-                        locator.multipart_upload_id.as_ref().cloned().unwrap(),
+                        locator.multipart_upload_id.as_ref().cloned().unwrap().unwrap(),
                     )))
                     .await
                     .unwrap();
@@ -1218,11 +1218,12 @@ impl S3 for SkyProxy {
                     &self.dir_conf,
                     models::DeleteObjectsIsCompleted {
                         ids: vec![locator.id],
-                        multipart_upload_ids: Some(vec![locator
+                        multipart_upload_ids: Some(Some(vec![locator
                             .multipart_upload_id
                             .as_ref()
                             .cloned()
-                            .unwrap()]),
+                            .unwrap()
+                            .unwrap()])),
                     },
                 )
                 .await
@@ -1242,7 +1243,7 @@ impl S3 for SkyProxy {
             &self.dir_conf,
             models::ListObjectRequest {
                 bucket: req.input.bucket.clone(),
-                prefix: req.input.prefix.clone(),
+                prefix: Some(req.input.prefix.clone()),
                 start_after: None,
                 max_keys: None,
             },
@@ -1380,7 +1381,7 @@ impl S3 for SkyProxy {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
                 upload_id: req.input.upload_id.clone(),
-                part_number: Some(req.input.part_number),
+                part_number: Some(Some(req.input.part_number)),
             },
         )
         .await
@@ -1423,8 +1424,8 @@ impl S3 for SkyProxy {
                 multipart_upload_id: req.input.upload_id.clone(),
                 client_from_region: self.client_from_region.clone(),
                 do_list_parts: Some(false),
-                copy_src_bucket: Some(src_bucket.clone()),
-                copy_src_key: Some(src_key.clone()),
+                copy_src_bucket: Some(Some(src_bucket.clone())),
+                copy_src_key: Some(Some(src_key.clone())),
             },
         )
         .await
@@ -1441,8 +1442,8 @@ impl S3 for SkyProxy {
                     locator.key.clone(),
                     locator.multipart_upload_id.clone(),
                     part_number,
-                    locator.copy_src_bucket.clone().unwrap(),
-                    locator.copy_src_key.clone().unwrap(),
+                    locator.copy_src_bucket.clone().unwrap().unwrap(),
+                    locator.copy_src_key.clone().unwrap().unwrap(),
                 );
                 let copy_resp = client.upload_part_copy(S3Request::new(req)).await.unwrap();
 
@@ -1452,7 +1453,7 @@ impl S3 for SkyProxy {
                         id: locator.id,
                         part_number,
                         etag: copy_resp.output.copy_part_result.unwrap().e_tag.unwrap(),
-                        size: content_length, // we actually can't head object this :(, this is a part.
+                        size: content_length.unwrap() as u64, // we actually can't head object this :(, this is a part.
                     },
                 )
                 .await
@@ -1468,7 +1469,7 @@ impl S3 for SkyProxy {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
                 upload_id: req.input.upload_id.clone(),
-                part_number: Some(req.input.part_number),
+                part_number: Some(Some(req.input.part_number)),
             },
         )
         .await
@@ -1529,6 +1530,7 @@ impl S3 for SkyProxy {
 
             let mut physical_parts_list: Vec<_> = locator
                 .parts
+                .unwrap()
                 .unwrap()
                 .into_iter()
                 .map(|p| {
@@ -1651,7 +1653,7 @@ mod tests {
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
         proxy.create_bucket(req).await.unwrap().output;
-
+        
         {
             let mut request = new_put_object_request(bucket_name.to_string(), "my-key".to_string());
             let body = "abcdefg".to_string().into_bytes();
