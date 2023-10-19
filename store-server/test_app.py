@@ -1,7 +1,6 @@
 import pytest
 from starlette.testclient import TestClient
-from app import app
-
+from app import app, rm_lock_on_timeout
 
 @pytest.fixture
 def client():
@@ -380,6 +379,7 @@ def test_get_object(client):
     resp.raise_for_status()
     resp_data = resp.json()
     resp_data.pop("id")
+    resp_data.pop("status")
     assert resp_data == {
         "tag": "aws:us-west-1",
         "bucket": "skystore-us-west-1",  # Bucket is prefixed with "skystore-"
@@ -647,6 +647,7 @@ def test_list_objects(client):
             "key": "my-key-1",
             "size": 100,
             "etag": "123",
+            'status': 'ready',
             "last_modified": "2020-01-01T00:00:00",
         }
     ]
@@ -790,3 +791,78 @@ def test_multipart_flow(client):
     resp.raise_for_status()
     resp_data = resp.json()
     assert resp_data["region"] == "us-west-1"
+
+@pytest.mark.asyncio
+async def test_metadata_clean_up(client):
+    """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "temp-object-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-west1"],
+        },
+    )
+    resp.raise_for_status()
+
+    # simulate timeout by not completing bucket creation 
+    # for physical_bucket in resp.json()["locators"]:
+    #     resp = client.patch(
+    #         "/complete_create_bucket",
+    #         json={
+    #             "id": physical_bucket["id"],
+    #             "creation_date": "2020-01-01T00:00:00",
+    #         },
+    #     )
+    #     resp.raise_for_status()
+
+    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+    await rm_lock_on_timeout(0, testing=True)
+
+    resp = client.post(
+        "/locate_bucket",
+        json={
+            "bucket": "temp-object-bucket",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    assert resp.json()['status'] == 'ready'
+    
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "temp-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+        },
+    )
+    resp.raise_for_status()
+
+    # forgo complete_upload for the first object. Let background process handle the first object
+    # simulates something going wrong and lock left acquired.    
+    # client.patch(
+    #     "/complete_upload",
+    #     json={
+    #         "id": resp.json()["locators"][1]["id"],
+    #         "size": 100,
+    #         "etag": "123",
+    #         "last_modified": "2020-01-01T00:00:00",
+    #     },
+    # ).raise_for_status()
+    
+    #pytest.set_trace() #debugging line
+
+    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+    await rm_lock_on_timeout(0, testing=True)
+
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "temp-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
+    assert resp.json()['status'] == 'ready'
