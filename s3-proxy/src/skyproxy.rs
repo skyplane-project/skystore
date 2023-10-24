@@ -1418,10 +1418,10 @@ impl S3 for SkyProxy {
         let mut request_range = None;
         if let Some(range) = &req.input.copy_source_range {
             let (start, end) = parse_range(range);
-            if end.is_none() {
-                content_length -= start;
+            if let Some(end) = end {
+                content_length = end - start + 1;
             } else {
-                content_length = end.unwrap() - start + 1;
+                content_length -= start;
             }
             request_range = Some(range.clone());
         }
@@ -1442,7 +1442,7 @@ impl S3 for SkyProxy {
         .unwrap();
 
         let mut tasks = tokio::task::JoinSet::new();
-        
+
         locators.into_iter().for_each(|locator| {
             let conf = self.dir_conf.clone();
             let request_range = request_range.clone();

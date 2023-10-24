@@ -310,7 +310,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 )
                 .await
                 .unwrap();
-            let body = Some(StreamingBlob::wrap(res));
+            let body = StreamingBlob::wrap(res);
             // now upload the selected range to the destination bucket
             let res = self
                 .client
@@ -319,35 +319,35 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                         bucket: destination_bucket.clone(),
                         ..Default::default()
                     },
-                    body.unwrap(),
+                    body,
                     &UploadType::Simple(Media::new(format!(
                         "{destination_object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
                     ))),
                 )
                 .await
                 .unwrap();
-    
+
             Ok(S3Response::new(UploadPartCopyOutput {
                 copy_part_result: Some(CopyPartResult {
                     e_tag: Some(res.etag),
                     ..Default::default()
                 }),
                 ..Default::default()
-            })) 
+            }))
         } else {
             let res = self
-            .client
-            .copy_object(&CopyObjectRequest {
-                destination_bucket,
-                destination_object: format!(
-                    "{destination_object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
-                ),
-                source_bucket: source_bucket.to_string(),
-                source_object: source_object.to_string(),
-                ..Default::default()
-            })
-            .await
-            .unwrap();
+                .client
+                .copy_object(&CopyObjectRequest {
+                    destination_bucket,
+                    destination_object: format!(
+                        "{destination_object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
+                    ),
+                    source_bucket: source_bucket.to_string(),
+                    source_object: source_object.to_string(),
+                    ..Default::default()
+                })
+                .await
+                .unwrap();
 
             return Ok(S3Response::new(UploadPartCopyOutput {
                 copy_part_result: Some(CopyPartResult {
@@ -355,7 +355,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }))
+            }));
         }
     }
 

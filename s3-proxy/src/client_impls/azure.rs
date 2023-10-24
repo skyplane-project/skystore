@@ -425,12 +425,9 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             let resp = resp.pop().unwrap();
             match resp {
                 Ok(resp) => {
-                    let body = Some(StreamingBlob::wrap(resp.data));
-                    let input_stream = SeekableBlobWrapper::new(body.unwrap());
-                    let resp = blob_client
-                        .put_block(block_id, input_stream)
-                        .await
-                        .unwrap();
+                    let body = StreamingBlob::wrap(resp.data);
+                    let input_stream = SeekableBlobWrapper::new(body);
+                    let resp = blob_client.put_block(block_id, input_stream).await.unwrap();
                     Ok(S3Response::new(UploadPartCopyOutput {
                         copy_part_result: Some(CopyPartResult {
                             // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
@@ -449,7 +446,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
             let resp = blob_client
                 .put_block_url(block_id, src_block_url)
                 .await
-                .unwrap();  
+                .unwrap();
             return Ok(S3Response::new(UploadPartCopyOutput {
                 copy_part_result: Some(CopyPartResult {
                     // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
@@ -457,7 +454,7 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }))  
+            }));
         }
     }
 
