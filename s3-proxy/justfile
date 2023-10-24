@@ -39,7 +39,7 @@ run-registry:
 install-local-s3:
   cargo install --force \
     --git https://github.com/Nugine/s3s.git \
-    --rev f66160f138b8110058676175b88ee36a00b9bd07 \
+    --rev 1739c0f40b13bf0ccbbdc5b1d55920e2b2de6484 \
     --bin s3s-fs \
     --features="binary" \
     s3s-fs
