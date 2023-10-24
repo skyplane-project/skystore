@@ -1872,7 +1872,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "UploadPartCopy is not implemented in the emulator."]
+    // #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow() {
         let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
