@@ -23,6 +23,9 @@ def init(
     config_file: str = typer.Option(
         ..., "--config", help="Path to the init config file"
     ),
+    start_server: bool = typer.Option(
+        False, "--start-server", help="Whether to start the server or not"
+    ),
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
     ),
@@ -43,6 +46,7 @@ def init(
         "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID"),
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
+        "LOCAL_SERVER": str(start_server).lower(),
     }
     env = {k: v for k, v in env.items() if v is not None}
 
@@ -62,13 +66,14 @@ def init(
         )
 
     # Start the skystore server
-    subprocess.Popen(
-        f"cd {DEFAULT_STORE_SERVER_PATH}; "
-        "rm skystore.db; uvicorn app:app --reload --port 3000",
-        shell=True,
-        env=env,
-    )
-
+    if start_server:
+        subprocess.Popen(
+            f"cd {DEFAULT_STORE_SERVER_PATH}; "
+            "rm skystore.db; uvicorn app:app --reload --port 3000",
+            shell=True,
+            env=env,
+        )
+        
     time.sleep(2)
 
     # Start the s3-proxy
@@ -89,14 +94,23 @@ def init(
 def register(
     register_config: str = typer.Option(
         ..., "--config", help="Path to the register config file"
-    )
-):
+    ),
+    local_test: bool = typer.Option(
+        False, "--local", help="Whether it is a local test or not"
+    ),
+):  
+    # read from LOCAL_SERVER environmental variable instead 
+    if local_test:
+        server_addr = "localhost"
+    else:
+        server_addr = "51.20.65.24"
+        
     try:
         with open(register_config, "r") as f:
             config = json.load(f)
 
         resp = requests.post(
-            "http://localhost:3000/register_buckets",
+            f"http://{server_addr}:3000/register_buckets",
             json={"bucket": config["bucket"], "config": config["config"]},
         )
         if resp.status_code == 200:

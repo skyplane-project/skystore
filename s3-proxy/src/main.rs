@@ -55,7 +55,11 @@ async fn main() {
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
 
-    let proxy = SkyProxy::new(init_regions, client_from_region, local_run).await;
+    let local_server: bool = env::var("LOCAL_SERVER")
+        .map(|s| s.parse::<bool>().unwrap())
+        .unwrap_or(true);
+
+    let proxy = SkyProxy::new(init_regions, client_from_region, local_run, local_server).await;
 
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain
