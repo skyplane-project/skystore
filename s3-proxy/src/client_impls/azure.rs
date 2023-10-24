@@ -118,7 +118,7 @@ impl AzureObjectStoreClient {
         let access_key = std::env::var("STORAGE_ACCESS_KEY").expect("missing STORAGE_ACCOUNT_KEY");
         let storage_credentials = StorageCredentials::Key(account.clone(), access_key);
 
-        let client = azure_storage_blobs::prelude::ClientBuilder::new(account, storage_credentials)
+        let client = ClientBuilder::new(account, storage_credentials)
             // .retry(RetryOptions::none())
             .blob_service_client();
         // let client = ClientBuilder::emulator().blob_service_client();
