@@ -47,13 +47,22 @@ TEST_CONFIGURATION = Configuration(
             bucket="my-sky-bucket-3",
             need_warmup=True,
         ),
+        PhysicalLocation(
+            name="azure:westus3",
+            cloud="azure",
+            region="westus3",
+            bucket="sky-s3-backend",
+            prefix="demo-dry-run/",
+            # broadcast_to=["gcp:us-west1", "aws:us-west-2"],
+        ),
     ]
 )
 
 DEFAULT_INIT_REGIONS = [
     "aws:us-west-1",
     "aws:us-east-2",
-    # "gcp:us-west1",
+    "gcp:us-west1",
+    "azure:westus3",
     # "aws:eu-central-1",
 ]
 

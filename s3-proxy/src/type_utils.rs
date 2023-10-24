@@ -164,6 +164,7 @@ pub fn new_upload_part_copy_request(
     part_number: i32,
     copy_source_bucket: String,
     copy_source_key: String,
+    copy_source_range: Option<String>, // e.g. "bytes=0-100"
 ) -> UploadPartCopyInput {
     let mut builder = UploadPartCopyInput::builder();
     builder.set_bucket(bucket);
@@ -175,6 +176,7 @@ pub fn new_upload_part_copy_request(
         key: copy_source_key.into(),
         version_id: None,
     });
+    builder.set_copy_source_range(copy_source_range);
     builder.build().unwrap()
 }
 
@@ -302,4 +304,25 @@ pub fn locate_response_is_404<T>(error: &Error<T>) -> bool {
         Error::ResponseError(err) => err.status == 404,
         _ => false,
     }
+}
+
+// based on s3, the range HTTP header it supports:
+// Int {
+//     /// first position
+//     first: u64,
+//     /// last position
+//     last: Option<u64>,
+// },
+// However, s3s only supports the following range format: last-first.
+pub fn parse_range(range: &String) -> (u64, Option<u64>) {
+    // range: e.g. "bytes=0-100"
+    let suffix = &range[6..];
+    let parts = suffix.split('-').collect::<Vec<&str>>();
+    let start = parts[0].parse::<u64>().unwrap();
+    // "bytes=100-"
+    if parts[1] == "" {
+        return (start, None);
+    }
+    let end = parts[1].parse::<u64>().unwrap();
+    (start, Some(end))
 }

@@ -1,4 +1,4 @@
-use crate::objstore_client::ObjectStoreClient;
+use crate::{objstore_client::ObjectStoreClient, type_utils::parse_range};
 use azure_core::{Body, SeekableStream};
 use azure_storage::StorageCredentials;
 use azure_storage_blobs::prelude::*;
@@ -13,6 +13,9 @@ use std::{
 
 use azure_storage::shared_access_signature::service_sas::BlobSasPermissions;
 use s3s::{S3Request, S3Result};
+
+// use azure_svc_blobstorage::*;
+// use azure_identity::DefaultAzureCredential;
 
 pub struct AzureObjectStoreClient {
     client: BlobServiceClient,
@@ -115,11 +118,11 @@ impl AzureObjectStoreClient {
         let access_key = std::env::var("STORAGE_ACCESS_KEY").expect("missing STORAGE_ACCOUNT_KEY");
         let storage_credentials = StorageCredentials::Key(account.clone(), access_key);
 
-        let client = ClientBuilder::new(account, storage_credentials)
+        let client = azure_storage_blobs::prelude::ClientBuilder::new(account, storage_credentials)
             // .retry(RetryOptions::none())
             .blob_service_client();
         // let client = ClientBuilder::emulator().blob_service_client();
-
+        // let service_client = azure_svc_blobstorage::Client::builder(storage_credentials);
         // act as healthcheck
         client.list_containers().into_stream().next().await;
 
@@ -410,19 +413,52 @@ impl ObjectStoreClient for AzureObjectStoreClient {
 
         let blob_client = self.blob_client(&container_name, &blob_name);
         let block_id = format!("{upload_id}-{part_number:04}");
-        let resp = blob_client
-            .put_block_url(block_id, src_block_url)
-            .await
-            .unwrap();
 
-        Ok(S3Response::new(UploadPartCopyOutput {
-            copy_part_result: Some(CopyPartResult {
-                // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
-                e_tag: Some(resp.request_id.to_string()),
+        if let Some(range) = req.copy_source_range {
+            let (start, end) = parse_range(&range);
+            let end = end.unwrap_or(u64::MAX);
+            let mut request_builder = blob_client.get().chunk_size(u64::MAX);
+            request_builder = request_builder.range(start..end);
+            let resp = request_builder.into_stream();
+            let mut resp: Vec<_> = resp.collect().await;
+            assert_eq!(resp.len(), 1);
+            let resp = resp.pop().unwrap();
+            match resp {
+                Ok(resp) => {
+                    let body = Some(StreamingBlob::wrap(resp.data));
+                    let input_stream = SeekableBlobWrapper::new(body.unwrap());
+                    let resp = blob_client
+                        .put_block(block_id, input_stream)
+                        .await
+                        .unwrap();
+                    Ok(S3Response::new(UploadPartCopyOutput {
+                        copy_part_result: Some(CopyPartResult {
+                            // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
+                            e_tag: Some(resp.request_id.to_string()),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }))
+                }
+                Err(err) => Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    format!("Request failed: {err}"),
+                )),
+            }
+        } else {
+            let resp = blob_client
+                .put_block_url(block_id, src_block_url)
+                .await
+                .unwrap();  
+            return Ok(S3Response::new(UploadPartCopyOutput {
+                copy_part_result: Some(CopyPartResult {
+                    // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
+                    e_tag: Some(resp.request_id.to_string()),
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        }))
+            }))  
+        }
     }
 
     async fn complete_multipart_upload(

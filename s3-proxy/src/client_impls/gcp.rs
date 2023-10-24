@@ -1,4 +1,5 @@
 use crate::objstore_client::ObjectStoreClient;
+use crate::type_utils::parse_range;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
@@ -293,7 +294,48 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             panic!("Only bucket copy is supported");
         };
 
-        let res = self
+        if let Some(range) = req.copy_source_range {
+            let (start, end) = parse_range(&range);
+            let range = Range(Some(start), end);
+            // first download the object within the range selected
+            let res = self
+                .client
+                .download_streamed_object(
+                    &GetObjectRequest {
+                        bucket: source_bucket.to_string(),
+                        object: source_object.to_string(),
+                        ..Default::default()
+                    },
+                    &range,
+                )
+                .await
+                .unwrap();
+            let body = Some(StreamingBlob::wrap(res));
+            // now upload the selected range to the destination bucket
+            let res = self
+                .client
+                .upload_streamed_object(
+                    &UploadObjectRequest {
+                        bucket: destination_bucket.clone(),
+                        ..Default::default()
+                    },
+                    body.unwrap(),
+                    &UploadType::Simple(Media::new(format!(
+                        "{destination_object}.sky-upload-{upload_id}.sky-multipart-{part_number}"
+                    ))),
+                )
+                .await
+                .unwrap();
+    
+            Ok(S3Response::new(UploadPartCopyOutput {
+                copy_part_result: Some(CopyPartResult {
+                    e_tag: Some(res.etag),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })) 
+        } else {
+            let res = self
             .client
             .copy_object(&CopyObjectRequest {
                 destination_bucket,
@@ -307,13 +349,14 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        Ok(S3Response::new(UploadPartCopyOutput {
-            copy_part_result: Some(CopyPartResult {
-                e_tag: Some(res.etag),
+            return Ok(S3Response::new(UploadPartCopyOutput {
+                copy_part_result: Some(CopyPartResult {
+                    e_tag: Some(res.etag),
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        }))
+            }))
+        }
     }
 
     async fn complete_multipart_upload(
