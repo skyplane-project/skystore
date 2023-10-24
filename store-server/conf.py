@@ -52,7 +52,10 @@ TEST_CONFIGURATION = Configuration(
 
 DEFAULT_INIT_REGIONS = [
     "aws:us-west-1",
-    "aws:us-east-2",
+    "aws:us-east-1",
+    "aws:eu-north-1",
+    "aws:eu-sout-1",
+    "aws:eu-west-1"
     # "gcp:us-west1",
     # "aws:eu-central-1",
 ]

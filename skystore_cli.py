@@ -73,7 +73,7 @@ def init(
             shell=True,
             env=env,
         )
-        
+
     time.sleep(2)
 
     # Start the s3-proxy
@@ -98,13 +98,13 @@ def register(
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
     ),
-):  
-    # read from LOCAL_SERVER environmental variable instead 
+):
+    # read from LOCAL_SERVER environmental variable instead
     if local_test:
         server_addr = "localhost"
     else:
         server_addr = "15.160.154.191"
-        
+
     try:
         with open(register_config, "r") as f:
             config = json.load(f)

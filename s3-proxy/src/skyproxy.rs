@@ -20,6 +20,7 @@ pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
     dir_conf: Configuration,
     client_from_region: String,
+    policy: String,
 }
 
 impl SkyProxy {
@@ -28,6 +29,7 @@ impl SkyProxy {
         client_from_region: String,
         local: bool,
         local_server: bool,
+        policy: String,
     ) -> Self {
         let mut store_clients = HashMap::new();
 
@@ -132,6 +134,7 @@ impl SkyProxy {
             store_clients,
             dir_conf,
             client_from_region,
+            policy,
         }
     }
 }
@@ -142,6 +145,7 @@ impl Clone for SkyProxy {
             store_clients: self.store_clients.clone(),
             dir_conf: self.dir_conf.clone(),
             client_from_region: self.client_from_region.clone(),
+            policy: self.policy.clone(),
         }
     }
 }
@@ -496,6 +500,7 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
+                let policy = self.policy.clone();
 
                 let src_bucket = src_locator.bucket.clone();
                 let src_key = src_locator.key.clone();
@@ -530,6 +535,7 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
+                            policy: Some(policy),
                         },
                     )
                     .await
@@ -612,6 +618,7 @@ impl S3 for SkyProxy {
                         let dir_conf_clone = self.dir_conf.clone();
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
+                        let policy = self.policy.clone();
 
                         let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
@@ -626,6 +633,7 @@ impl S3 for SkyProxy {
                                     is_multipart: false,
                                     copy_src_bucket: None,
                                     copy_src_key: None,
+                                    policy: Some(policy.clone()),
                                 },
                             )
                             .await
@@ -671,6 +679,7 @@ impl S3 for SkyProxy {
                                         last_modified: timestamp_to_string(
                                             head_resp.output.last_modified.unwrap(),
                                         ),
+                                        policy: Some(policy.clone()),
                                     },
                                 )
                                 .await
@@ -746,6 +755,7 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: None,
                 copy_src_key: None,
+                policy: Some(self.policy.clone()),
             },
         )
         .await
@@ -763,6 +773,7 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
+                let policy_clone = self.policy.clone();
                 let req = S3Request::new(clone_put_object_request(
                     &request_template,
                     Some(input_blob),
@@ -808,6 +819,7 @@ impl S3 for SkyProxy {
                             size: size_to_set as u64,
                             etag: e_tag.clone(),
                             last_modified,
+                            policy: Some(policy_clone),
                         },
                     )
                     .await
@@ -1066,6 +1078,7 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: Some(src_bucket.to_string()),
                 copy_src_key: Some(src_key.to_string()),
+                policy: Some(self.policy.clone()),
             },
         )
         .await
@@ -1084,6 +1097,7 @@ impl S3 for SkyProxy {
             .for_each(|(locator, (src_bucket, src_key))| {
                 let conf = self.dir_conf.clone();
                 let client = self.store_clients.get(&locator.tag).unwrap().clone();
+                let policy_clone = self.policy.clone();
 
                 tasks.spawn(async move {
                     let copy_resp = client
@@ -1115,6 +1129,7 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
+                            policy: Some(policy_clone),
                         },
                     )
                     .await
@@ -1154,6 +1169,7 @@ impl S3 for SkyProxy {
             ));
         };
 
+        let policy = self.policy.clone();
         let upload_resp = apis::start_upload(
             &self.dir_conf,
             models::StartUploadRequest {
@@ -1163,6 +1179,7 @@ impl S3 for SkyProxy {
                 is_multipart: true,
                 copy_src_bucket: None,
                 copy_src_key: None,
+                policy: Some(policy),
             },
         )
         .await
@@ -1590,6 +1607,7 @@ impl S3 for SkyProxy {
                     etag: resp.output.e_tag.unwrap(),
                     size: head_resp.output.content_length as u64,
                     last_modified: timestamp_to_string(head_resp.output.last_modified.unwrap()),
+                    policy: Some(self.policy.clone()),
                 },
             )
             .await
@@ -1636,17 +1654,28 @@ mod tests {
         format!("my-bucket-{}", timestamp)
     }
 
+    async fn setup_sky_proxy() -> SkyProxy {
+        SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            true,
+            "push".to_string(),
+        )
+        .await
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_constructor() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
         assert!(!proxy.store_clients.is_empty());
     }
 
     #[tokio::test]
     #[serial]
     async fn test_list_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1663,7 +1692,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_then_get() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1737,7 +1766,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1789,7 +1818,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1824,7 +1853,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_copy_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1883,7 +1912,7 @@ mod tests {
     #[serial]
     // #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -2041,7 +2070,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_many_parts() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -2132,7 +2161,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_abort_multipart_upload() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true, true).await;
+        let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);

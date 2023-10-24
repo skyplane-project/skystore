@@ -40,6 +40,7 @@ def test_delete_object(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -202,6 +203,7 @@ def test_register_bucket(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -297,6 +299,7 @@ def test_delete_bucket(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -354,6 +357,7 @@ def test_get_object(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -428,6 +432,78 @@ def test_get_object(client):
     assert location in {"us-west-1", "us-west1"}
 
 
+def test_get_object_pull_logic(client):
+    """Test that the `get_object` endpoint works using write-local logic."""
+
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-get-bucket-write-local",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    # Start upload from another region, expected write local
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-get-bucket-write-local",
+            "key": "my-key-write-local",
+            "client_from_region": "aws:us-east-1",
+            "is_multipart": False,
+            "policy": "write-local",  # write local policy
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00",
+                "policy": "write-local",  # write local policy
+            },
+        ).raise_for_status()
+
+    # Try reading from the client's region
+    resp = client.post(
+        "/locate_object",
+        json={
+            "bucket": "my-get-bucket-write-local",
+            "key": "my-key-write-local",
+            "client_from_region": "aws:us-east-1",
+        },
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    resp_data.pop("id")
+    assert resp_data == {
+        "tag": "aws:us-east-1",
+        "bucket": "skystore-us-east-1",
+        "key": "my-key-write-local",
+        "region": "us-east-1",
+        "cloud": "aws",
+        "size": 100,
+        "etag": "123",
+        "last_modified": "2020-01-01T00:00:00",
+        "multipart_upload_id": None,
+    }
+
+
 def test_warmup(client):
     # init region in aws:us-west-1 and aws:us-east-2
     resp = client.post(
@@ -454,6 +530,7 @@ def test_warmup(client):
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -526,6 +603,7 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -558,6 +636,7 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -612,6 +691,7 @@ def test_list_objects(client):
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
+            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -685,6 +765,7 @@ def test_multipart_flow(client):
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "is_multipart": True,
+            "policy": "push",
         },
     )
     resp.raise_for_status()

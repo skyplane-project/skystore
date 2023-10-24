@@ -717,6 +717,10 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
+    if request.policy not in ["push", "write-local"]:
+        logger.error(f"policy not supported: {request}")
+        return Response(status_code=400, content="Bad Request")
+
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -768,9 +772,6 @@ async def start_upload(
         await db.refresh(existing_objects[0], ["logical_object"])
         logical_object = existing_objects[0].logical_object
 
-    # Old version: look up config file
-    # upload_to_region_tags = [request.client_from_region] + conf.lookup(request.client_from_region).broadcast_to
-
     logical_bucket = (
         await db.execute(
             select(DBLogicalBucket)
@@ -782,14 +783,18 @@ async def start_upload(
 
     if primary_exists:
         # Assume that physical bucket locators for this region already exists and we don't need to create them
+        # TODO: I think this is the pull-on-read scenario?
         upload_to_region_tags = [request.client_from_region]
     else:
-        # Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-        upload_to_region_tags = [
-            locator.location_tag
-            for locator in physical_bucket_locators
-            if locator.is_primary or locator.need_warmup
-        ]
+        # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
+        if request.policy == "push":
+            upload_to_region_tags = [
+                locator.location_tag
+                for locator in physical_bucket_locators
+                if locator.is_primary or locator.need_warmup
+            ]
+        else:
+            upload_to_region_tags = [request.client_from_region]
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -875,6 +880,10 @@ async def start_upload(
 
 @app.patch("/complete_upload")
 async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
+    if request.policy not in ["push", "write-local"]:
+        logger.error(f"policy not supported: {request}")
+        return Response(status_code=400, content="Bad Request")
+
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -889,7 +898,11 @@ async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
     logger.debug(f"complete_upload: {request} -> {physical_locator}")
 
     physical_locator.status = Status.ready
-    if physical_locator.is_primary:
+
+    # TODO: push-based, if the object is primary, we need to update the logical object
+    if (
+        request.policy == "push" and physical_locator.is_primary
+    ) or request.policy == "write-local":
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
         logical_object.status = Status.ready

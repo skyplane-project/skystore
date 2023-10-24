@@ -148,6 +148,9 @@ class StartUploadRequest(LocateObjectRequest):
     copy_src_bucket: Optional[str] = None
     copy_src_key: Optional[str] = None
 
+    # Policy
+    policy: Optional[str] = "pull"
+
 
 class StartUploadResponse(BaseModel):
     locators: List[LocateObjectResponse]
@@ -172,6 +175,8 @@ class PatchUploadIsCompleted(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
+
+    policy: Optional[str] = "push"
 
 
 class PatchUploadMultipartUploadId(BaseModel):

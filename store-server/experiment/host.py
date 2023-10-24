@@ -19,7 +19,9 @@ def aws_credentials():
     access_key, secret_key = auth.get_credentials()
     return access_key, secret_key
 
+
 app = typer.Typer()
+
 
 @app.command()
 def create_instance(
@@ -27,7 +29,9 @@ def create_instance(
     aws_region_list: List[str] = typer.Option(all_aws_regions, "-aws"),
     azure_region_list: List[str] = typer.Option(all_azure_regions, "-azure"),
     gcp_region_list: List[str] = typer.Option(all_gcp_regions, "-gcp"),
-    gcp_standard_region_list: List[str] = typer.Option(all_gcp_regions_standard, "-gcp-standard"),
+    gcp_standard_region_list: List[str] = typer.Option(
+        all_gcp_regions_standard, "-gcp-standard"
+    ),
     ibmcloud_region_list: List[str] = typer.Option(all_ibmcloud_regions, "-ibmcloud"),
     #
     enable_aws: bool = typer.Option(True),
@@ -36,10 +40,18 @@ def create_instance(
     enable_gcp_standard: bool = typer.Option(False),
     enable_ibmcloud: bool = typer.Option(False),
     # instances to provision
-    aws_instance_class: str = typer.Option("m5.8xlarge", help="AWS instance class to use"),
-    azure_instance_class: str = typer.Option("Standard_D32_v5", help="Azure instance class to use"),
-    gcp_instance_class: str = typer.Option("n2-standard-32", help="GCP instance class to use"),
-    ibmcloud_instance_class: str = typer.Option("bx2-2x8", help="IBM Cloud instance class to use"),
+    aws_instance_class: str = typer.Option(
+        "m5.8xlarge", help="AWS instance class to use"
+    ),
+    azure_instance_class: str = typer.Option(
+        "Standard_D32_v5", help="Azure instance class to use"
+    ),
+    gcp_instance_class: str = typer.Option(
+        "n2-standard-32", help="GCP instance class to use"
+    ),
+    ibmcloud_instance_class: str = typer.Option(
+        "bx2-2x8", help="IBM Cloud instance class to use"
+    ),
 ):
     def check_stderr(tup):
         assert tup[1].strip() == "", f"Command failed, err: {tup[1]}"
@@ -71,7 +83,9 @@ def create_instance(
         raise typer.Abort()
 
     # validate GCP regions
-    assert not enable_gcp_standard or enable_gcp, f"GCP is disabled but GCP standard is enabled"
+    assert (
+        not enable_gcp_standard or enable_gcp
+    ), f"GCP is disabled but GCP standard is enabled"
     if not enable_gcp:
         gcp_region_list = []
     elif not all(r in all_gcp_regions for r in gcp_region_list):
@@ -115,7 +129,9 @@ def create_instance(
         gcp_instance_os="ubuntu",
         gcp_use_premium_network=True,
     )
-    instance_list: List[compute.Server] = [i for ilist in aws_instances.values() for i in ilist]
+    instance_list: List[compute.Server] = [
+        i for ilist in aws_instances.values() for i in ilist
+    ]
     instance_list.extend([i for ilist in azure_instances.values() for i in ilist])
     instance_list.extend([i for ilist in gcp_instances.values() for i in ilist])
 
@@ -127,28 +143,36 @@ def create_instance(
 
             # Insert the '-o StrictHostKeyChecking=accept-new' option in the middle of the ssh command
             ssh_parts = ssh_cmd.split(" ", 1)
-            modified_ssh_cmd = f"{ssh_parts[0]} -o StrictHostKeyChecking=accept-new {ssh_parts[1]}"
+            modified_ssh_cmd = (
+                f"{ssh_parts[0]} -o StrictHostKeyChecking=accept-new {ssh_parts[1]}"
+            )
             f.write(modified_ssh_cmd + "\n")
 
         f.close()
-        
+
     # setup instances
     def setup(server: compute.Server):
         print("Setting up instance: ", server.region_tag)
-        check_stderr(server.run_command("echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections"))
+        check_stderr(
+            server.run_command(
+                "echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections"
+            )
+        )
         server.run_command(
             "sudo add-apt-repository universe;\
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 -y"
         )
-        server.run_command("sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; sudo update-alternatives --config python3")
+        server.run_command(
+            "sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; sudo update-alternatives --config python3"
+        )
         server.run_command(make_sysctl_tcp_tuning_command(cc="cubic"))
         server.run_command(
             f"aws configure set aws_access_key_id {aws_credentials()[0]}; aws configure set aws_secret_access_key {aws_credentials()[1]}"
         )
-        
-        # Set up other stuff 
-        # install cargo 
+
+        # Set up other stuff
+        # install cargo
         server.run_command(
             "curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
             git clone https://github.com/skyplane-project/skystore; cd skystore/store-server;\
@@ -157,6 +181,7 @@ def create_instance(
         )
 
     do_parallel(setup, instance_list, spinner=True, n=-1, desc="Setup")
-        
+
+
 if __name__ == "__main__":
     app()
