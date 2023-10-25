@@ -313,7 +313,6 @@ pub fn locate_response_is_404<T>(error: &Error<T>) -> bool {
 //     /// last position
 //     last: Option<u64>,
 // },
-// However, s3s only supports the following range format: last-first.
 pub fn parse_range(range: &str) -> (u64, Option<u64>) {
     // range: e.g. "bytes=0-100"
     let suffix = &range[6..];

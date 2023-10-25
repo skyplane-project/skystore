@@ -228,7 +228,6 @@ impl S3 for SkyProxy {
         let locators = create_bucket_resp.locators;
 
         for locator in locators {
-            // println!("locator: {:?}", locator);
             let client: Arc<Box<dyn ObjectStoreClient>> =
                 self.store_clients.get(&locator.tag).unwrap().clone();
 
@@ -2190,8 +2189,6 @@ mod tests {
                 .await;
 
             let body = result_bytes.concat();
-            println!("body len: {}", body.len());
-            println!("part_size * 2: {}", part_size * 2);
             assert!(body.len() == part_size * 2);
             // assert!(body.len() == 6 * 2);
             assert!(body[0] == 0);
