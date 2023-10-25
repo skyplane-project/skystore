@@ -396,7 +396,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .unwrap();
 
         // Delete the intermediate parts and objects
-        // TODO: consider sending a batch request or parallelize it. 
+        // TODO: consider sending a batch request or parallelize it.
         for obj in to_delete {
             self.client
                 .delete_object(&DeleteObjectRequest {
