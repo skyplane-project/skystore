@@ -39,7 +39,9 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 *DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
+*DefaultApi* | [**locate_bucket_status**](docs/DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
+*DefaultApi* | [**locate_object_status**](docs/DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
 *DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 *DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
@@ -52,6 +54,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [BucketResponse](docs/BucketResponse.md)
+ - [BucketStatus](docs/BucketStatus.md)
  - [Configuration](docs/Configuration.md)
  - [ContinueUploadPhysicalPart](docs/ContinueUploadPhysicalPart.md)
  - [ContinueUploadRequest](docs/ContinueUploadRequest.md)
@@ -80,6 +83,7 @@ Class | Method | HTTP request | Description
  - [LogicalPartResponse](docs/LogicalPartResponse.md)
  - [MultipartResponse](docs/MultipartResponse.md)
  - [ObjectResponse](docs/ObjectResponse.md)
+ - [ObjectStatus](docs/ObjectStatus.md)
  - [PatchUploadIsCompleted](docs/PatchUploadIsCompleted.md)
  - [PatchUploadMultipartUploadId](docs/PatchUploadMultipartUploadId.md)
  - [PatchUploadMultipartUploadPart](docs/PatchUploadMultipartUploadPart.md)

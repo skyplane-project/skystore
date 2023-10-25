@@ -1,5 +1,7 @@
 pub mod bucket_response;
 pub use self::bucket_response::BucketResponse;
+pub mod bucket_status;
+pub use self::bucket_status::BucketStatus;
 pub mod configuration;
 pub use self::configuration::Configuration;
 pub mod continue_upload_physical_part;
@@ -56,6 +58,8 @@ pub mod multipart_response;
 pub use self::multipart_response::MultipartResponse;
 pub mod object_response;
 pub use self::object_response::ObjectResponse;
+pub mod object_status;
+pub use self::object_status::ObjectStatus;
 pub mod patch_upload_is_completed;
 pub use self::patch_upload_is_completed::PatchUploadIsCompleted;
 pub mod patch_upload_multipart_upload_id;

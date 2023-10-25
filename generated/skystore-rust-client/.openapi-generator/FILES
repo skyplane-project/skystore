@@ -3,6 +3,7 @@
 Cargo.toml
 README.md
 docs/BucketResponse.md
+docs/BucketStatus.md
 docs/Configuration.md
 docs/ContinueUploadPhysicalPart.md
 docs/ContinueUploadRequest.md
@@ -32,6 +33,7 @@ docs/LocationInner.md
 docs/LogicalPartResponse.md
 docs/MultipartResponse.md
 docs/ObjectResponse.md
+docs/ObjectStatus.md
 docs/PatchUploadIsCompleted.md
 docs/PatchUploadMultipartUploadId.md
 docs/PatchUploadMultipartUploadPart.md
@@ -49,6 +51,7 @@ src/apis/default_api.rs
 src/apis/mod.rs
 src/lib.rs
 src/models/bucket_response.rs
+src/models/bucket_status.rs
 src/models/configuration.rs
 src/models/continue_upload_physical_part.rs
 src/models/continue_upload_request.rs
@@ -78,6 +81,7 @@ src/models/logical_part_response.rs
 src/models/mod.rs
 src/models/multipart_response.rs
 src/models/object_response.rs
+src/models/object_status.rs
 src/models/patch_upload_is_completed.rs
 src/models/patch_upload_multipart_upload_id.rs
 src/models/patch_upload_multipart_upload_part.rs

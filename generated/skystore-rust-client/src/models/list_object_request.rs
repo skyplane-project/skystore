@@ -15,12 +15,12 @@
 pub struct ListObjectRequest {
     #[serde(rename = "bucket")]
     pub bucket: String,
-    #[serde(rename = "prefix", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub prefix: Option<Option<String>>,
-    #[serde(rename = "start_after", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub start_after: Option<Option<String>>,
-    #[serde(rename = "max_keys", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub max_keys: Option<Option<i32>>,
+    #[serde(rename = "prefix", skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+    #[serde(rename = "start_after", skip_serializing_if = "Option::is_none")]
+    pub start_after: Option<String>,
+    #[serde(rename = "max_keys", skip_serializing_if = "Option::is_none")]
+    pub max_keys: Option<i32>,
 }
 
 impl ListObjectRequest {

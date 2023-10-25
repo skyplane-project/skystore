@@ -67,7 +67,7 @@ class DBPhysicalObjectLocator(Base):
     )
 
     key = Column(String)
-    lock_acquired_at = Column(DateTime, nullable=True, default=None)
+    lock_acquired_ts = Column(DateTime, nullable=True, default=None)
     status = Column(Enum(Status))
     is_primary = Column(Boolean, nullable=False, default=False)
 
@@ -101,8 +101,6 @@ class LocateObjectResponse(BaseModel):
     bucket: str
     region: str
     key: str
-
-    status: Optional[Status] = None
 
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
@@ -225,14 +223,14 @@ class ObjectResponse(BaseModel):
     key: str
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
-    status: Optional[Status] = None
     last_modified: datetime
 
+class ObjectStatus(BaseModel):
+    status: Status
 
 class HeadObjectRequest(BaseModel):
     bucket: str
     key: str
-
 
 class HeadObjectResponse(BaseModel):
     bucket: str

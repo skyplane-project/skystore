@@ -10,8 +10,7 @@ Name | Type | Description | Notes
 **bucket** | **String** |  | 
 **region** | **String** |  | 
 **key** | **String** |  | 
-**status** | Option<[**crate::models::Status**](Status.md)> |  | [optional]
-**size** | Option<**u32**> |  | [optional]
+**size** | Option<**u64**> |  | [optional]
 **last_modified** | Option<**String**> |  | [optional]
 **etag** | Option<**String**> |  | [optional]
 **multipart_upload_id** | Option<**String**> |  | [optional]

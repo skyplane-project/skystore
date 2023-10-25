@@ -46,7 +46,7 @@ class DBPhysicalBucketLocator(Base):
     bucket = Column(String)
     prefix = Column(String, default="")
 
-    lock_acquired_at = Column(DateTime, nullable=True, default=None)
+    lock_acquired_ts = Column(DateTime, nullable=True, default=None)
     status = Column(Enum(Status), default=Status.pending)
     is_primary = Column(
         Boolean, nullable=False, default=False
@@ -79,8 +79,9 @@ class LocateBucketResponse(BaseModel):
     cloud: str
     bucket: str
     region: str
-    status: Optional[Status] = None
 
+class BucketStatus(BaseModel):
+    status: Status
 
 class HeadBucketRequest(BaseModel):
     bucket: str

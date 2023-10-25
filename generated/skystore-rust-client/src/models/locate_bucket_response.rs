@@ -23,8 +23,6 @@ pub struct LocateBucketResponse {
     pub bucket: String,
     #[serde(rename = "region")]
     pub region: String,
-    #[serde(rename = "status", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub status: Option<Option<crate::models::Status>>,
 }
 
 impl LocateBucketResponse {
@@ -35,7 +33,6 @@ impl LocateBucketResponse {
             cloud,
             bucket,
             region,
-            status: None,
         }
     }
 }

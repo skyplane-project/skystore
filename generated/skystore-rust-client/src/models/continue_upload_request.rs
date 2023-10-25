@@ -23,10 +23,10 @@ pub struct ContinueUploadRequest {
     pub multipart_upload_id: String,
     #[serde(rename = "do_list_parts", skip_serializing_if = "Option::is_none")]
     pub do_list_parts: Option<bool>,
-    #[serde(rename = "copy_src_bucket", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub copy_src_bucket: Option<Option<String>>,
-    #[serde(rename = "copy_src_key", default, with = "::serde_with::rust::double_option", skip_serializing_if = "Option::is_none")]
-    pub copy_src_key: Option<Option<String>>,
+    #[serde(rename = "copy_src_bucket", skip_serializing_if = "Option::is_none")]
+    pub copy_src_bucket: Option<String>,
+    #[serde(rename = "copy_src_key", skip_serializing_if = "Option::is_none")]
+    pub copy_src_key: Option<String>,
 }
 
 impl ContinueUploadRequest {

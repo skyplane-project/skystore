@@ -379,7 +379,6 @@ def test_get_object(client):
     resp.raise_for_status()
     resp_data = resp.json()
     resp_data.pop("id")
-    resp_data.pop("status")
     assert resp_data == {
         "tag": "aws:us-west-1",
         "bucket": "skystore-us-west-1",  # Bucket is prefixed with "skystore-"
@@ -647,7 +646,6 @@ def test_list_objects(client):
             "key": "my-key-1",
             "size": 100,
             "etag": "123",
-            'status': 'ready',
             "last_modified": "2020-01-01T00:00:00",
         }
     ]
@@ -820,7 +818,7 @@ async def test_metadata_clean_up(client):
     await rm_lock_on_timeout(0, testing=True)
 
     resp = client.post(
-        "/locate_bucket",
+        "/locate_bucket_status",
         json={
             "bucket": "temp-object-bucket",
             "client_from_region": "aws:us-west-1",
@@ -857,7 +855,7 @@ async def test_metadata_clean_up(client):
     await rm_lock_on_timeout(0, testing=True)
 
     resp = client.post(
-        "/locate_object",
+        "/locate_object_status",
         json={
             "bucket": "temp-object-bucket",
             "key": "my-key",
