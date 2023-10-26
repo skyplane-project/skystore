@@ -330,7 +330,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
             let (start, end) = parse_range(&range);
             let max = end.unwrap_or(u64::MAX);
-            // cutoff is 2GB
+            // NOTE: threshold to 2GB, alternatively writing to a temporary file
             let cutoff = 2 * 1024 * 1024 * 1024;
             if metadata.size as u64 - start > cutoff && max - start > cutoff {
                 panic!("The range is too large, try to reduce the range to be less than 2GB!");
