@@ -404,6 +404,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
         let req = req.input;
         let bucket = req.bucket;
+        let bucket_clone = bucket.clone();
         let object = req.key;
         let upload_id = req.upload_id;
 
@@ -424,6 +425,9 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 ..Default::default()
             })
             .collect();
+
+        let mut to_delete: Vec<SourceObjects> = parts.clone();
+
         if parts.len() > 32 {
             // GCS only supports compsing 1-32 objects. In this case,
             // we need to compose multiple times.
@@ -439,7 +443,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                     .client
                     .compose_object(&ComposeObjectRequest {
                         bucket: bucket.clone(),
-                        destination_object: composed_object,
+                        destination_object: composed_object.clone(),
                         composing_targets: ComposingTargets {
                             source_objects: curr_composed_parts.drain(..32).collect(),
                             ..Default::default()
@@ -451,6 +455,11 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
                 next_composed_parts.push(SourceObjects {
                     name: res.name,
+                    ..Default::default()
+                });
+
+                to_delete.push(SourceObjects {
+                    name: composed_object,
                     ..Default::default()
                 });
 
@@ -491,7 +500,18 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             .await
             .unwrap();
 
-        // TODO: delete parts, high priority
+        // Delete the intermediate parts and objects
+        // TODO: consider sending a batch request or parallelize it.
+        for obj in to_delete {
+            self.client
+                .delete_object(&DeleteObjectRequest {
+                    bucket: bucket_clone.clone(),
+                    object: obj.name,
+                    ..Default::default()
+                })
+                .await
+                .unwrap();
+        }
 
         Ok(S3Response::new(CompleteMultipartUploadOutput {
             e_tag: Some(res.etag),
