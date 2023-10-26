@@ -85,7 +85,7 @@ impl SkyProxy {
 
                 // if bucket not exists, create one
                 let skystore_bucket_name = format!("skystore-{}", region);
-                let bucket_region = if provider == "aws" {
+                let bucket_region = if provider == "aws" || provider == "gcp" {
                     Some(region.to_string())
                 } else {
                     None
@@ -100,7 +100,7 @@ impl SkyProxy {
                 {
                     Ok(_) => {}
                     Err(e) => {
-                        if e.to_string().contains("BucketAlreadyOwnedByYou") {
+                        if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                             // Bucket already exists, no action needed
                         } else {
                             panic!("Failed to create bucket: {}", e);
@@ -2280,7 +2280,6 @@ mod tests {
                 .map(|chunk| chunk.unwrap())
                 .collect::<Vec<_>>()
                 .await;
-
             let body = result_bytes.concat();
             assert!(body.len() == 40 * 5 * 1024 * 1024);
         }

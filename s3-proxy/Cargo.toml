@@ -30,12 +30,12 @@ tokio-stream = "0.1.14"
 tokio-util = "0.7.8"
 bytes = "1.4.0"
 flo_stream = "0.7.0"
-azure_storage_blobs = { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "5014404dff3cd77faf37a7077ec67bb6a2cf1f4c" }
-azure_storage =  { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "5014404dff3cd77faf37a7077ec67bb6a2cf1f4c" }
-azure_core =  { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "5014404dff3cd77faf37a7077ec67bb6a2cf1f4c" }
+azure_storage_blobs = { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "4849d7937edb8a95bbdfb85e1837c7606c83f57b" }
+azure_storage =  { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "4849d7937edb8a95bbdfb85e1837c7606c83f57b" }
+azure_core =  { git = "https://github.com/Azure/azure-sdk-for-rust.git", rev = "4849d7937edb8a95bbdfb85e1837c7606c83f57b" }
 futures = "0.3.28"
 uuid = "1.3.3"
-hex = "0.4.3" 
+hex = "0.4.3"
 google-cloud-storage = "0.11.0"
 google-cloud-default = { version = "0.2.0", features = ["storage"] }
 futures-lite = "1.13.0"

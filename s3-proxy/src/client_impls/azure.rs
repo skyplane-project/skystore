@@ -116,7 +116,7 @@ impl AzureObjectStoreClient {
     pub async fn new() -> Self {
         let account = std::env::var("STORAGE_ACCOUNT").expect("missing STORAGE_ACCOUNT");
         let access_key = std::env::var("STORAGE_ACCESS_KEY").expect("missing STORAGE_ACCOUNT_KEY");
-        let storage_credentials = StorageCredentials::Key(account.clone(), access_key);
+        let storage_credentials = StorageCredentials::access_key(account.clone(), access_key);
 
         let client = ClientBuilder::new(account, storage_credentials)
             // .retry(RetryOptions::none())
@@ -408,53 +408,37 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                 },
                 time::OffsetDateTime::now_utc().saturating_add(time::Duration::days(2)),
             )
+            .await
             .unwrap();
         let src_block_url = src_blob_client.generate_signed_blob_url(&token).unwrap();
 
         let blob_client = self.blob_client(&container_name, &blob_name);
         let block_id = format!("{upload_id}-{part_number:04}");
-
+        let (mut start, mut end) = (0, Some(u64::MAX));
         if let Some(range) = req.copy_source_range {
-            let (start, end) = parse_range(&range);
-            let end = end.unwrap_or(u64::MAX);
-            let mut request_builder = blob_client.get().chunk_size(u64::MAX);
-            request_builder = request_builder.range(start..end);
-            let resp = request_builder.into_stream();
-            let mut resp: Vec<_> = resp.collect().await;
-            assert_eq!(resp.len(), 1);
-            let resp = resp.pop().unwrap();
-            match resp {
-                Ok(resp) => {
-                    let body = StreamingBlob::wrap(resp.data);
-                    let input_stream = SeekableBlobWrapper::new(body);
-                    let resp = blob_client.put_block(block_id, input_stream).await.unwrap();
-                    Ok(S3Response::new(UploadPartCopyOutput {
-                        copy_part_result: Some(CopyPartResult {
-                            // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
-                            e_tag: Some(resp.request_id.to_string()),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    }))
-                }
-                Err(err) => Err(s3s::S3Error::with_message(
-                    s3s::S3ErrorCode::InternalError,
-                    format!("Request failed: {err}"),
-                )),
-            }
-        } else {
-            let resp = blob_client
-                .put_block_url(block_id, src_block_url)
-                .await
-                .unwrap();
-            return Ok(S3Response::new(UploadPartCopyOutput {
+            (start, end) = parse_range(&range);
+        }
+
+        let mut end = end.unwrap_or(u64::MAX);
+        if end != u64::MAX {
+            end = end.saturating_add(1);
+        }
+        let resp = blob_client
+            .put_block_url(block_id, src_block_url)
+            .range(start..end)
+            .await;
+        match resp {
+            Ok(resp) => Ok(S3Response::new(UploadPartCopyOutput {
                 copy_part_result: Some(CopyPartResult {
-                    // e_tag: Some(resp.content_md5.unwrap().bytes().encode_hex::<String>()),
                     e_tag: Some(resp.request_id.to_string()),
                     ..Default::default()
                 }),
                 ..Default::default()
-            }));
+            })),
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Upload_part_copy failed: {err}"),
+            )),
         }
     }
 
