@@ -863,17 +863,6 @@ impl S3 for SkyProxy {
                 resp
             }
             Err(_) => {
-                // let response_err = match err{
-                //     skystore_rust_client::apis::Error::ResponseError(response_content) => {
-                //         let status_p = response_content.status;
-                //         if status_p == 404 {
-                //             vector.push()
-                //         } else{
-                //             errvector.push()
-                //         }
-                //     }
-                //     _ => 2
-                // };
 
                 // TODO: fail silent (assume object exists error), fix this
                 // 1) Error handling
@@ -949,7 +938,6 @@ impl S3 for SkyProxy {
 
         let mut deleted_objects = DeletedObjects::default();
         let mut errors = Errors::default();
-        println!("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww111");
         for (key, results) in key_to_results {
             let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
             println!("here is another key {}", key);
@@ -2365,7 +2353,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_non_existence_objects() {
-        println!("this one has been runned wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww");
+        // println!("this one has been runned wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww");
         let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
