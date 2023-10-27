@@ -1,8 +1,8 @@
 set export
 
 # Set this before running test 
-AWS_ACCESS_KEY_ID := "AKIDEXAMPLE"
-AWS_SECRET_ACCESS_KEY := "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+AWS_ACCESS_KEY_ID := "aws_access_key_id_dummy"
+AWS_SECRET_ACCESS_KEY := "aws_secret_access_key_dummy"
 AWS_REGION := "us-west-dummy"
 
 # set dotenv-load
@@ -38,8 +38,8 @@ run-registry:
 
 install-local-s3:
   cargo install --force \
-    --git https://github.com/Nugine/s3s.git \
-    --rev 210616177344d295f987c594ce6012f76e4597eb \
+    --git https://github.com/Nugine/s3s \
+    --rev 0cc49cf24c05eeb6a809882d1a7b76e953822c0d \
     --bin s3s-fs \
     --features="binary" \
     s3s-fs
