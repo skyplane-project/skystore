@@ -1727,10 +1727,7 @@ mod tests {
 
         let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
         let delete_objects_req = S3Request::new(delete_objects_input);
-        proxy
-            .delete_objects(delete_objects_req)
-            .await
-            .unwrap();
+        proxy.delete_objects(delete_objects_req).await.unwrap();
 
         // Verify objects are deleted
         let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
