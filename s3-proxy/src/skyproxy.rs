@@ -15,6 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::error;
+use aws_sdk_s3::error::SdkError::ResponseError;
 
 pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
@@ -815,6 +816,9 @@ impl S3 for SkyProxy {
         req: S3Request<DeleteObjectsInput>,
     ) -> S3Result<S3Response<DeleteObjectsOutput>> {
         // Send start delete objects request
+        let mut resp_hashmap: HashMap<String, Vec<models::LocateObjectResponse>> = HashMap::new();
+        let mut err_key: Vec<String> = Vec::new();
+        let mut suc_key: Vec<String> = Vec::new();
         let keys: Vec<_> = req
             .input
             .delete
@@ -822,7 +826,7 @@ impl S3 for SkyProxy {
             .iter()
             .map(|obj| obj.key.clone())
             .collect();
-        let delete_objects_resp = match apis::start_delete_objects(
+        let delete_objects_resp: models::DeleteObjectsResponse = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
@@ -830,10 +834,37 @@ impl S3 for SkyProxy {
                 multipart_upload_ids: None,
             },
         )
-        .await
-        {
-            Ok(resp) => resp,
+        .await{   
+            // let vector ;
+        //     let err_vector
+            Ok(mut resp) => {
+                for (key, value) in resp.locator_res.iter() {
+                    if *value == 200{
+                        println!("here  is the key {}", key);
+                        resp_hashmap.insert((*key).clone(), resp.locators.get(key).unwrap().clone());
+                    } else if *value == 404{
+                        suc_key.push((*key).clone());
+                    } else{
+                        err_key.push((*key).clone());
+                    }
+                    println!("ITER KEY, VALUE: {} {}", key, value);
+                }
+                resp.locators = resp_hashmap;
+                resp
+            }
             Err(_) => {
+                // let response_err = match err{
+                //     skystore_rust_client::apis::Error::ResponseError(response_content) => {
+                //         let status_p = response_content.status;
+                //         if status_p == 404 {
+                //             vector.push()
+                //         } else{
+                //             errvector.push()
+                //         }
+                //     }
+                //     _ => 2
+                // };
+
                 // TODO: fail silent (assume object exists error), fix this
                 // 1) Error handling
                 //      404: return delete success
@@ -908,10 +939,10 @@ impl S3 for SkyProxy {
 
         let mut deleted_objects = DeletedObjects::default();
         let mut errors = Errors::default();
-
+        println!("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww111");
         for (key, results) in key_to_results {
             let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
-
+            println!("here is another key {}", key);
             // complete delete objects
             let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
             if !completed_ids.is_empty() {
@@ -941,7 +972,20 @@ impl S3 for SkyProxy {
                 });
             }
         }
-
+        for key in suc_key.into_iter(){
+            deleted_objects.push(DeletedObject {
+                key: Some(key.clone()),
+                delete_marker: true, 
+                ..Default::default()
+            });
+        }
+        for key in err_key.into_iter(){
+            errors.push(Error {
+                key: Some(key.clone()),
+                code: Some("InternalError".to_string()),
+                ..Default::default()
+            });
+        }
         Ok(S3Response::new(DeleteObjectsOutput {
             deleted: Some(deleted_objects),
             errors: if errors.is_empty() {
@@ -2084,6 +2128,59 @@ mod tests {
             let body = result_bytes.concat();
             assert!(body.len() == 40 * 5 * 1024 * 1024);
         }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_non_existence_objects() {
+        println!("this one has been runned wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww");
+        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        for i in 0..3 {
+            let mut request =
+                new_put_object_request(bucket_name.to_string(), format!("my-key-{}", i));
+            let body = format!("data-{}", i).into_bytes();
+            request.body = Some(s3s::Body::from(body).into());
+
+            let req = S3Request::new(request);
+            proxy.put_object(req).await.unwrap().output;
+        }
+
+        let delete = Delete {
+            objects: vec![
+                ObjectIdentifier {
+                    key: "my-key-0".to_string(),
+                    version_id: None,
+                },
+                ObjectIdentifier {
+                    key: "my-key-1".to_string(),
+                    version_id: None,
+                },
+            ],
+            ..Default::default()
+        };
+
+        let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
+        let delete_objects_req = S3Request::new(delete_objects_input);
+        proxy
+            .delete_objects(delete_objects_req)
+            .await
+            .unwrap()
+            .output;
+
+        // Verify objects are deleted
+        let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
+        let list_resp = proxy
+            .list_objects_v2(S3Request::new(list_request))
+            .await
+            .unwrap()
+            .output;
+        assert!(list_resp.contents.unwrap().len() == 1);
     }
 
     #[tokio::test]

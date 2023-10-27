@@ -272,6 +272,7 @@ class DeleteObjectsRequest(BaseModel):
 
 class DeleteObjectsResponse(BaseModel):
     locators: Dict[str, List[LocateObjectResponse]]
+    locator_res: Dict[str, int]
 
 
 class DeleteObjectsIsCompleted(BaseModel):

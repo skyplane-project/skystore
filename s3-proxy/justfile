@@ -11,7 +11,7 @@ list:
   just --list
 
 test:
-  cargo test skyproxy
+  cargo test skyproxy -- --nocapture
 
 run:
   RUST_LOG=INFO RUST_BACKTRACE=full cargo run
