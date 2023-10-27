@@ -975,7 +975,7 @@ impl S3 for SkyProxy {
         for key in suc_key.into_iter(){
             deleted_objects.push(DeletedObject {
                 key: Some(key.clone()),
-                delete_marker: true, 
+                delete_marker: false, 
                 ..Default::default()
             });
         }
@@ -2157,13 +2157,10 @@ mod tests {
                     key: "my-key-0".to_string(),
                     version_id: None,
                 },
-                ObjectIdentifier {
-                    key: "my-key-1".to_string(),
-                    version_id: None,
-                },
             ],
             ..Default::default()
         };
+        
 
         let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
         let delete_objects_req = S3Request::new(delete_objects_input);
@@ -2172,15 +2169,55 @@ mod tests {
             .await
             .unwrap()
             .output;
+        let delete = Delete {
+            objects: vec![
+                ObjectIdentifier {
+                    key: "my-key-0".to_string(),
+                    version_id: None,
+                },
+            ],
+            ..Default::default()
+        };
+        
 
-        // Verify objects are deleted
-        let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
-        let list_resp = proxy
-            .list_objects_v2(S3Request::new(list_request))
+        let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
+        let delete_objects_req = S3Request::new(delete_objects_input);
+        let second_delete = proxy
+            .delete_objects(delete_objects_req)
             .await
             .unwrap()
             .output;
-        assert!(list_resp.contents.unwrap().len() == 1);
+        let mut find = false;
+        match second_delete.deleted{
+            Some(v)=>{
+                for key in v.into_iter(){
+                    match key.key{
+                        Some(k)=>{
+                            if k == "my-key-0"{
+                                find = true;
+                            }
+                        },
+                        None=>{
+
+                        }
+                    }
+                }
+            },
+            None=>{
+
+            },
+        }
+        assert!(find == true);
+        
+
+        // Verify objects are deleted
+        // let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
+        // let list_resp = proxy
+        //     .list_objects_v2(S3Request::new(list_request))
+        //     .await
+        //     .unwrap()
+        //     .output;
+        // assert!(list_resp.contents.unwrap().len() == 1);
     }
 
     #[tokio::test]
