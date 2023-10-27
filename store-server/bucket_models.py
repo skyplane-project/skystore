@@ -80,8 +80,10 @@ class LocateBucketResponse(BaseModel):
     bucket: str
     region: str
 
+
 class BucketStatus(BaseModel):
     status: Status
+
 
 class HeadBucketRequest(BaseModel):
     bucket: str

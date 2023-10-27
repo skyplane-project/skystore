@@ -225,12 +225,15 @@ class ObjectResponse(BaseModel):
     etag: str
     last_modified: datetime
 
+
 class ObjectStatus(BaseModel):
     status: Status
+
 
 class HeadObjectRequest(BaseModel):
     bucket: str
     key: str
+
 
 class HeadObjectResponse(BaseModel):
     bucket: str

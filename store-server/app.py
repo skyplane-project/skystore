@@ -8,7 +8,6 @@ from sqlalchemy.orm import joinedload
 import os
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Response, status
-from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
 from rich.logging import RichHandler
 from itertools import zip_longest
@@ -98,6 +97,7 @@ load_dotenv()
 
 stop_task_flag = asyncio.Event()
 
+
 @app.on_event("startup")
 async def startup():
     global init_region_tags
@@ -106,17 +106,19 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
-    
+
     loop = asyncio.get_event_loop()
     loop.create_task(rm_lock_on_timeout(10))
 
     if os.getenv("INIT_REGIONS"):
         init_region_tags = os.getenv("INIT_REGIONS").split(",")
 
+
 @app.on_event("shutdown")
 async def shutdown_event():
     # Set the flag to signal the background task to stop
     stop_task_flag.set()
+
 
 async def get_session() -> AsyncSession:
     async with async_session() as session:
@@ -124,6 +126,7 @@ async def get_session() -> AsyncSession:
 
 
 DBSession = Annotated[AsyncSession, Depends(get_session)]
+
 
 @app.post("/register_buckets")
 async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Response:
@@ -890,6 +893,7 @@ async def start_upload(
         copy_src_keys=copy_src_keys,
     )
 
+
 async def rm_lock_on_timeout(minutes, testing=False):
     # initial wait to prevent first check which should never run
     if not testing:
@@ -900,35 +904,41 @@ async def rm_lock_on_timeout(minutes, testing=False):
 
             # calculate time for which we can timeout. Anything before or equal to 10 minutes ago will timeout
             cutoff_time = datetime.utcnow() - timedelta(minutes)
-            
+
             # time out Physical objects that have been running for more than 10 minutes
-            stmt_timeout_physical_objects = (update(DBPhysicalObjectLocator)
-                    .where(DBPhysicalObjectLocator.lock_acquired_ts <= cutoff_time)
-                    .values(status=Status.ready, lock_acquired_ts=None)
-                )
-            await db.execute(stmt_timeout_physical_objects)
-            
-            # time out Physical buckets that have been running for more than 10 minutes
-            stmt_timeout_physical_buckets = (update(DBPhysicalBucketLocator)
-                    .where(DBPhysicalBucketLocator.lock_acquired_ts <= cutoff_time)
-                    .values(status=Status.ready, lock_acquired_ts=None)
-                )
-            await db.execute(stmt_timeout_physical_buckets)
-            
-            # find Logical objects that are pending
-            stmt_find_pending_logical_objs = (
-                select(DBLogicalObject)
-                .where(DBLogicalObject.status == Status.pending)
+            stmt_timeout_physical_objects = (
+                update(DBPhysicalObjectLocator)
+                .where(DBPhysicalObjectLocator.lock_acquired_ts <= cutoff_time)
+                .values(status=Status.ready, lock_acquired_ts=None)
             )
-            pendingLogicalObjs = (await db.execute(stmt_find_pending_logical_objs)).fetchall()
-            
-            if pendingLogicalObjs != None:
+            await db.execute(stmt_timeout_physical_objects)
+
+            # time out Physical buckets that have been running for more than 10 minutes
+            stmt_timeout_physical_buckets = (
+                update(DBPhysicalBucketLocator)
+                .where(DBPhysicalBucketLocator.lock_acquired_ts <= cutoff_time)
+                .values(status=Status.ready, lock_acquired_ts=None)
+            )
+            await db.execute(stmt_timeout_physical_buckets)
+
+            # find Logical objects that are pending
+            stmt_find_pending_logical_objs = select(DBLogicalObject).where(
+                DBLogicalObject.status == Status.pending
+            )
+            pendingLogicalObjs = (
+                await db.execute(stmt_find_pending_logical_objs)
+            ).fetchall()
+
+            if pendingLogicalObjs is not None:
                 # loop through list of pending logical objects
                 for logical_obj in pendingLogicalObjs:
                     # get all physical objects corresponding to a given logical object
-                    stmt3 = (select(DBPhysicalObjectLocator)
+                    stmt3 = (
+                        select(DBPhysicalObjectLocator)
                         .join(DBLogicalObject)
-                        .where(logical_obj.id == DBPhysicalObjectLocator.logical_object_id)
+                        .where(
+                            logical_obj.id == DBPhysicalObjectLocator.logical_object_id
+                        )
                     )
                     objects = (await db.execute(stmt3)).fetchall()
 
@@ -941,22 +951,27 @@ async def rm_lock_on_timeout(minutes, testing=False):
                         )
                         await db.execute(edit_logical_obj_stmt)
 
-                #await db.commit()
+                # await db.commit()
 
             # find Logical buckets that are pending
-            stmt_find_pending_logical_buckets = (
-                select(DBLogicalBucket)
-                .where(DBLogicalBucket.status == Status.pending)
+            stmt_find_pending_logical_buckets = select(DBLogicalBucket).where(
+                DBLogicalBucket.status == Status.pending
             )
-            pendingLogicalBuckets = (await db.execute(stmt_find_pending_logical_buckets)).fetchall()
-            
-            if pendingLogicalBuckets != None:
+            pendingLogicalBuckets = (
+                await db.execute(stmt_find_pending_logical_buckets)
+            ).fetchall()
+
+            if pendingLogicalBuckets is not None:
                 # loop through list of pending logical buckets
                 for logical_bucket in pendingLogicalBuckets:
                     # get all physical buckets corresponding to a given logical object
-                    stmt3 = (select(DBPhysicalBucketLocator)
+                    stmt3 = (
+                        select(DBPhysicalBucketLocator)
                         .join(DBLogicalBucket)
-                        .where(logical_bucket.id == DBPhysicalBucketLocator.logical_bucket_id)
+                        .where(
+                            logical_bucket.id
+                            == DBPhysicalBucketLocator.logical_bucket_id
+                        )
                     )
                     buckets = (await db.execute(stmt3)).fetchall()
 
@@ -973,11 +988,9 @@ async def rm_lock_on_timeout(minutes, testing=False):
 
         if testing:
             break
-        
+
         await asyncio.sleep(minutes * 60)
 
-    
-            
 
 @app.patch("/complete_upload")
 async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
@@ -1004,6 +1017,7 @@ async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
         logical_object.etag = request.etag
         logical_object.last_modified = request.last_modified.replace(tzinfo=None)
     await db.commit()
+
 
 @app.patch("/set_multipart_id")
 async def set_multipart_id(request: PatchUploadMultipartUploadId, db: DBSession):
@@ -1309,6 +1323,7 @@ async def list_parts(
         if request.part_number is None or part.part_number == request.part_number
     ]
 
+
 @app.post(
     "/locate_object_status",
     responses={
@@ -1349,9 +1364,8 @@ async def locate_object_status(
 
     await db.refresh(chosen_locator, ["logical_object"])
 
-    return ObjectStatus(
-        status=chosen_locator.status
-    )
+    return ObjectStatus(status=chosen_locator.status)
+
 
 @app.post(
     "/locate_bucket_status",
@@ -1401,6 +1415,7 @@ async def locate_bucket_status(
 async def healthz() -> HealthcheckResponse:
     return HealthcheckResponse(status="OK")
 
+
 # def custom_openapi():
 #     if app.openapi_schema:
 #         return app.openapi_schema
@@ -1419,6 +1434,7 @@ async def healthz() -> HealthcheckResponse:
 
 
 # app.openapi = custom_openapi
+
 
 ## Add routes above this function
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

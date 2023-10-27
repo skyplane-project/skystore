@@ -2,6 +2,7 @@ import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as client:
@@ -790,6 +791,7 @@ def test_multipart_flow(client):
     resp_data = resp.json()
     assert resp_data["region"] == "us-west-1"
 
+
 @pytest.mark.asyncio
 async def test_metadata_clean_up(client):
     """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
@@ -803,7 +805,7 @@ async def test_metadata_clean_up(client):
     )
     resp.raise_for_status()
 
-    # simulate timeout by not completing bucket creation 
+    # simulate timeout by not completing bucket creation
     # for physical_bucket in resp.json()["locators"]:
     #     resp = client.patch(
     #         "/complete_create_bucket",
@@ -824,8 +826,8 @@ async def test_metadata_clean_up(client):
             "client_from_region": "aws:us-west-1",
         },
     )
-    assert resp.json()['status'] == 'ready'
-    
+    assert resp.json()["status"] == "ready"
+
     resp = client.post(
         "/start_upload",
         json={
@@ -838,7 +840,7 @@ async def test_metadata_clean_up(client):
     resp.raise_for_status()
 
     # forgo complete_upload for the first object. Let background process handle the first object
-    # simulates something going wrong and lock left acquired.    
+    # simulates something going wrong and lock left acquired.
     # client.patch(
     #     "/complete_upload",
     #     json={
@@ -848,8 +850,8 @@ async def test_metadata_clean_up(client):
     #         "last_modified": "2020-01-01T00:00:00",
     #     },
     # ).raise_for_status()
-    
-    #pytest.set_trace() #debugging line
+
+    # pytest.set_trace() #debugging line
 
     # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
     await rm_lock_on_timeout(0, testing=True)
@@ -863,4 +865,4 @@ async def test_metadata_clean_up(client):
         },
     )
     # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
-    assert resp.json()['status'] == 'ready'
+    assert resp.json()["status"] == "ready"
