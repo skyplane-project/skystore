@@ -440,7 +440,7 @@ async def start_delete_objects(
         locator_dict[key] = locators
         locator_res_dict[key] = 200
 
-    return DeleteObjectsResponse(locators=locator_dict, locator_res = locator_res_dict)
+    return DeleteObjectsResponse(locators=locator_dict, locator_res=locator_res_dict)
 
 
 @app.patch("/complete_delete_objects")

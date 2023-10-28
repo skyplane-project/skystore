@@ -15,7 +15,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::error;
-use aws_sdk_s3::error::SdkError::ResponseError;
 
 pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
@@ -844,17 +843,19 @@ impl S3 for SkyProxy {
                 multipart_upload_ids: None,
             },
         )
-        .await{   
+        .await
+        {
             // let vector ;
-        //     let err_vector
+            //     let err_vector
             Ok(mut resp) => {
                 for (key, value) in resp.locator_res.iter() {
-                    if *value == 200{
+                    if *value == 200 {
                         println!("here  is the key {}", key);
-                        resp_hashmap.insert((*key).clone(), resp.locators.get(key).unwrap().clone());
-                    } else if *value == 404{
+                        resp_hashmap
+                            .insert((*key).clone(), resp.locators.get(key).unwrap().clone());
+                    } else if *value == 404 {
                         suc_key.push((*key).clone());
-                    } else{
+                    } else {
                         err_key.push((*key).clone());
                     }
                     println!("ITER KEY, VALUE: {} {}", key, value);
@@ -863,7 +864,6 @@ impl S3 for SkyProxy {
                 resp
             }
             Err(_) => {
-
                 // TODO: fail silent (assume object exists error), fix this
                 // 1) Error handling
                 //      404: return delete success
@@ -970,14 +970,14 @@ impl S3 for SkyProxy {
                 });
             }
         }
-        for key in suc_key.into_iter(){
+        for key in suc_key.into_iter() {
             deleted_objects.push(DeletedObject {
                 key: Some(key.clone()),
-                delete_marker: false, 
+                delete_marker: false,
                 ..Default::default()
             });
         }
-        for key in err_key.into_iter(){
+        for key in err_key.into_iter() {
             errors.push(Error {
                 key: Some(key.clone()),
                 code: Some("InternalError".to_string()),
@@ -2372,15 +2372,12 @@ mod tests {
         }
 
         let delete = Delete {
-            objects: vec![
-                ObjectIdentifier {
-                    key: "my-key-0".to_string(),
-                    version_id: None,
-                },
-            ],
+            objects: vec![ObjectIdentifier {
+                key: "my-key-0".to_string(),
+                version_id: None,
+            }],
             ..Default::default()
         };
-        
 
         let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
         let delete_objects_req = S3Request::new(delete_objects_input);
@@ -2390,15 +2387,12 @@ mod tests {
             .unwrap()
             .output;
         let delete = Delete {
-            objects: vec![
-                ObjectIdentifier {
-                    key: "my-key-0".to_string(),
-                    version_id: None,
-                },
-            ],
+            objects: vec![ObjectIdentifier {
+                key: "my-key-0".to_string(),
+                version_id: None,
+            }],
             ..Default::default()
         };
-        
 
         let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
         let delete_objects_req = S3Request::new(delete_objects_input);
@@ -2408,27 +2402,22 @@ mod tests {
             .unwrap()
             .output;
         let mut find = false;
-        match second_delete.deleted{
-            Some(v)=>{
-                for key in v.into_iter(){
-                    match key.key{
-                        Some(k)=>{
-                            if k == "my-key-0"{
+        match second_delete.deleted {
+            Some(v) => {
+                for key in v.into_iter() {
+                    match key.key {
+                        Some(k) => {
+                            if k == "my-key-0" {
                                 find = true;
                             }
-                        },
-                        None=>{
-
                         }
+                        None => {}
                     }
                 }
-            },
-            None=>{
-
-            },
+            }
+            None => {}
         }
         assert!(find == true);
-        
 
         // Verify objects are deleted
         // let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
