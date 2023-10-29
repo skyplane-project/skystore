@@ -16,9 +16,3 @@ impl LocationInner {
         LocationInner {}
     }
 }
-
-impl Default for LocationInner {
-    fn default() -> Self {
-        Self::new()
-    }
-}

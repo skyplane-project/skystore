@@ -368,7 +368,7 @@ async def start_delete_objects(
         )
 
     locator_dict = {}
-    locator_res_dict = {}
+    locator_status_res_dict = {}
     for key, multipart_upload_id in zip_longest(
         request.keys, request.multipart_upload_ids or []
     ):
@@ -394,7 +394,7 @@ async def start_delete_objects(
             )
         logical_obj = await db.scalar(stmt)
         if logical_obj is None:
-            locator_res_dict[key] = 404
+            locator_status_res_dict[key] = 404
             continue
             # return Response(status_code=404, content="Object not found")
 
@@ -404,7 +404,7 @@ async def start_delete_objects(
                 logger.error(
                     f"Cannot delete physical object. Current status is {physical_locator.status}"
                 )
-                locator_res_dict[key] = 409
+                locator_status_res_dict[key] = 409
                 break
                 # return Response(
                 #     status_code=409,
@@ -438,9 +438,11 @@ async def start_delete_objects(
         logger.debug(f"start_delete_object: {request} -> {logical_obj}")
 
         locator_dict[key] = locators
-        locator_res_dict[key] = 200
+        locator_status_res_dict[key] = 200
 
-    return DeleteObjectsResponse(locators=locator_dict, locator_res=locator_res_dict)
+    return DeleteObjectsResponse(
+        locators=locator_dict, locator_status_res=locator_status_res_dict
+    )
 
 
 @app.patch("/complete_delete_objects")

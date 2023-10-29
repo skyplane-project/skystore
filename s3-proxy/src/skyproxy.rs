@@ -848,9 +848,8 @@ impl S3 for SkyProxy {
             // let vector ;
             //     let err_vector
             Ok(mut resp) => {
-                for (key, value) in resp.locator_res.iter() {
+                for (key, value) in resp.locator_status_res.iter() {
                     if *value == 200 {
-                        println!("here  is the key {}", key);
                         resp_hashmap
                             .insert((*key).clone(), resp.locators.get(key).unwrap().clone());
                     } else if *value == 404 {
@@ -858,7 +857,6 @@ impl S3 for SkyProxy {
                     } else {
                         err_key.push((*key).clone());
                     }
-                    println!("ITER KEY, VALUE: {} {}", key, value);
                 }
                 resp.locators = resp_hashmap;
                 resp
@@ -2352,8 +2350,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_delete_non_existence_objects() {
-        // println!("this one has been runned wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww");
+    async fn test_delete_none_existence_objects() {
         let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
 
         let bucket_name = generate_unique_bucket_name();
@@ -2387,10 +2384,17 @@ mod tests {
             .unwrap()
             .output;
         let delete = Delete {
-            objects: vec![ObjectIdentifier {
-                key: "my-key-0".to_string(),
-                version_id: None,
-            }],
+            objects: vec![
+                ObjectIdentifier {
+                    key: "my-key-0".to_string(),
+                    version_id: None,
+                },
+                ObjectIdentifier {
+                    key: "my-key-1".to_string(),
+                    version_id: None,
+                },
+            ],
+
             ..Default::default()
         };
 
@@ -2402,6 +2406,7 @@ mod tests {
             .unwrap()
             .output;
         let mut find = false;
+        let mut find1 = false;
         match second_delete.deleted {
             Some(v) => {
                 for key in v.into_iter() {
@@ -2409,6 +2414,9 @@ mod tests {
                         Some(k) => {
                             if k == "my-key-0" {
                                 find = true;
+                            }
+                            if k == "my-key-1" {
+                                find1 = true;
                             }
                         }
                         None => {}
@@ -2418,15 +2426,7 @@ mod tests {
             None => {}
         }
         assert!(find == true);
-
-        // Verify objects are deleted
-        // let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
-        // let list_resp = proxy
-        //     .list_objects_v2(S3Request::new(list_request))
-        //     .await
-        //     .unwrap()
-        //     .output;
-        // assert!(list_resp.contents.unwrap().len() == 1);
+        assert!(find1 == true);
     }
 
     #[tokio::test]

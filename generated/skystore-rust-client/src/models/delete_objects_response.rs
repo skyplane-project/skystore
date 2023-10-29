@@ -12,14 +12,18 @@
 pub struct DeleteObjectsResponse {
     #[serde(rename = "locators")]
     pub locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>,
-    pub locator_res: ::std::collections::HashMap<String, i32>,
+    #[serde(rename = "locator_status_res")]
+    pub locator_status_res: ::std::collections::HashMap<String, i32>,
 }
 
 impl DeleteObjectsResponse {
     pub fn new(
         locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>,
-        locator_res: ::std::collections::HashMap<String, i32>,
+        locator_status_res: ::std::collections::HashMap<String, i32>,
     ) -> DeleteObjectsResponse {
-        DeleteObjectsResponse { locators, locator_res }
+        DeleteObjectsResponse {
+            locators,
+            locator_status_res,
+        }
     }
 }

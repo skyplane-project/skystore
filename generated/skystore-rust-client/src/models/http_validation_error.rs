@@ -19,9 +19,3 @@ impl HttpValidationError {
         HttpValidationError { detail: None }
     }
 }
-
-impl Default for HttpValidationError {
-    fn default() -> Self {
-        Self::new()
-    }
-}
