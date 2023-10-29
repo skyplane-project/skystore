@@ -424,7 +424,7 @@ No authorization required
 > crate::models::BucketStatus locate_bucket_status(locate_bucket_request)
 Locate Bucket Status
 
-Given the bucket name, return one or zero physical bucket locators.
+Given the bucket name, return physical bucket status. Currently only used for testing metadata cleanup
 
 ### Parameters
 
@@ -484,7 +484,7 @@ No authorization required
 > crate::models::ObjectStatus locate_object_status(locate_object_request)
 Locate Object Status
 
-Given the logical object information, return the status of the object.
+Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup.
 
 ### Parameters
 

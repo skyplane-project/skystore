@@ -1334,13 +1334,14 @@ async def list_parts(
 async def locate_object_status(
     request: LocateObjectRequest, db: DBSession
 ) -> ObjectStatus:
-    """Given the logical object information, return the status of the object."""
+    """Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup."""
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
     )
+    # get physical locators
     locators = (await db.scalars(stmt)).all()
     if len(locators) == 0:
         return Response(status_code=404, content="Object Not Found")
@@ -1363,7 +1364,7 @@ async def locate_object_status(
     )
 
     await db.refresh(chosen_locator, ["logical_object"])
-
+    # return object status
     return ObjectStatus(status=chosen_locator.status)
 
 
@@ -1377,35 +1378,30 @@ async def locate_object_status(
 async def locate_bucket_status(
     request: LocateBucketRequest, db: DBSession
 ) -> BucketStatus:
-    """Given the bucket name, return one or zero physical bucket locators."""
+    """Given the bucket name, return physical bucket status. Currently only used for testing metadata cleanup"""
     stmt = (
         select(DBPhysicalBucketLocator)
         .join(DBLogicalBucket)
         .where(DBLogicalBucket.bucket == request.bucket)
     )
+    # get buckets corresponding to data from request
     locators = (await db.scalars(stmt)).all()
 
     if len(locators) == 0:
         return Response(status_code=404, content="Bucket Not Found")
 
     chosen_locator = None
-    reason = ""
     for locator in locators:
         if locator.location_tag == request.client_from_region:
             chosen_locator = locator
-            reason = "exact match"
             break
     else:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
-        reason = "fallback to primary"
-
-    logger.debug(
-        f"locate_bucket: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
-    )
 
     await db.refresh(chosen_locator, ["logical_bucket"])
 
+    # return status
     return BucketStatus(
         status=chosen_locator.status,
     )
@@ -1414,26 +1410,6 @@ async def locate_bucket_status(
 @app.get("/healthz")
 async def healthz() -> HealthcheckResponse:
     return HealthcheckResponse(status="OK")
-
-
-# def custom_openapi():
-#     if app.openapi_schema:
-#         return app.openapi_schema
-#     openapi_schema = get_openapi(
-#         title="Custom title",
-#         version="3.0.2",
-#         summary="This is a very custom OpenAPI schema",
-#         description="Here's a longer description of the custom **OpenAPI** schema",
-#         routes=app.routes,
-#     )
-#     # openapi_schema["info"]["x-logo"] = {
-#     #     "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
-#     # }
-#     app.openapi_schema = openapi_schema
-#     return app.openapi_schema
-
-
-# app.openapi = custom_openapi
 
 
 ## Add routes above this function
