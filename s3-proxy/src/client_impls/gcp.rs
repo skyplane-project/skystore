@@ -6,6 +6,7 @@ use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
 use google_cloud_storage::http::buckets::insert::{
     BucketCreationConfig, InsertBucketParam, InsertBucketRequest,
 };
+use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
@@ -34,6 +35,7 @@ impl GCPObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for GCPObjectStoreClient {
+
     async fn create_bucket(
         &self,
         req: S3Request<CreateBucketInput>,
@@ -96,6 +98,20 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         Ok(S3Response::new(DeleteBucketOutput::default()))
     }
+
+    async fn head_bucket(
+        &self,
+        req: S3Request<HeadBucketInput>,
+    ) -> S3Result<S3Response<HeadBucketOutput>> {
+        let req = req.input;
+        let bucket = req.bucket;
+
+        let _res = self.client.get_bucket(&GetBucketRequest {
+		bucket,  ..Default::default()}).await;
+
+        Ok(S3Response::new(HeadBucketOutput {}))
+    }
+
 
     async fn head_object(
         &self,
