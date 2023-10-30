@@ -40,7 +40,6 @@ impl S3ObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for S3ObjectStoreClient {
-
     async fn head_bucket(
         &self,
         req: S3Request<HeadBucketInput>,
