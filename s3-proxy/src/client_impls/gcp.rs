@@ -3,10 +3,10 @@ use crate::type_utils::parse_range;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
+use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::insert::{
     BucketCreationConfig, InsertBucketParam, InsertBucketRequest,
 };
-use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
