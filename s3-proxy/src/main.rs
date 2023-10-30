@@ -25,6 +25,7 @@ struct WarmupRequest {
     warmup_regions: Vec<String>,
 }
 
+
 #[tokio::main]
 async fn main() {
     // Exit the process upon panic, this is used for debugging purpose.
@@ -54,7 +55,6 @@ async fn main() {
     let local_run: bool = env::var("LOCAL")
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
-
     let proxy = SkyProxy::new(init_regions, client_from_region, local_run).await;
 
     // Setup S3 service
@@ -96,10 +96,12 @@ async fn main() {
                     },
                 ),
         )
-        .service_fn(move |req: hyper::Request<hyper::Body>| {
+        .service_fn(move |mut req: hyper::Request<hyper::Body>| {
             let mut s3_service = s3_service.clone();
             let proxy_clone = proxy.clone();
-
+            if env::var("PULL_POLICY").unwrap() == "copy_on_read" {
+                req.headers_mut().insert("X-SKYSTORE-PULL", "copy_on_read".parse().unwrap());
+            }
             if req.uri().path() == "/_/warmup_object" {
                 let fut = async move {
                     if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {

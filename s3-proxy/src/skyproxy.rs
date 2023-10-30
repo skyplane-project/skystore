@@ -100,6 +100,7 @@ impl SkyProxy {
                 {
                     Ok(_) => {}
                     Err(e) => {
+                        println!("Failed to create bucket: {}", e);
                         if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                             // Bucket already exists, no action needed
                         } else {
@@ -586,6 +587,7 @@ impl S3 for SkyProxy {
         match locator {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
+                    println!("pull policy: copy_on_read");
                     if location.tag != self.client_from_region {
                         let get_resp = self
                             .store_clients
