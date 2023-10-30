@@ -6,12 +6,12 @@ use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;
 use google_cloud_storage::http::buckets::insert::{
     BucketCreationConfig, InsertBucketParam, InsertBucketRequest,
 };
+use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
-use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::objects::SourceObjects;
