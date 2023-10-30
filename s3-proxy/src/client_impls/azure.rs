@@ -143,7 +143,6 @@ impl AzureObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for AzureObjectStoreClient {
-
     async fn create_bucket(
         &self,
         req: S3Request<CreateBucketInput>,
@@ -221,16 +220,15 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         let container_name = req.bucket;
 
         let container_client = self.container_client(&container_name);
-		let _resp = container_client.exists().await;
-		match _resp {
-			Ok(_) => Ok(S3Response::new (HeadBucketOutput {})),
-			Err(err) => Err(s3s::S3Error::with_message(
+        let _resp = container_client.exists().await;
+        match _resp {
+            Ok(_) => Ok(S3Response::new(HeadBucketOutput {})),
+            Err(err) => Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
                 format!("Request failed: {err}"),
             )),
-		}
+        }
     }
-
 
     async fn get_object(
         &self,

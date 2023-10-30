@@ -1,9 +1,7 @@
 use s3s::dto::*;
 use s3s::{S3Request, S3Response, S3Result};
-
 #[async_trait::async_trait]
 pub trait ObjectStoreClient: Send + Sync + 'static {
-
     async fn head_bucket(
         &self,
         req: S3Request<HeadBucketInput>,

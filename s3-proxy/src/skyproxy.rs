@@ -82,18 +82,17 @@ impl SkyProxy {
 
                 let client_arc = Arc::new(client);
                 store_clients.insert(r.to_string(), client_arc.clone());
-				let user_name = whoami::username();
-				// if bucket not exists, create one
+                let user_name = whoami::username();
+                // if bucket not exists, create one
                 let skystore_bucket_name = format!("skystore-{}-{}", user_name, region);
-                println!("{}",skystore_bucket_name);
                 let bucket_region = if provider == "aws" || provider == "gcp" {
                     Some(region.to_string())
                 } else {
                     None
                 };
-				let mut bucket_exists = true;
+                let mut bucket_exists = true;
                 match client_arc
-                    . head_bucket(S3Request::new(new_head_bucket_request(
+                    .head_bucket(S3Request::new(new_head_bucket_request(
                         skystore_bucket_name.clone(),
                         bucket_region.clone(),
                     )))
@@ -110,24 +109,24 @@ impl SkyProxy {
                     }
                 };
                 if !bucket_exists {
-	                match client_arc
-	                    .create_bucket(S3Request::new(new_create_bucket_request(
-	                        skystore_bucket_name.clone(),
-	                        bucket_region.clone(),
-	                    )))
-	                    .await
-	                {
-	                    Ok(_) => {}
-	                    Err(e) => {
-	                        if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
-	                            // Bucket already exists, no action needed
-	                        } else {
-	                            panic!("Failed to create bucket: {}", e);
-	                        }
-	                    }
-	                }
-	            }
-			};
+                    match client_arc
+                        .create_bucket(S3Request::new(new_create_bucket_request(
+                            skystore_bucket_name.clone(),
+                            bucket_region.clone(),
+                        )))
+                        .await
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
+                                // Bucket already exists, no action needed
+                            } else {
+                                panic!("Failed to create bucket: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         let dir_conf = Configuration {
