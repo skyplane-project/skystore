@@ -15,6 +15,20 @@
                 "region": "us-east-2",
                 "bucket": "my-sky-bucket-2",
                 "need_warmup": true
+            },
+            {
+                "name": "gcp:us-east1",
+                "cloud": "gcp",
+                "region": "us-east1",
+                "bucket": "my-sky-bucket-3",
+                "need_warmup": true
+            },
+            {
+                "name": "gcp:us-west1",
+                "cloud": "gcp",
+                "region": "us-west1",
+                "bucket": "my-sky-bucket-4",
+                "need_warmup": true
             }
         ]
     }

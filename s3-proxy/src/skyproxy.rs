@@ -585,7 +585,6 @@ impl S3 for SkyProxy {
         match locator {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
-                    println!("pull policy: copy_on_read");
                     if location.tag != self.client_from_region {
                         let get_resp = self
                             .store_clients

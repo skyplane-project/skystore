@@ -1,7 +1,9 @@
 {
     "init_regions": [
         "aws:us-west-1",
-        "aws:us-east-2"
+        "aws:us-east-2",
+        "gcp:us-east1",
+        "gcp:us-west1"
     ],
     "client_from_region": "aws:us-west-1"
 }
