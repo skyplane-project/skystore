@@ -20,10 +20,16 @@ pub struct SkyProxy {
     store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
     dir_conf: Configuration,
     client_from_region: String,
+    skystore_bucket_prefix: String,
 }
 
 impl SkyProxy {
-    pub async fn new(regions: Vec<String>, client_from_region: String, local: bool) -> Self {
+    pub async fn new(
+        regions: Vec<String>,
+        client_from_region: String,
+        local: bool,
+        skystore_bucket_prefix: String,
+    ) -> Self {
         let mut store_clients = HashMap::new();
 
         if local {
@@ -82,9 +88,8 @@ impl SkyProxy {
 
                 let client_arc = Arc::new(client);
                 store_clients.insert(r.to_string(), client_arc.clone());
-                let user_name = whoami::username();
                 // if bucket not exists, create one
-                let skystore_bucket_name = format!("skystore-{}-{}", user_name, region);
+                let skystore_bucket_name = format!("{}-{}", skystore_bucket_prefix, region);
                 let bucket_region = if provider == "aws" || provider == "gcp" {
                     Some(region.to_string())
                 } else {
@@ -142,6 +147,7 @@ impl SkyProxy {
             store_clients,
             dir_conf,
             client_from_region,
+            skystore_bucket_prefix,
         }
     }
 }
@@ -152,6 +158,7 @@ impl Clone for SkyProxy {
             store_clients: self.store_clients.clone(),
             dir_conf: self.dir_conf.clone(),
             client_from_region: self.client_from_region.clone(),
+            skystore_bucket_prefix: self.skystore_bucket_prefix.clone(),
         }
     }
 }
