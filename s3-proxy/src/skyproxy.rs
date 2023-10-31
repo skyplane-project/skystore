@@ -586,6 +586,7 @@ impl S3 for SkyProxy {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
                     if location.tag != self.client_from_region {
+                        println!("Pulling from remote region: {}", location.tag);
                         let get_resp = self
                             .store_clients
                             .get(&location.tag)
