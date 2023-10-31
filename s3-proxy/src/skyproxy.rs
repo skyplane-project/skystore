@@ -90,7 +90,6 @@ impl SkyProxy {
                 } else {
                     None
                 };
-
                 match client_arc
                     .create_bucket(S3Request::new(new_create_bucket_request(
                         skystore_bucket_name.clone(),
@@ -100,8 +99,7 @@ impl SkyProxy {
                 {
                     Ok(_) => {}
                     Err(e) => {
-                        println!("Failed to create bucket: {}", e);
-                        if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
+                        if e.to_string().contains("BucketAlreadyOwnedByYou") || http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                             // Bucket already exists, no action needed
                         } else {
                             panic!("Failed to create bucket: {}", e);
