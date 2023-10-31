@@ -50,7 +50,7 @@ async fn main() {
         env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
     let local_run: bool = env::var("LOCAL")
         .map(|s| s.parse::<bool>().unwrap())
-        .unwrap_or(true
+        .unwrap_or(true);
     let skystore_bucket_ptefix: String =
         env::var("SKYSTORE_BUCKET_PREFIX").expect("SKYSTORE_BUCKET_PREFIX is missing");
 
