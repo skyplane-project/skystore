@@ -17,16 +17,16 @@
                 "need_warmup": true
             },
             {
-                "name": "gcp:us-east1",
-                "cloud": "gcp",
-                "region": "us-east1",
+                "name": "aws:us-west-2",
+                "cloud": "aws",
+                "region": "us-west-2",
                 "bucket": "my-sky-bucket-3",
-                "need_warmup": true
+                "is_primary": true
             },
             {
-                "name": "gcp:us-west1",
-                "cloud": "gcp",
-                "region": "us-west1",
+                "name": "aws:us-east-1",
+                "cloud": "aws",
+                "region": "us-east-1",
                 "bucket": "my-sky-bucket-4",
                 "need_warmup": true
             }
