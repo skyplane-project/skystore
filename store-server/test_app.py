@@ -1,6 +1,6 @@
 import pytest
 from starlette.testclient import TestClient
-from app import app
+from app import app, rm_lock_on_timeout
 
 
 @pytest.fixture
@@ -790,3 +790,54 @@ def test_multipart_flow(client):
     resp.raise_for_status()
     resp_data = resp.json()
     assert resp_data["region"] == "us-west-1"
+
+
+@pytest.mark.asyncio
+async def test_metadata_clean_up(client):
+    """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "temp-object-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-west1"],
+        },
+    )
+    resp.raise_for_status()
+
+    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+    await rm_lock_on_timeout(0, testing=True)
+
+    resp = client.post(
+        "/locate_bucket_status",
+        json={
+            "bucket": "temp-object-bucket",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    assert resp.json()["status"] == "ready"
+
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "temp-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+        },
+    )
+    resp.raise_for_status()
+
+    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+    await rm_lock_on_timeout(0, testing=True)
+
+    resp = client.post(
+        "/locate_object_status",
+        json={
+            "bucket": "temp-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
+    assert resp.json()["status"] == "ready"
