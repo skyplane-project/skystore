@@ -64,6 +64,8 @@ from object_models import (
     DeleteObjectsIsCompleted,
 )
 
+background_tasks = set()
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(filename)s:%(lineno)d - %(message)s",
@@ -107,8 +109,8 @@ async def startup():
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(rm_lock_on_timeout(10))
+    task = asyncio.create_task(rm_lock_on_timeout(10))
+    background_tasks.add(task)
 
     if os.getenv("INIT_REGIONS"):
         init_region_tags = os.getenv("INIT_REGIONS").split(",")
@@ -118,6 +120,7 @@ async def startup():
 async def shutdown_event():
     # Set the flag to signal the background task to stop
     stop_task_flag.set()
+    background_tasks.discard
 
 
 async def get_session() -> AsyncSession:
