@@ -94,7 +94,8 @@ app = FastAPI()
 app.openapi_version = "3.0.2"
 conf = TEST_CONFIGURATION
 init_region_tags = DEFAULT_INIT_REGIONS
-skystore_bucket_prefix = os.getenv("SKYSTORE_BUCKET_PREFIX", DEFAULT_SKYSTORE_BUCKET_PREFIX)
+skystore_bucket_prefix = os.getenv("SKYSTORE_BUCKET_PREFIX",
+                                   DEFAULT_SKYSTORE_BUCKET_PREFIX)
 
 load_dotenv()
 
