@@ -13,7 +13,7 @@ from itertools import zip_longest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS
+from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS, DEFAULT_SKYSTORE_BUCKET_PREFIX
 from utils import Status
 from bucket_models import (
     DBLogicalBucket,
@@ -88,6 +88,7 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 app = FastAPI()
 conf = TEST_CONFIGURATION
 init_region_tags = DEFAULT_INIT_REGIONS
+skystore_bucket_prefix = os.getenv("SKYSTORE_BUCKET_PREFIX", DEFAULT_SKYSTORE_BUCKET_PREFIX)
 
 load_dotenv()
 
@@ -100,7 +101,6 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
-
     if os.getenv("INIT_REGIONS"):
         init_region_tags = os.getenv("INIT_REGIONS").split(",")
 
@@ -154,7 +154,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
                 location_tag=cloud + ":" + region,
                 cloud=cloud,
                 region=region,
-                bucket=f"skystore-{region}",
+                bucket=f"{skystore_bucket_prefix}-{region}",
                 prefix="",  # TODO: integrate with prefix
                 status=Status.ready,
                 is_primary=False,
@@ -200,7 +200,7 @@ async def start_create_bucket(
     for region_tag in upload_to_region_tags:
         cloud, region = region_tag.split(":")
         physical_bucket_name = (
-            f"skystore-{region}"  # NOTE: might need another naming scheme
+            f"{skystore_bucket_prefix}-{region}"  # NOTE: might need another naming scheme
         )
 
         bucket_locator = DBPhysicalBucketLocator(
