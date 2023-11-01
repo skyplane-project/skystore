@@ -48,7 +48,7 @@ impl SkyProxy {
                 store_clients.insert(r.to_string(), client.clone());
 
                 // if bucket not exists, create one
-                let skystore_bucket_name = format!("skystore-{}", region);
+                let skystore_bucket_name = format!("{}-{}", skystore_bucket_prefix, region);
                 match client
                     .create_bucket(S3Request::new(new_create_bucket_request(
                         skystore_bucket_name,
@@ -1660,6 +1660,7 @@ mod tests {
             "azure:westus3".to_string(),
         ];
         static ref CLIENT_FROM_REGION: String = "aws:us-west-1".to_string();
+        static ref SKYSTORE_BUCKET_PREFIX: String = "skystore".to_string();
     }
 
     fn generate_unique_bucket_name() -> String {
@@ -1670,14 +1671,26 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_constructor() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
         assert!(!proxy.store_clients.is_empty());
     }
 
     #[tokio::test]
     #[serial]
     async fn test_list_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1694,7 +1707,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_then_get() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1768,7 +1787,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_objects() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1820,7 +1845,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
@@ -1855,7 +1886,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_copy_object() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -1913,7 +1950,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_flow() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -2073,7 +2116,13 @@ mod tests {
     #[serial]
     // #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow_large() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -2257,7 +2306,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_many_parts() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -2347,7 +2402,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_abort_multipart_upload() {
-        let proxy = SkyProxy::new(REGIONS.clone(), CLIENT_FROM_REGION.clone(), true).await;
+        let proxy = SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            true,
+            SKYSTORE_BUCKET_PREFIX.clone(),
+        )
+        .await;
 
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
