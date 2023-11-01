@@ -1657,7 +1657,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         let request = new_list_objects_v2_input(bucket_name.to_string(), None);
         let req = S3Request::new(request);
@@ -1674,7 +1674,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         {
             let mut request = new_put_object_request(bucket_name.to_string(), "my-key".to_string());
@@ -1747,7 +1747,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         for i in 0..3 {
             let mut request =
@@ -1756,7 +1756,7 @@ mod tests {
             request.body = Some(s3s::Body::from(body).into());
 
             let req = S3Request::new(request);
-            proxy.put_object(req).await.unwrap().output;
+            proxy.put_object(req).await.unwrap();
         }
 
         let delete = Delete {
@@ -1775,11 +1775,7 @@ mod tests {
 
         let delete_objects_input = new_delete_objects_request(bucket_name.to_string(), delete);
         let delete_objects_req = S3Request::new(delete_objects_input);
-        proxy
-            .delete_objects(delete_objects_req)
-            .await
-            .unwrap()
-            .output;
+        proxy.delete_objects(delete_objects_req).await.unwrap();
 
         // Verify objects are deleted
         let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
@@ -1799,7 +1795,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         {
             let mut request =
@@ -1808,13 +1804,13 @@ mod tests {
             request.body = Some(s3s::Body::from(body).into());
 
             let req = S3Request::new(request);
-            proxy.put_object(req).await.unwrap().output;
+            proxy.put_object(req).await.unwrap();
         }
 
         let delete_object_input =
             new_delete_object_request(bucket_name.to_string(), "my-single-key".to_string());
         let delete_object_req = S3Request::new(delete_object_input);
-        proxy.delete_object(delete_object_req).await.unwrap().output;
+        proxy.delete_object(delete_object_req).await.unwrap();
 
         // Verify a single object was deleted
         let list_request = new_list_objects_v2_input(bucket_name.to_string(), None);
@@ -1835,7 +1831,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         // put an object to my-bucket/my-copy-key
         {
@@ -1893,7 +1889,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         // AWS's The minimal multipart upload size is 5Mb
         // which is pretty sad but we have to test it against real service here.
@@ -2237,7 +2233,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         // initiate multipart upload
         let upload_id = {
@@ -2326,7 +2322,7 @@ mod tests {
         let bucket_name = generate_unique_bucket_name();
         let request = new_create_bucket_request(bucket_name.to_string(), None);
         let req = S3Request::new(request);
-        proxy.create_bucket(req).await.unwrap().output;
+        proxy.create_bucket(req).await.unwrap();
 
         let upload_id = {
             let request = new_create_multipart_upload_request(
@@ -2364,7 +2360,7 @@ mod tests {
             );
             let req = S3Request::new(request);
 
-            proxy.abort_multipart_upload(req).await.unwrap().output;
+            proxy.abort_multipart_upload(req).await.unwrap();
         };
 
         // Check that the upload ID is no longer listed
