@@ -584,6 +584,7 @@ impl S3 for SkyProxy {
 
         match locator {
             Some(location) => {
+                println!("get from bucket: {:?}", location.bucket);
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
                     if location.tag != self.client_from_region {
                         println!("Pulling from remote region: {}", location.tag);
@@ -652,7 +653,6 @@ impl S3 for SkyProxy {
                                     )))
                                     .await
                                     .unwrap();
-
                                 apis::complete_upload(
                                     &dir_conf_clone,
                                     models::PatchUploadIsCompleted {

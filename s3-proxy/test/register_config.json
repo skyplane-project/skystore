@@ -20,7 +20,7 @@
                 "name": "aws:us-west-1",
                 "cloud": "aws",
                 "region": "us-west-1",
-                "bucket": "my-sky-bucket-1"
+                "bucket": "my-sky-bucket-99"
             }
         ]
     }

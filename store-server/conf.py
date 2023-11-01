@@ -61,8 +61,9 @@ TEST_CONFIGURATION = Configuration(
 DEFAULT_INIT_REGIONS = [
     "aws:us-west-1",
     "aws:us-east-2",
-    "gcp:us-west1",
-    "azure:westus3",
+    # "aws:us-west-2",
+    # "gcp:us-west1",
+    # "azure:westus3",
     # "aws:eu-central-1",
 ]
 
