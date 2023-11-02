@@ -621,7 +621,8 @@ async def locate_object(
         if retries == MAX_RETIRES - 1:
             return Response(status_code=404, content="Object Not Ready")
         
-        time.sleep(1)
+        await asyncio.sleep(0.2)
+        await db.refresh(chosen_locator)
         retries += 1 
 
     return LocateObjectResponse(

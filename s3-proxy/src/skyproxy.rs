@@ -661,7 +661,7 @@ impl S3 for SkyProxy {
                                     .await
                                     .unwrap();
                                 
-                                // println!("content length: {}", head_resp.output.content_length);
+                               // println!("content length: {}", head_resp.output.content_length);
 
                                 apis::complete_upload(
                                     &dir_conf_clone,
@@ -676,6 +676,7 @@ impl S3 for SkyProxy {
                                 )
                                 .await
                                 .unwrap();
+                                // println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
                                 // if head_resp.output.content_length.is_positive() {
                                 //     println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
                                 // }
