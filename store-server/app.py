@@ -1,5 +1,7 @@
+import asyncio
 from datetime import datetime
 import logging
+import time
 import uuid
 from utils import Base
 from typing import Annotated, List
@@ -595,7 +597,8 @@ async def locate_object(
             chosen_locator = locator
             reason = "exact match"
             break
-    else:
+        
+    if chosen_locator is None:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
@@ -605,6 +608,21 @@ async def locate_object(
     )
 
     await db.refresh(chosen_locator, ["logical_object"])
+    
+    retries = 0 
+    MAX_RETIRES = 10
+    while retries < MAX_RETIRES:
+        if chosen_locator.status == Status.ready:
+            # print(f"Object {chosen_locator.location_tag} object {chosen_locator.key} is ready")
+            break 
+        
+        # print(f"Waiting for region {chosen_locator.location_tag} object {chosen_locator.key} to be ready: {chosen_locator.status}")
+         
+        if retries == MAX_RETIRES - 1:
+            return Response(status_code=404, content="Object Not Ready")
+        
+        time.sleep(1)
+        retries += 1 
 
     return LocateObjectResponse(
         id=chosen_locator.id,
@@ -717,6 +735,10 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
+    # print all physical locators
+    stmt = select(DBPhysicalObjectLocator)
+    locators = (await db.scalars(stmt)).all()
+    
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -820,6 +842,7 @@ async def start_upload(
         )
 
     locators = []
+    # print(f"upload_to_region_tags: {upload_to_region_tags}")
     for region_tag in upload_to_region_tags:
         if region_tag in existing_tags:
             continue
