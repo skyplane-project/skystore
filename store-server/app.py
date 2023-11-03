@@ -610,7 +610,7 @@ async def locate_object(
     await db.refresh(chosen_locator, ["logical_object"])
     
     retries = 0 
-    MAX_RETIRES = 10
+    MAX_RETIRES = 1000
     while retries < MAX_RETIRES:
         if chosen_locator.status == Status.ready:
             # print(f"Object {chosen_locator.location_tag} object {chosen_locator.key} is ready")
@@ -621,8 +621,8 @@ async def locate_object(
         if retries == MAX_RETIRES - 1:
             return Response(status_code=404, content="Object Not Ready")
         
-        await asyncio.sleep(0.2)
-        await db.refresh(chosen_locator)
+        await asyncio.sleep(0.01)
+        await db.refresh(chosen_locator, ['status'])
         retries += 1 
 
     return LocateObjectResponse(

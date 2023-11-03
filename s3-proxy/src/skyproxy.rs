@@ -584,10 +584,10 @@ impl S3 for SkyProxy {
 
         match locator {
             Some(location) => {
-                // println!("get from bucket: {:?}", location.bucket);
+                println!("get from bucket: {:?}", location.bucket);
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
                     if location.tag != self.client_from_region {
-                        // println!("Pulling from remote region: {} with bucket {}", location.tag, location.bucket);
+                        println!("Pulling from remote region: {} with bucket {}", location.tag, location.bucket);
                         let get_resp = self
                             .store_clients
                             .get(&location.tag)
@@ -608,7 +608,7 @@ impl S3 for SkyProxy {
                         let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
                         
-                        // println!("start upload key {} to bucket {}", key, bucket);
+                        println!("start upload key {} to bucket {}", key, bucket);
                         let start_upload_resp = apis::start_upload(
                             &dir_conf_clone,
                             models::StartUploadRequest {
@@ -676,10 +676,10 @@ impl S3 for SkyProxy {
                                 )
                                 .await
                                 .unwrap();
-                                // println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
-                                // if head_resp.output.content_length.is_positive() {
-                                //     println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
-                                // }
+                                println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
+                                if head_resp.output.content_length.is_positive() {
+                                    println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
+                                }
                             }
                             // println!("finish real uploading.");
                         });
