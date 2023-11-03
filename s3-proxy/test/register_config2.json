@@ -11,5 +11,6 @@
             }
         ]
     }
+    "skystore_bucket_prefix" : "skystore"
     
 }

@@ -66,6 +66,7 @@ DEFAULT_INIT_REGIONS = [
     # "aws:eu-central-1",
 ]
 
+DEFAULT_SKYSTORE_BUCKET_PREFIX = "skystore"
 
 DEMO_CONFIGURATION = Configuration(
     physical_locations=[

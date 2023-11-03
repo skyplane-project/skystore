@@ -17,6 +17,7 @@
                 "need_warmup": true
             }
         ]
-    }
+    },
+    "skystore_bucket_prefix" : "skystore"
     
 }

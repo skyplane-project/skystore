@@ -43,19 +43,24 @@ async fn main() {
     // Setup our proxy object
     // let init_regions = vec!["aws:us-west-1".to_string(), "aws:us-east-2".to_string()];
     // let client_from_region = "aws:us-west-1".to_string();
-
     let init_regions: Vec<String> = env::var("INIT_REGIONS")
         .map(|s| s.split(',').map(|s| s.to_string()).collect())
         .unwrap_or_else(|_| vec!["aws:us-east-1".to_string()]);
-
     let client_from_region: String =
         env::var("CLIENT_FROM_REGION").expect("CLIENT_FROM_REGION must be set");
-
     let local_run: bool = env::var("LOCAL")
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
+    let skystore_bucket_ptefix: String =
+        env::var("SKYSTORE_BUCKET_PREFIX").expect("SKYSTORE_BUCKET_PREFIX is missing");
 
-    let proxy = SkyProxy::new(init_regions, client_from_region, local_run).await;
+    let proxy = SkyProxy::new(
+        init_regions,
+        client_from_region,
+        local_run,
+        skystore_bucket_ptefix,
+    )
+    .await;
 
     // Setup S3 service
     // TODO: Add auth and configure virtual-host style domain

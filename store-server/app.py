@@ -14,7 +14,11 @@ from itertools import zip_longest
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS
+from conf import (
+    TEST_CONFIGURATION,
+    DEFAULT_INIT_REGIONS,
+    DEFAULT_SKYSTORE_BUCKET_PREFIX,
+)
 from utils import Status
 from bucket_models import (
     DBLogicalBucket,
@@ -94,6 +98,9 @@ app = FastAPI()
 app.openapi_version = "3.0.2"
 conf = TEST_CONFIGURATION
 init_region_tags = DEFAULT_INIT_REGIONS
+skystore_bucket_prefix = os.getenv(
+    "SKYSTORE_BUCKET_PREFIX", DEFAULT_SKYSTORE_BUCKET_PREFIX
+)
 
 load_dotenv()
 
@@ -173,7 +180,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
                 location_tag=cloud + ":" + region,
                 cloud=cloud,
                 region=region,
-                bucket=f"skystore-{region}",
+                bucket=f"{skystore_bucket_prefix}-{region}",
                 prefix="",  # TODO: integrate with prefix
                 lock_acquired_ts=None,
                 status=Status.ready,
@@ -219,9 +226,7 @@ async def start_create_bucket(
 
     for region_tag in upload_to_region_tags:
         cloud, region = region_tag.split(":")
-        physical_bucket_name = (
-            f"skystore-{region}"  # NOTE: might need another naming scheme
-        )
+        physical_bucket_name = f"{skystore_bucket_prefix}-{region}"  # NOTE: might need another naming scheme
 
         bucket_locator = DBPhysicalBucketLocator(
             logical_bucket=logical_bucket,
