@@ -561,6 +561,37 @@ async def locate_bucket(
         region=chosen_locator.region,
     )
 
+@app.post(
+        "/locate_physical_object",
+)
+async def locate_local_pending_object(
+    request: LocateObjectRequest, db: DBSession
+) -> int:
+    """Given the logical object information, return whether there is an object in the local region."""
+    stmt = (
+        select(DBPhysicalObjectLocator)
+        .join(DBLogicalObject)
+        .where(DBLogicalObject.bucket == request.bucket)
+        .where(DBLogicalObject.key == request.key)
+        .where(DBLogicalObject.status == Status.ready)
+    )
+    locators = (await db.scalars(stmt)).all()
+
+    if len(locators) == 0:
+        return 0
+
+    # if request.get_primary:
+    #     chosen_locator = next(locator for locator in locators if locator.is_primary)
+    #     reason = "exact match (primary)"
+    # else:
+    for locator in locators:
+        if locator.location_tag == request.client_from_region:
+            if locator.status == Status.pending:
+                return 1 
+            if locator.status == Status.ready:
+                return 2
+        
+    return 0 
 
 @app.post(
     "/locate_object",
@@ -593,7 +624,7 @@ async def locate_object(
     #     reason = "exact match (primary)"
     # else:
     for locator in locators:
-        if locator.location_tag == request.client_from_region:
+        if locator.location_tag == request.client_from_region and locator.status == Status.ready:
             chosen_locator = locator
             reason = "exact match"
             break
@@ -609,21 +640,21 @@ async def locate_object(
 
     await db.refresh(chosen_locator, ["logical_object"])
     
-    retries = 0 
-    MAX_RETIRES = 1000
-    while retries < MAX_RETIRES:
-        if chosen_locator.status == Status.ready:
-            # print(f"Object {chosen_locator.location_tag} object {chosen_locator.key} is ready")
-            break 
+    # retries = 0 
+    # MAX_RETIRES = 1000
+    # while retries < MAX_RETIRES:
+    #     if chosen_locator.status == Status.ready:
+    #         print(f"Object {chosen_locator.location_tag} object {chosen_locator.key} is ready")
+    #         break 
         
-        # print(f"Waiting for region {chosen_locator.location_tag} object {chosen_locator.key} to be ready: {chosen_locator.status}")
+    #     print(f"Waiting for region {chosen_locator.location_tag} object {chosen_locator.key} to be ready: {chosen_locator.status}")
          
-        if retries == MAX_RETIRES - 1:
-            return Response(status_code=404, content="Object Not Ready")
+    #     if retries == MAX_RETIRES - 1:
+    #         return Response(status_code=404, content="Object Not Ready")
         
-        await asyncio.sleep(0.01)
-        await db.refresh(chosen_locator, ['status'])
-        retries += 1 
+    #     await asyncio.sleep(0.01)
+    #     await db.refresh(chosen_locator, ['status'])
+    #     retries += 1 
 
     return LocateObjectResponse(
         id=chosen_locator.id,

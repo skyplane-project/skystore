@@ -39,6 +39,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 *DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
+*DefaultApi* | [**locate_local_pending_object**](docs/DefaultApi.md#locate_local_pending_object) | **POST** /locate_physical_object | Locate Local Pending Object
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 *DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id

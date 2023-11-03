@@ -10,7 +10,6 @@ use chrono::Utc;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
-use skystore_rust_client::models;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -587,8 +586,18 @@ impl S3 for SkyProxy {
                 println!("get from bucket: {:?}", location.bucket);
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
                     if location.tag != self.client_from_region {
-                        println!("Pulling from remote region: {} with bucket {}", location.tag, location.bucket);
-                        let get_resp = self
+                        let local_exists = apis::locate_local_pending_object(
+                            &self.dir_conf,
+                            models::LocateObjectRequest {
+                                bucket: bucket.clone(),
+                                key: key.clone(),
+                                client_from_region: self.client_from_region.clone(),
+                            },
+                        ).await.unwrap();
+
+                        if local_exists == 1 {
+                            println!("find object {} in local region {}, directly return.", key.clone(), self.client_from_region.clone());
+                            return self
                             .store_clients
                             .get(&location.tag)
                             .unwrap()
@@ -597,104 +606,130 @@ impl S3 for SkyProxy {
                                 input.key = location.key;
                                 input
                             }))
-                            .await?;
-                        let data = get_resp.output.body.unwrap();
-
-                        // Spawn a background task to store the object in the local object store
-                        let dir_conf_clone = self.dir_conf.clone();
-                        let client_from_region_clone = self.client_from_region.clone();
-                        let store_clients_clone = self.store_clients.clone();
-
-                        let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
-                        let response_blob = input_blobs.pop();
-                        
-                        println!("start upload key {} to bucket {}", key, bucket);
-                        let start_upload_resp = apis::start_upload(
-                            &dir_conf_clone,
-                            models::StartUploadRequest {
-                                bucket: bucket.clone(),
-                                key: key.clone(),
-                                client_from_region: client_from_region_clone.clone(),
-                                is_multipart: false,
-                                copy_src_bucket: None,
-                                copy_src_key: None,
-                            },
-                        )
-                        .await
-                        .unwrap();
-
-
-                        let locators = start_upload_resp.locators;
-                        
-                        tokio::spawn(async move {
-
-                            let request_template = clone_put_object_request(
-                                &new_put_object_request(bucket.clone(), key.clone()),
-                                None,
-                            );
-
-                            // println!("prepare to perform real upload.");
-
-                            for (locator, input_blob) in
-                                locators.into_iter().zip(input_blobs.into_iter())
-                            {
-                                let client: Arc<Box<dyn ObjectStoreClient>> =
-                                    store_clients_clone.get(&locator.tag).unwrap().clone();
-                                let req = S3Request::new(clone_put_object_request(
-                                    &request_template,
-                                    Some(input_blob),
-                                ))
-                                .map_input(|mut input| {
-                                    input.bucket = locator.bucket.clone();
-                                    input.key = locator.key.clone();
+                            .await;                           
+                        } else if local_exists == 0 {
+                            println!("Pulling from remote region: {} with bucket {}", location.tag, location.bucket);
+                            let get_resp = self
+                                .store_clients
+                                .get(&location.tag)
+                                .unwrap()
+                                .get_object(req.map_input(|mut input: GetObjectInput| {
+                                    input.bucket = location.bucket;
+                                    input.key = location.key;
                                     input
-                                });
+                                }))
+                                .await?;
+                            let data = get_resp.output.body.unwrap();
+
+                            // Spawn a background task to store the object in the local object store
+                            let dir_conf_clone = self.dir_conf.clone();
+                            let client_from_region_clone = self.client_from_region.clone();
+                            let store_clients_clone = self.store_clients.clone();
+
+                            let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
+                            let response_blob = input_blobs.pop();
+                            
+                            println!("start upload key {} to bucket {}", key, bucket);
+                            let start_upload_resp = apis::start_upload(
+                                &dir_conf_clone,
+                                models::StartUploadRequest {
+                                    bucket: bucket.clone(),
+                                    key: key.clone(),
+                                    client_from_region: client_from_region_clone.clone(),
+                                    is_multipart: false,
+                                    copy_src_bucket: None,
+                                    copy_src_key: None,
+                                },
+                            )
+                            .await
+                            .unwrap();
+
+
+                            let locators = start_upload_resp.locators;
+                            
+                            tokio::spawn(async move {
+
+                                let request_template = clone_put_object_request(
+                                    &new_put_object_request(bucket.clone(), key.clone()),
+                                    None,
+                                );
+
+                                // println!("prepare to perform real upload.");
+
+                                for (locator, input_blob) in
+                                    locators.into_iter().zip(input_blobs.into_iter())
+                                {
+                                    let client: Arc<Box<dyn ObjectStoreClient>> =
+                                        store_clients_clone.get(&locator.tag).unwrap().clone();
+                                    let req = S3Request::new(clone_put_object_request(
+                                        &request_template,
+                                        Some(input_blob),
+                                    ))
+                                    .map_input(|mut input| {
+                                        input.bucket = locator.bucket.clone();
+                                        input.key = locator.key.clone();
+                                        input
+                                    });
+                                        
+                                    // println!("put object with key {} in bucket {}", locator.key, locator.bucket);
+                                    let put_resp = client.put_object(req).await.unwrap();
+                                    let e_tag = put_resp.output.e_tag.unwrap();
+                                    let head_resp = client
+                                        .head_object(S3Request::new(new_head_object_request(
+                                            locator.bucket.clone(),
+                                            locator.key.clone(),
+                                        )))
+                                        .await
+                                        .unwrap();
                                     
-                                // println!("put object with key {} in bucket {}", locator.key, locator.bucket);
-                                let put_resp = client.put_object(req).await.unwrap();
-                                let e_tag = put_resp.output.e_tag.unwrap();
-                                let head_resp = client
-                                    .head_object(S3Request::new(new_head_object_request(
-                                        locator.bucket.clone(),
-                                        locator.key.clone(),
-                                    )))
+                                // println!("content length: {}", head_resp.output.content_length);
+
+                                    apis::complete_upload(
+                                        &dir_conf_clone,
+                                        models::PatchUploadIsCompleted {
+                                            id: locator.id,
+                                            size: head_resp.output.content_length as u64,
+                                            etag: e_tag.clone(),
+                                            last_modified: timestamp_to_string(
+                                                head_resp.output.last_modified.unwrap(),
+                                            ),
+                                        },
+                                    )
                                     .await
                                     .unwrap();
-                                
-                               // println!("content length: {}", head_resp.output.content_length);
-
-                                apis::complete_upload(
-                                    &dir_conf_clone,
-                                    models::PatchUploadIsCompleted {
-                                        id: locator.id,
-                                        size: head_resp.output.content_length as u64,
-                                        etag: e_tag.clone(),
-                                        last_modified: timestamp_to_string(
-                                            head_resp.output.last_modified.unwrap(),
-                                        ),
-                                    },
-                                )
-                                .await
-                                .unwrap();
-                                println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
-                                if head_resp.output.content_length.is_positive() {
                                     println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
+                                    if head_resp.output.content_length.is_positive() {
+                                        println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
+                                    }
                                 }
-                            }
-                            // println!("finish real uploading.");
-                        });
+                                // println!("finish real uploading.");
+                            });
 
-                        let response = S3Response::new(GetObjectOutput {
-                            body: Some(response_blob.unwrap()),
-                            bucket_key_enabled: get_resp.output.bucket_key_enabled,
-                            content_length: get_resp.output.content_length,
-                            delete_marker: get_resp.output.delete_marker,
-                            missing_meta: get_resp.output.missing_meta,
-                            parts_count: get_resp.output.parts_count,
-                            tag_count: get_resp.output.tag_count,
-                            ..Default::default()
-                        });
-                        return Ok(response);
+                            let response = S3Response::new(GetObjectOutput {
+                                body: Some(response_blob.unwrap()),
+                                bucket_key_enabled: get_resp.output.bucket_key_enabled,
+                                content_length: get_resp.output.content_length,
+                                delete_marker: get_resp.output.delete_marker,
+                                missing_meta: get_resp.output.missing_meta,
+                                parts_count: get_resp.output.parts_count,
+                                tag_count: get_resp.output.tag_count,
+                                ..Default::default()
+                            });
+                            return Ok(response);
+                        } else if local_exists == 2 {
+                            return self
+                            .store_clients
+                            .get(&self.client_from_region)
+                            .unwrap()
+                            .get_object(req.map_input(|mut input: GetObjectInput| {
+                                input.bucket = location.bucket;
+                                input.key = location.key;
+                                input
+                            }))
+                            .await;                           
+                        } else {
+                            panic!("Error: local_exists should be 0, 1 or 2");
+                        }
                     } else {
                         return self
                             .store_clients

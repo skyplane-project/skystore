@@ -18,6 +18,7 @@ Method | HTTP request | Description
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 [**locate_bucket**](DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
+[**locate_local_pending_object**](DefaultApi.md#locate_local_pending_object) | **POST** /locate_physical_object | Locate Local Pending Object
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 [**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
@@ -404,6 +405,36 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::LocateBucketResponse**](LocateBucketResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## locate_local_pending_object
+
+> i32 locate_local_pending_object(locate_object_request)
+Locate Local Pending Object
+
+Given the logical object information, return whether there is an object in the local region.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**locate_object_request** | [**LocateObjectRequest**](LocateObjectRequest.md) |  | [required] |
+
+### Return type
+
+**i32**
 
 ### Authorization
 
