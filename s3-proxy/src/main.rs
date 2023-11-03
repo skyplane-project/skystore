@@ -25,7 +25,6 @@ struct WarmupRequest {
     warmup_regions: Vec<String>,
 }
 
-
 #[tokio::main]
 async fn main() {
     // Exit the process upon panic, this is used for debugging purpose.
@@ -100,7 +99,8 @@ async fn main() {
             let mut s3_service = s3_service.clone();
             let proxy_clone = proxy.clone();
             if env::var("PULL_POLICY").unwrap() == "copy_on_read" {
-                req.headers_mut().insert("X-SKYSTORE-PULL", "copy_on_read".parse().unwrap());
+                req.headers_mut()
+                    .insert("X-SKYSTORE-PULL", "copy_on_read".parse().unwrap());
             }
             if req.uri().path() == "/_/warmup_object" {
                 let fut = async move {
