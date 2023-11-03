@@ -595,7 +595,11 @@ impl S3 for SkyProxy {
                                 client_from_region: self.client_from_region.clone(),
                             },
                         ).await.unwrap();
-
+                        let start = SystemTime::now();
+                        let since_the_epoch = start
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .expect("Time went backwards");
+                        println!("local_exist value determined at {:?}", since_the_epoch);
                         if local_exists == 1 {
                             println!("find object {} in local region {}, directly return.", key.clone(), self.client_from_region.clone());
                             return self
@@ -630,25 +634,33 @@ impl S3 for SkyProxy {
                             let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                             let response_blob = input_blobs.pop();
                             
-                            println!("start upload key {} to bucket {}", key, bucket);
-                            let start_upload_resp = apis::start_upload(
-                                &dir_conf_clone,
-                                models::StartUploadRequest {
-                                    bucket: bucket.clone(),
-                                    key: key.clone(),
-                                    client_from_region: client_from_region_clone.clone(),
-                                    is_multipart: false,
-                                    copy_src_bucket: None,
-                                    copy_src_key: None,
-                                },
-                            )
-                            .await
-                            .unwrap();
-
-
-                            let locators = start_upload_resp.locators;
-                            
                             tokio::spawn(async move {
+                                let start = SystemTime::now();
+                                let since_the_epoch = start
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .expect("Time went backwards");
+                                println!("task spawned at {:?}", since_the_epoch);
+                                println!("start upload key {} to bucket {}", key, bucket);
+                                let start_upload_resp = apis::start_upload(
+                                    &dir_conf_clone,
+                                    models::StartUploadRequest {
+                                        bucket: bucket.clone(),
+                                        key: key.clone(),
+                                        client_from_region: client_from_region_clone.clone(),
+                                        is_multipart: false,
+                                        copy_src_bucket: None,
+                                        copy_src_key: None,
+                                    },
+                                )
+                                .await
+                                .unwrap();
+                                let start = SystemTime::now();
+                                let since_the_epoch = start
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .expect("Time went backwards");
+                                println!("start upload finished at {:?}", since_the_epoch);
+    
+                                let locators = start_upload_resp.locators;
 
                                 let request_template = clone_put_object_request(
                                     &new_put_object_request(bucket.clone(), key.clone()),
