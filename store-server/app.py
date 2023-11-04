@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 import logging
 import uuid
@@ -578,6 +577,7 @@ async def locate_object(
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.ready)
+        .where(DBPhysicalObjectLocator.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
 
@@ -596,7 +596,7 @@ async def locate_object(
             chosen_locator = locator
             reason = "exact match"
             break
-        
+
     if chosen_locator is None:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
@@ -607,20 +607,6 @@ async def locate_object(
     )
 
     await db.refresh(chosen_locator, ["logical_object"])
-    
-    retries = 0 
-    MAX_RETIRES = 1000
-    while retries < MAX_RETIRES:
-        if chosen_locator.status == Status.ready:
-            break 
-                 
-        if retries == MAX_RETIRES - 1:
-            return Response(status_code=404, content="Object Not Ready")
-        
-        await asyncio.sleep(0.01)
-        await db.refresh(chosen_locator, ['status'])
-        await db.refresh(chosen_locator, ['logical_object'])
-        retries += 1 
 
     return LocateObjectResponse(
         id=chosen_locator.id,
@@ -736,7 +722,7 @@ async def start_upload(
     # print all physical locators
     stmt = select(DBPhysicalObjectLocator)
     locators = (await db.scalars(stmt)).all()
-    
+
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)

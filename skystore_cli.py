@@ -30,8 +30,10 @@ def init(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
     pull_policy: str = typer.Option(
-        "read", "--policy", help="Policy to pull from the bucket"
-    )
+        "read",
+        "--policy",
+        help="Policy to pull from the bucket, either 'read' or 'copy_on_read'",
+    ),
 ):
     with open(config_file, "r") as f:
         config = json.load(f)

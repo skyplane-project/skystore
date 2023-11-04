@@ -623,6 +623,7 @@ impl S3 for SkyProxy {
                             .await;
 
                             // only upload if start_upload is successful, this indicates that the object is not in the local object store
+                            // status neither pending nor ready
                             if let Ok(start_upload_resp) = start_upload_resp_result {
                                 let locators = start_upload_resp.locators;
                                 let request_template = clone_put_object_request(
