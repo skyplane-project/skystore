@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 import logging
-import time
 import uuid
 from utils import Base
 from typing import Annotated, List
@@ -613,16 +612,14 @@ async def locate_object(
     MAX_RETIRES = 1000
     while retries < MAX_RETIRES:
         if chosen_locator.status == Status.ready:
-            # print(f"Object {chosen_locator.location_tag} object {chosen_locator.key} is ready")
             break 
-        
-        # print(f"Waiting for region {chosen_locator.location_tag} object {chosen_locator.key} to be ready: {chosen_locator.status}")
-         
+                 
         if retries == MAX_RETIRES - 1:
             return Response(status_code=404, content="Object Not Ready")
         
         await asyncio.sleep(0.01)
         await db.refresh(chosen_locator, ['status'])
+        await db.refresh(chosen_locator, ['logical_object'])
         retries += 1 
 
     return LocateObjectResponse(
@@ -843,7 +840,6 @@ async def start_upload(
         )
 
     locators = []
-    # print(f"upload_to_region_tags: {upload_to_region_tags}")
     for region_tag in upload_to_region_tags:
         if region_tag in existing_tags:
             continue

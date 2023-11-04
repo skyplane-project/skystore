@@ -586,13 +586,8 @@ impl S3 for SkyProxy {
 
         match locator {
             Some(location) => {
-                //println!("get from bucket: {:?}", location.bucket);
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
                     if location.tag != self.client_from_region {
-                        // println!(
-                        //     "Pulling from remote region: {} with bucket {}",
-                        //     location.tag, location.bucket
-                        // );
                         let get_resp = self
                             .store_clients
                             .get(&location.tag)
@@ -614,7 +609,6 @@ impl S3 for SkyProxy {
                         let response_blob = input_blobs.pop();
 
                         tokio::spawn(async move {
-                            // println!("start upload key {} to bucket {}", key, bucket);
                             let start_upload_resp_result = apis::start_upload(
                                 &dir_conf_clone,
                                 models::StartUploadRequest {
@@ -636,8 +630,6 @@ impl S3 for SkyProxy {
                                     None,
                                 );
 
-                                // println!("prepare to perform real upload.");
-
                                 for (locator, input_blob) in
                                     locators.into_iter().zip(input_blobs.into_iter())
                                 {
@@ -653,7 +645,6 @@ impl S3 for SkyProxy {
                                         input
                                     });
 
-                                    // println!("put object with key {} in bucket {}", locator.key, locator.bucket);
                                     let put_resp = client.put_object(req).await.unwrap();
                                     let e_tag = put_resp.output.e_tag.unwrap();
                                     let head_resp = client
@@ -663,9 +654,6 @@ impl S3 for SkyProxy {
                                         )))
                                         .await
                                         .unwrap();
-
-                                    // println!("content length: {}", head_resp.output.content_length);
-
                                     apis::complete_upload(
                                         &dir_conf_clone,
                                         models::PatchUploadIsCompleted {
@@ -679,12 +667,7 @@ impl S3 for SkyProxy {
                                     )
                                     .await
                                     .unwrap();
-                                    // println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
-                                    // if head_resp.output.content_length.is_positive() {
-                                    //     println!("complete upload key {} to bucket: {}", locator.key, locator.bucket.clone());
-                                    // }
                                 }
-                                // println!("finish real uploading.");
                             }
                         });
 
@@ -790,11 +773,6 @@ impl S3 for SkyProxy {
                 );
 
                 tasks.spawn(async move {
-                    // println!(
-                    //     "put object with key {} in bucket {}",
-                    //     locator.key, locator.bucket
-                    // );
-
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
 
