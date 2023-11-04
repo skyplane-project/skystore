@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import asyncio
 import logging
 import uuid
 from utils import Base
@@ -10,10 +11,14 @@ from fastapi import Depends, FastAPI, Response, status
 from fastapi.routing import APIRoute
 from rich.logging import RichHandler
 from itertools import zip_longest
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from conf import TEST_CONFIGURATION, DEFAULT_INIT_REGIONS
+from conf import (
+    TEST_CONFIGURATION,
+    DEFAULT_INIT_REGIONS,
+    DEFAULT_SKYSTORE_BUCKET_PREFIX,
+)
 from utils import Status
 from bucket_models import (
     DBLogicalBucket,
@@ -23,6 +28,7 @@ from bucket_models import (
     LocateBucketResponse,
     HeadBucketRequest,
     BucketResponse,
+    BucketStatus,
     CreateBucketRequest,
     CreateBucketResponse,
     CreateBucketIsCompleted,
@@ -50,6 +56,7 @@ from object_models import (
     ContinueUploadResponse,
     ListObjectRequest,
     ObjectResponse,
+    ObjectStatus,
     HeadObjectRequest,
     HeadObjectResponse,
     MultipartResponse,
@@ -60,6 +67,8 @@ from object_models import (
     DeleteObjectsResponse,
     DeleteObjectsIsCompleted,
 )
+
+background_tasks = set()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,10 +95,16 @@ engine = create_async_engine(
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 app = FastAPI()
+app.openapi_version = "3.0.2"
 conf = TEST_CONFIGURATION
 init_region_tags = DEFAULT_INIT_REGIONS
+skystore_bucket_prefix = os.getenv(
+    "SKYSTORE_BUCKET_PREFIX", DEFAULT_SKYSTORE_BUCKET_PREFIX
+)
 
 load_dotenv()
+
+stop_task_flag = asyncio.Event()
 
 
 @app.on_event("startup")
@@ -101,8 +116,18 @@ async def startup():
         # await conn.exec_driver_sql("pragma journal_mode=memory")
         # await conn.exec_driver_sql("pragma synchronous=OFF")
 
+    task = asyncio.create_task(rm_lock_on_timeout(10))
+    background_tasks.add(task)
+
     if os.getenv("INIT_REGIONS"):
         init_region_tags = os.getenv("INIT_REGIONS").split(",")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Set the flag to signal the background task to stop
+    stop_task_flag.set()
+    background_tasks.discard
 
 
 async def get_session() -> AsyncSession:
@@ -139,6 +164,7 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
             region=location.region,
             bucket=location.bucket,
             prefix="",  # location.prefix + "/",
+            lock_acquired_ts=None,
             status=Status.ready,
             is_primary=location.is_primary,  # TODO: assume one primary must be specified for now, need to enforce this
             need_warmup=location.need_warmup,
@@ -154,8 +180,9 @@ async def register_buckets(request: RegisterBucketRequest, db: DBSession) -> Res
                 location_tag=cloud + ":" + region,
                 cloud=cloud,
                 region=region,
-                bucket=f"skystore-{region}",
+                bucket=f"{skystore_bucket_prefix}-{region}",
                 prefix="",  # TODO: integrate with prefix
+                lock_acquired_ts=None,
                 status=Status.ready,
                 is_primary=False,
                 need_warmup=False,
@@ -199,9 +226,7 @@ async def start_create_bucket(
 
     for region_tag in upload_to_region_tags:
         cloud, region = region_tag.split(":")
-        physical_bucket_name = (
-            f"skystore-{region}"  # NOTE: might need another naming scheme
-        )
+        physical_bucket_name = f"{skystore_bucket_prefix}-{region}"  # NOTE: might need another naming scheme
 
         bucket_locator = DBPhysicalBucketLocator(
             logical_bucket=logical_bucket,
@@ -210,6 +235,7 @@ async def start_create_bucket(
             region=region,
             bucket=physical_bucket_name,
             prefix="",  # TODO: integrate prefix, e.x. logical_bucket.bucket + "/"
+            lock_acquired_ts=datetime.utcnow(),
             status=Status.pending,
             is_primary=(
                 region_tag == request.client_from_region
@@ -251,6 +277,7 @@ async def complete_create_bucket(request: CreateBucketIsCompleted, db: DBSession
     logger.debug(f"complete_create_bucket: {request} -> {physical_locator}")
 
     physical_locator.status = Status.ready
+    physical_locator.lock_acquired_ts = None
     if physical_locator.is_primary:
         physical_locator.logical_bucket.status = Status.ready
         physical_locator.logical_bucket.creation_date = request.creation_date.replace(
@@ -293,6 +320,7 @@ async def start_delete_bucket(
             )
 
         locator.status = Status.pending_deletion
+        locator.lock_acquired_ts = datetime.utcnow()
         locators.append(
             LocateBucketResponse(
                 id=locator.id,
@@ -407,6 +435,7 @@ async def start_delete_objects(
                 )
 
             physical_locator.status = Status.pending_deletion
+            physical_locator.lock_acquired_ts = datetime.utcnow()
             locators.append(
                 LocateObjectResponse(
                     id=physical_locator.id,
@@ -525,7 +554,7 @@ async def locate_bucket(
     stmt = (
         select(DBPhysicalBucketLocator)
         .join(DBLogicalBucket)
-        .where(DBLogicalBucket.name == request.bucket)
+        .where(DBLogicalBucket.bucket == request.bucket)
         .where(DBLogicalBucket.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
@@ -580,7 +609,6 @@ async def locate_object(
         .where(DBPhysicalObjectLocator.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
-
     if len(locators) == 0:
         return Response(status_code=404, content="Object Not Found")
 
@@ -851,6 +879,7 @@ async def start_upload(
                 region=physical_bucket_locator.region,
                 bucket=physical_bucket_locator.bucket,
                 key=physical_bucket_locator.prefix + request.key,
+                lock_acquired_ts=datetime.utcnow(),
                 status=Status.pending,
                 is_primary=physical_bucket_locator.is_primary,
             )
@@ -879,6 +908,104 @@ async def start_upload(
     )
 
 
+async def rm_lock_on_timeout(minutes, testing=False):
+    # initial wait to prevent first check which should never run
+    if not testing:
+        await asyncio.sleep(minutes)
+    while not stop_task_flag.is_set() or testing:
+        async with engine.begin() as db:
+            # db.begin()
+
+            # calculate time for which we can timeout. Anything before or equal to 10 minutes ago will timeout
+            cutoff_time = datetime.utcnow() - timedelta(minutes)
+
+            # time out Physical objects that have been running for more than 10 minutes
+            stmt_timeout_physical_objects = (
+                update(DBPhysicalObjectLocator)
+                .where(DBPhysicalObjectLocator.lock_acquired_ts <= cutoff_time)
+                .values(status=Status.ready, lock_acquired_ts=None)
+            )
+            await db.execute(stmt_timeout_physical_objects)
+
+            # time out Physical buckets that have been running for more than 10 minutes
+            stmt_timeout_physical_buckets = (
+                update(DBPhysicalBucketLocator)
+                .where(DBPhysicalBucketLocator.lock_acquired_ts <= cutoff_time)
+                .values(status=Status.ready, lock_acquired_ts=None)
+            )
+            await db.execute(stmt_timeout_physical_buckets)
+
+            # find Logical objects that are pending
+            stmt_find_pending_logical_objs = select(DBLogicalObject).where(
+                DBLogicalObject.status == Status.pending
+            )
+            pendingLogicalObjs = (
+                await db.execute(stmt_find_pending_logical_objs)
+            ).fetchall()
+
+            if pendingLogicalObjs is not None:
+                # loop through list of pending logical objects
+                for logical_obj in pendingLogicalObjs:
+                    # get all physical objects corresponding to a given logical object
+                    stmt3 = (
+                        select(DBPhysicalObjectLocator)
+                        .join(DBLogicalObject)
+                        .where(
+                            logical_obj.id == DBPhysicalObjectLocator.logical_object_id
+                        )
+                    )
+                    objects = (await db.execute(stmt3)).fetchall()
+
+                    # set logical objects status to "Ready" if all of its physical objects are "Ready"
+                    if all([Status.ready == obj.status for obj in objects]):
+                        edit_logical_obj_stmt = (
+                            update(DBLogicalObject)
+                            .where(objects[0].logical_object_id == logical_obj.id)
+                            .values(status=Status.ready)
+                        )
+                        await db.execute(edit_logical_obj_stmt)
+
+                # await db.commit()
+
+            # find Logical buckets that are pending
+            stmt_find_pending_logical_buckets = select(DBLogicalBucket).where(
+                DBLogicalBucket.status == Status.pending
+            )
+            pendingLogicalBuckets = (
+                await db.execute(stmt_find_pending_logical_buckets)
+            ).fetchall()
+
+            if pendingLogicalBuckets is not None:
+                # loop through list of pending logical buckets
+                for logical_bucket in pendingLogicalBuckets:
+                    # get all physical buckets corresponding to a given logical object
+                    stmt3 = (
+                        select(DBPhysicalBucketLocator)
+                        .join(DBLogicalBucket)
+                        .where(
+                            logical_bucket.id
+                            == DBPhysicalBucketLocator.logical_bucket_id
+                        )
+                    )
+                    buckets = (await db.execute(stmt3)).fetchall()
+
+                    # set logical buckets status to "Ready" if all of its physical buckets are "Ready"
+                    if all([Status.ready == bucket.status for bucket in buckets]):
+                        edit_logical_bucket_stmt = (
+                            update(DBLogicalBucket)
+                            .where(buckets[0].logical_bucket_id == logical_bucket.id)
+                            .values(status=Status.ready)
+                        )
+                        await db.execute(edit_logical_bucket_stmt)
+
+            await db.commit()
+
+        if testing:
+            break
+
+        await asyncio.sleep(minutes * 60)
+
+
 @app.patch("/complete_upload")
 async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
     stmt = (
@@ -895,6 +1022,7 @@ async def complete_upload(request: PatchUploadIsCompleted, db: DBSession):
     logger.debug(f"complete_upload: {request} -> {physical_locator}")
 
     physical_locator.status = Status.ready
+    physical_locator.lock_acquired_ts = None
     if physical_locator.is_primary:
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
@@ -1045,6 +1173,7 @@ async def continue_upload(
             bucket=locator.bucket,
             region=locator.region,
             key=locator.key,
+            status=locator.status,
             multipart_upload_id=locator.multipart_upload_id,
             parts=[
                 ContinueUploadPhysicalPart(
@@ -1207,6 +1336,89 @@ async def list_parts(
         for part in obj.multipart_upload_parts
         if request.part_number is None or part.part_number == request.part_number
     ]
+
+
+@app.post(
+    "/locate_object_status",
+    responses={
+        status.HTTP_200_OK: {"model": ObjectStatus},
+        status.HTTP_404_NOT_FOUND: {"description": "Object not found"},
+    },
+)
+async def locate_object_status(
+    request: LocateObjectRequest, db: DBSession
+) -> ObjectStatus:
+    """Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup."""
+    stmt = (
+        select(DBPhysicalObjectLocator)
+        .join(DBLogicalObject)
+        .where(DBLogicalObject.bucket == request.bucket)
+        .where(DBLogicalObject.key == request.key)
+    )
+    # get physical locators
+    locators = (await db.scalars(stmt)).all()
+    if len(locators) == 0:
+        return Response(status_code=404, content="Object Not Found")
+
+    chosen_locator = None
+    reason = ""
+
+    for locator in locators:
+        if locator.location_tag == request.client_from_region:
+            chosen_locator = locator
+            reason = "exact match"
+            break
+    else:
+        # find the primary locator
+        chosen_locator = next(locator for locator in locators if locator.is_primary)
+        reason = "fallback to primary"
+
+    logger.debug(
+        f"locate_object: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
+    )
+
+    await db.refresh(chosen_locator, ["logical_object"])
+    # return object status
+    return ObjectStatus(status=chosen_locator.status)
+
+
+@app.post(
+    "/locate_bucket_status",
+    responses={
+        status.HTTP_200_OK: {"model": BucketStatus},
+        status.HTTP_404_NOT_FOUND: {"description": "Bucket not found"},
+    },
+)
+async def locate_bucket_status(
+    request: LocateBucketRequest, db: DBSession
+) -> BucketStatus:
+    """Given the bucket name, return physical bucket status. Currently only used for testing metadata cleanup"""
+    stmt = (
+        select(DBPhysicalBucketLocator)
+        .join(DBLogicalBucket)
+        .where(DBLogicalBucket.bucket == request.bucket)
+    )
+    # get buckets corresponding to data from request
+    locators = (await db.scalars(stmt)).all()
+
+    if len(locators) == 0:
+        return Response(status_code=404, content="Bucket Not Found")
+
+    chosen_locator = None
+    for locator in locators:
+        if locator.location_tag == request.client_from_region:
+            chosen_locator = locator
+            break
+    else:
+        # find the primary locator
+        chosen_locator = next(locator for locator in locators if locator.is_primary)
+
+    await db.refresh(chosen_locator, ["logical_bucket"])
+
+    # return status
+    return BucketStatus(
+        status=chosen_locator.status,
+    )
 
 
 @app.get("/healthz")

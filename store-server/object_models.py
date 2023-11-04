@@ -67,7 +67,7 @@ class DBPhysicalObjectLocator(Base):
     )
 
     key = Column(String)
-
+    lock_acquired_ts = Column(DateTime, nullable=True, default=None)
     status = Column(Enum(Status))
     is_primary = Column(Boolean, nullable=False, default=False)
 
@@ -224,6 +224,10 @@ class ObjectResponse(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
+
+
+class ObjectStatus(BaseModel):
+    status: Status
 
 
 class HeadObjectRequest(BaseModel):

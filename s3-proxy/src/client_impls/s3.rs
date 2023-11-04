@@ -40,6 +40,13 @@ impl S3ObjectStoreClient {
 
 #[async_trait::async_trait]
 impl ObjectStoreClient for S3ObjectStoreClient {
+    async fn head_bucket(
+        &self,
+        req: S3Request<HeadBucketInput>,
+    ) -> S3Result<S3Response<HeadBucketOutput>> {
+        return self.s3_proxy.head_bucket(req).await;
+    }
+
     async fn create_bucket(
         &self,
         req: S3Request<CreateBucketInput>,

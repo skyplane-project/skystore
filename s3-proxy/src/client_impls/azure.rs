@@ -212,6 +212,24 @@ impl ObjectStoreClient for AzureObjectStoreClient {
         }
     }
 
+    async fn head_bucket(
+        &self,
+        req: S3Request<HeadBucketInput>,
+    ) -> S3Result<S3Response<HeadBucketOutput>> {
+        let req = req.input;
+        let container_name = req.bucket;
+
+        let container_client = self.container_client(&container_name);
+        let _resp = container_client.exists().await;
+        match _resp {
+            Ok(_) => Ok(S3Response::new(HeadBucketOutput {})),
+            Err(err) => Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::InternalError,
+                format!("Request failed: {err}"),
+            )),
+        }
+    }
+
     async fn get_object(
         &self,
         req: S3Request<GetObjectInput>,

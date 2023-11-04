@@ -23,6 +23,7 @@
                 "bucket": "my-sky-bucket-99"
             }
         ]
-    }
+    },
+    "skystore_bucket_prefix" : "skystore"
     
 }

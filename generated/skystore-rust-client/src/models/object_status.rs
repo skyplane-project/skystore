@@ -12,18 +12,15 @@
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct HeadObjectRequest {
-    #[serde(rename = "bucket")]
-    pub bucket: String,
-    #[serde(rename = "key")]
-    pub key: String,
+pub struct ObjectStatus {
+    #[serde(rename = "status")]
+    pub status: crate::models::Status,
 }
 
-impl HeadObjectRequest {
-    pub fn new(bucket: String, key: String) -> HeadObjectRequest {
-        HeadObjectRequest {
-            bucket,
-            key,
+impl ObjectStatus {
+    pub fn new(status: crate::models::Status) -> ObjectStatus {
+        ObjectStatus {
+            status,
         }
     }
 }
