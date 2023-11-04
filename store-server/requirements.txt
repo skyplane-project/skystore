@@ -4,6 +4,7 @@ uvicorn[standard]
 aiosqlite
 pydantic
 pytest
+pytest-asyncio
 httpx
 sqlalchemy>=2.0
 sqlalchemy_repr

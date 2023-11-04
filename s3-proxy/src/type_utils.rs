@@ -13,6 +13,13 @@ pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> Crea
 }
 
 #[allow(dead_code)]
+pub fn new_head_bucket_request(bucket: String, _region: Option<String>) -> HeadBucketInput {
+    let mut builder = HeadBucketInput::builder();
+    builder.set_bucket(bucket);
+    builder.build().unwrap()
+}
+
+#[allow(dead_code)]
 pub fn new_delete_bucket_request(bucket: String) -> DeleteBucketInput {
     let mut builder = DeleteBucketInput::builder();
     builder.set_bucket(bucket);

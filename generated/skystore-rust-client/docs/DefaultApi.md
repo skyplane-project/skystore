@@ -18,7 +18,9 @@ Method | HTTP request | Description
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 [**locate_bucket**](DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
+[**locate_bucket_status**](DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
+[**locate_object_status**](DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
 [**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
@@ -417,6 +419,36 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## locate_bucket_status
+
+> crate::models::BucketStatus locate_bucket_status(locate_bucket_request)
+Locate Bucket Status
+
+Given the bucket name, return physical bucket status. Currently only used for testing metadata cleanup
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**locate_bucket_request** | [**LocateBucketRequest**](LocateBucketRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::BucketStatus**](BucketStatus.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## locate_object
 
 > crate::models::LocateObjectResponse locate_object(locate_object_request)
@@ -434,6 +466,36 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::LocateObjectResponse**](LocateObjectResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## locate_object_status
+
+> crate::models::ObjectStatus locate_object_status(locate_object_request)
+Locate Object Status
+
+Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**locate_object_request** | [**LocateObjectRequest**](LocateObjectRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::ObjectStatus**](ObjectStatus.md)
 
 ### Authorization
 

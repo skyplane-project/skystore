@@ -39,6 +39,11 @@ def init(
         config = json.load(f)
 
     init_regions_str = ",".join(config["init_regions"])
+    skystore_bucket_prefix = (
+        config["skystore_bucket_prefix"]
+        if "skystore_bucket_prefix" in config
+        else "skystore"
+    )
     env = {
         **os.environ,
         "INIT_REGIONS": init_regions_str,
@@ -49,6 +54,7 @@ def init(
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
         "PULL_POLICY": pull_policy,
+        "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
     }
     env = {k: v for k, v in env.items() if v is not None}
 
@@ -70,7 +76,7 @@ def init(
     # Start the skystore server
     subprocess.Popen(
         f"cd {DEFAULT_STORE_SERVER_PATH}; "
-        "rm skystore.db; uvicorn app:app --reload --port 3000",
+        "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
         shell=True,
         env=env,
     )

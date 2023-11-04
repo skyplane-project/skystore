@@ -3,5 +3,6 @@
         "aws:us-west-1",
         "aws:us-east-2"
     ],
-    "client_from_region": "aws:us-east-2"
+    "client_from_region": "aws:us-east-2",
+    "skystore_bucket_prefix" : "skystore"
 }
