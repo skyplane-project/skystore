@@ -125,7 +125,10 @@ impl SkyProxy {
                     {
                         Ok(_) => {}
                         Err(e) => {
-                            if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
+                            if e.to_string().contains("BucketAlreadyOwnedByYou")
+                                || http::StatusCode::INTERNAL_SERVER_ERROR
+                                    == e.status_code().unwrap()
+                            {
                                 // Bucket already exists, no action needed
                             } else {
                                 panic!("Failed to create bucket: {}", e);
@@ -263,9 +266,9 @@ impl S3 for SkyProxy {
             let dir_conf = self.dir_conf.clone();
 
             // TODO: fix
-            // if bucket name starts with skystore-, then it's a skybucket already created during initialization
+            // if bucket name starts with $skystore_bucket_prefix, then it's a skybucket already created during initialization
             // so we don't need to create it again
-            if bucket_name.starts_with("skystore-") {
+            if bucket_name.starts_with(&self.skystore_bucket_prefix) {
                 let system_time: SystemTime = Utc::now().into();
                 let timestamp: s3s::dto::Timestamp = system_time.into();
 

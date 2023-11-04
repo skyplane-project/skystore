@@ -10,7 +10,7 @@
                 "is_primary": true
             }
         ]
-    }
+    },
     "skystore_bucket_prefix" : "skystore"
     
 }
