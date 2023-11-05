@@ -32,7 +32,7 @@ def extract_regions_from_trace(trace_file_path: str) -> Dict[str, List[str]]:
     return regions
 
 
-def issue_requests(trace_file_path):
+def issue_requests(trace_file_path: str):
     # Extract distinct cloud providers from the trace
     regions_dict = extract_regions_from_trace(trace_file_path)
     print("Extracted regions: ", regions_dict)
@@ -40,6 +40,7 @@ def issue_requests(trace_file_path):
     enable_aws = len(regions_dict["aws"]) > 0
     enable_gcp = len(regions_dict["gcp"]) > 0
     enable_azure = len(regions_dict["azure"]) > 0
+    print(f"enable_aws: {enable_aws}, enable_gcp: {enable_gcp}, enable_azure: {enable_azure}")
     instances_dict = create_instance(
         aws_region_list=regions_dict.get("aws", []),
         azure_region_list=regions_dict.get("azure", []),
@@ -47,6 +48,8 @@ def issue_requests(trace_file_path):
         enable_aws=enable_aws,
         enable_azure=enable_azure,
         enable_gcp=enable_gcp,
+        enable_gcp_standard=enable_gcp, 
+        enable_ibmcloud=False,
     )
 
     previous_timestamp = None
