@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import requests
+from enum import Enum
 
 app = typer.Typer(name="skystore")
 env = os.environ.copy()
@@ -16,6 +17,13 @@ DEFAULT_SKY_S3_PATH = os.path.join(
 DEFAULT_STORE_SERVER_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "store-server"
 )
+
+
+class Policy(str, Enum):
+    copy_on_read = "copy_on_read"
+    read = "read"
+    write_local = "write_local"
+    push = "push"
 
 
 @app.command()
@@ -30,9 +38,9 @@ def init(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
     policy: str = typer.Option(
-        "read",
+        Policy.read,
         "--policy",
-        help="Policy to pull from the bucket, either 'read' or 'copy_on_read'",
+        help="Policy to use for data placement",
     ),
 ):
     with open(config_file, "r") as f:
