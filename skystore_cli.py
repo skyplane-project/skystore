@@ -29,7 +29,7 @@ def init(
     sky_s3_binary_path: str = typer.Option(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
-    pull_policy: str = typer.Option(
+    policy: str = typer.Option(
         "read",
         "--policy",
         help="Policy to pull from the bucket, either 'read' or 'copy_on_read'",
@@ -53,7 +53,7 @@ def init(
         "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID"),
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
-        "PULL_POLICY": pull_policy,
+        "POLICY": policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
     }
     env = {k: v for k, v in env.items() if v is not None}
