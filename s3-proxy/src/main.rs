@@ -54,7 +54,7 @@ async fn main() {
     let local_run: bool = env::var("LOCAL")
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
-    let skystore_bucket_ptefix: String =
+    let skystore_bucket_prefix: String =
         env::var("SKYSTORE_BUCKET_PREFIX").expect("SKYSTORE_BUCKET_PREFIX is missing");
 
     let local_server: bool = env::var("LOCAL_SERVER")
@@ -69,7 +69,7 @@ async fn main() {
         local_run,
         local_server,
         policy,
-        skystore_bucket_ptefix,
+        skystore_bucket_prefix,
     )
     .await;
 
