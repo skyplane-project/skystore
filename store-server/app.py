@@ -747,10 +747,6 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: DBSession
 ) -> StartUploadResponse:
-    # print all physical locators
-    stmt = select(DBPhysicalObjectLocator)
-    locators = (await db.scalars(stmt)).all()
-
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
