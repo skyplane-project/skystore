@@ -8,15 +8,18 @@ use tracing::info;
 mod client_impls;
 mod objstore_client;
 mod skyproxy;
-mod stream_utils;
-mod type_utils;
+mod utils {
+    pub mod stream_utils;
+    pub mod type_utils;
+}
 
 use crate::skyproxy::SkyProxy;
-use crate::type_utils::new_head_object_request;
+use crate::utils::type_utils::new_head_object_request;
 use futures::future::FutureExt;
 use s3s::S3Error;
 use std::env;
 use tower::Service;
+pub mod skyproxy_test;
 
 #[derive(serde::Deserialize)]
 struct WarmupRequest {
@@ -59,7 +62,7 @@ async fn main() {
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
 
-    let policy: String = env::var("POLICY").expect("POLICY must be set");
+    let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
 
     let proxy = SkyProxy::new(
         init_regions,

@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import requests
+from enum import Enum
 
 app = typer.Typer(name="skystore")
 env = os.environ.copy()
@@ -17,6 +18,11 @@ DEFAULT_STORE_SERVER_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "store-server"
 )
 
+class Policy(str, Enum):
+    copy_on_read = "copy_on_read"
+    read = "read"
+    write_local = "write_local"
+    push = "push"
 
 @app.command()
 def init(
@@ -24,13 +30,16 @@ def init(
         ..., "--config", help="Path to the init config file"
     ),
     start_server: bool = typer.Option(
-        False, "--start-server", help="Whether to start the server or not"
+        False, "--start-server", help="Whether to start the server on localhost or not"
     ),
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
     ),
     sky_s3_binary_path: str = typer.Option(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
+    ),
+    policy: Policy = typer.Option(
+        Policy.write_local, "--policy", help="Policy to use for data placement"
     ),
 ):
     with open(config_file, "r") as f:
@@ -47,6 +56,7 @@ def init(
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
         "LOCAL_SERVER": str(start_server).lower(),
+        "POLICY": policy 
     }
     env = {k: v for k, v in env.items() if v is not None}
 

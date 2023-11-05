@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field, NonNegativeInt
-from utils import Base, Status
+from operations.utils.conf import Base, Status
 from sqlalchemy.dialects.postgresql import BIGINT
 from typing import Dict, List, Literal, Optional
 

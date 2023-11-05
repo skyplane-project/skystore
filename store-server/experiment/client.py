@@ -187,7 +187,7 @@ def create_instance(
             pip3 install -r requirements.txt; cargo install just --force; \
             cd .."
         )
-        
+
         check_stderr(
             server.run_command(
                 f"skystore exit; skystore init --config {config_file_path} --start-server;"

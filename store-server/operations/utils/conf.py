@@ -1,4 +1,16 @@
 from pydantic import BaseModel, Field
+import enum
+from sqlalchemy.orm import declarative_base
+from sqlalchemy_repr import RepresentableBase
+
+Base = declarative_base(cls=RepresentableBase)
+
+
+# Object status
+class Status(str, enum.Enum):
+    pending = "pending"
+    pending_deletion = "pending_deletion"
+    ready = "ready"
 
 
 class PhysicalLocation(BaseModel):
@@ -53,39 +65,6 @@ TEST_CONFIGURATION = Configuration(
 DEFAULT_INIT_REGIONS = [
     "aws:us-west-1",
     "aws:us-east-1",
-    "aws:eu-north-1",
-    "aws:eu-sout-1",
-    "aws:eu-west-1"
-    # "gcp:us-west1",
-    # "aws:eu-central-1",
+    "gcp:us-west1",
+    "aws:eu-central-1",
 ]
-
-
-DEMO_CONFIGURATION = Configuration(
-    physical_locations=[
-        PhysicalLocation(
-            name="azure:westus3",
-            cloud="azure",
-            region="westus3",
-            bucket="sky-s3-backend",
-            prefix="demo-dry-run/",
-            # broadcast_to=["gcp:us-west1", "aws:us-west-2"],
-        ),
-        PhysicalLocation(
-            name="gcp:us-west1",
-            cloud="gcp",
-            region="us-west1",
-            bucket="sky-s3-backend",
-            prefix="demo-dry-run/",
-            need_warmup=True,
-        ),
-        PhysicalLocation(
-            name="aws:us-west-2",
-            cloud="aws",
-            region="us-west-2",
-            bucket="sky-s3-backend",
-            prefix="demo-dry-run/",
-            need_warmup=True,
-        ),
-    ]
-)

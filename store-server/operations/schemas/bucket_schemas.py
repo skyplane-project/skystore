@@ -11,8 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
-from utils import Base, Status
-from conf import Configuration
+from operations.utils.conf import Base, Status, Configuration
 
 
 class DBLogicalBucket(Base):
