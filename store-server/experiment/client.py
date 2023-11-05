@@ -13,6 +13,11 @@ all_gcp_regions = compute.GCPCloudProvider.region_list()
 all_gcp_regions_standard = compute.GCPCloudProvider.region_list_standard()
 all_ibmcloud_regions = compute.IBMCloudProvider.region_list()
 from skyplane.compute.aws.aws_auth import AWSAuthentication
+import csv
+import time
+from datetime import datetime
+from typing import Dict, List
+import typer
 
 
 def aws_credentials():
@@ -21,38 +26,21 @@ def aws_credentials():
     return access_key, secret_key
 
 
-app = typer.Typer()
-
-
-@app.command()
 def create_instance(
-    # regions
-    aws_region_list: List[str] = typer.Option(all_aws_regions, "-aws"),
-    azure_region_list: List[str] = typer.Option(all_azure_regions, "-azure"),
-    gcp_region_list: List[str] = typer.Option(all_gcp_regions, "-gcp"),
-    gcp_standard_region_list: List[str] = typer.Option(
-        all_gcp_regions_standard, "-gcp-standard"
-    ),
-    ibmcloud_region_list: List[str] = typer.Option(all_ibmcloud_regions, "-ibmcloud"),
-    #
-    enable_aws: bool = typer.Option(True),
-    enable_azure: bool = typer.Option(False),
-    enable_gcp: bool = typer.Option(False),
-    enable_gcp_standard: bool = typer.Option(False),
-    enable_ibmcloud: bool = typer.Option(False),
-    # instances to provision
-    aws_instance_class: str = typer.Option(
-        "m5.8xlarge", help="AWS instance class to use"
-    ),
-    azure_instance_class: str = typer.Option(
-        "Standard_D32_v5", help="Azure instance class to use"
-    ),
-    gcp_instance_class: str = typer.Option(
-        "n2-standard-32", help="GCP instance class to use"
-    ),
-    ibmcloud_instance_class: str = typer.Option(
-        "bx2-2x8", help="IBM Cloud instance class to use"
-    ),
+    aws_region_list=None,
+    azure_region_list=None,
+    gcp_region_list=None,
+    gcp_standard_region_list=None,
+    ibmcloud_region_list=None,
+    enable_aws=True,
+    enable_azure=False,
+    enable_gcp=False,
+    enable_gcp_standard=False,
+    enable_ibmcloud=False,
+    aws_instance_class="m5.8xlarge",
+    azure_instance_class="Standard_D32_v5",
+    gcp_instance_class="n2-standard-32",
+    ibmcloud_instance_class="bx2-2x8",
 ):
     def check_stderr(tup):
         assert tup[1].strip() == "", f"Command failed, err: {tup[1]}"
@@ -145,6 +133,7 @@ def create_instance(
         for instance in ilist:
             instances_dict[f"gcp:{region}"] = instance
 
+    print("instances_dict: ", instances_dict)
     with open("ssh_cmd.txt", "a") as f:
         for key, instance in instances_dict.items():
             print("instance: ", key)
@@ -196,7 +185,13 @@ def create_instance(
             curl -sSL https://install.python-poetry.org | python3 -; poetry install; pip install --upgrade pip;\
             pip3 install -e .; cd store-server;\
             pip3 install -r requirements.txt; cargo install just --force; \
-            cd ..; skystore exit; skystore init --config {config_file_path} --start-server;"
+            cd .."
+        )
+        
+        check_stderr(
+            server.run_command(
+                f"skystore exit; skystore init --config {config_file_path} --start-server;"
+            )
         )
 
         # server.run_command(f"rm {config_file_path}")
@@ -205,5 +200,93 @@ def create_instance(
     return instances_dict
 
 
+def generate_file_on_server(server, size, filename):
+    cmd = f"dd if=/dev/urandom of={filename} bs=1 count={size}"
+    server.run_command(cmd)
+
+
+def extract_regions_from_trace(trace_file_path: str) -> Dict[str, List[str]]:
+    regions = {
+        "aws": set(),
+        "azure": set(),
+        "gcp": set(),
+    }
+
+    with open(trace_file_path, "r") as f:
+        csv_reader = csv.reader(f)
+        next(csv_reader)  # Skip the header
+        for row in csv_reader:
+            provider, region = row[2].split(":")
+            regions[provider].add(region)
+
+    # Convert sets to lists
+    for provider in regions:
+        regions[provider] = list(regions[provider])
+
+    return regions
+
+
+def issue_requests(trace_file_path: str):
+    # Extract distinct cloud providers from the trace
+    regions_dict = extract_regions_from_trace(trace_file_path)
+    print("Extracted regions: ", regions_dict)
+
+    enable_aws = len(regions_dict["aws"]) > 0
+    enable_gcp = len(regions_dict["gcp"]) > 0
+    enable_azure = len(regions_dict["azure"]) > 0
+    print(
+        f"enable_aws: {enable_aws}, enable_gcp: {enable_gcp}, enable_azure: {enable_azure}"
+    )
+    instances_dict = create_instance(
+        aws_region_list=regions_dict.get("aws", []),
+        azure_region_list=regions_dict.get("azure", []),
+        gcp_region_list=regions_dict.get("gcp", []),
+        enable_aws=enable_aws,
+        enable_azure=enable_azure,
+        enable_gcp=enable_gcp,
+        enable_gcp_standard=enable_gcp,
+        enable_ibmcloud=False,
+        aws_instance_class="m5.8xlarge",
+        azure_instance_class="Standard_D32_v5",
+        gcp_instance_class="n2-standard-32",
+    )
+
+    previous_timestamp = None
+    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
+
+    with open(trace_file_path, "r") as f:
+        csv_reader = csv.reader(f)
+        next(csv_reader)  # Skip the header
+        for row in csv_reader:
+            timestamp_str, op, issue_region, data_id, size = row
+            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+
+            if previous_timestamp:
+                wait_time = (timestamp - previous_timestamp).total_seconds()
+                time.sleep(wait_time)
+
+            # Construct server key
+            server_key = issue_region
+            server = instances_dict.get(server_key)
+            print("server: ", server)
+
+            if True and server:
+                if op == "write":
+                    filename = f"{data_id}.data"
+                    generate_file_on_server(server, size, filename)
+                    cmd = f"aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
+                elif op == "read":
+                    cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
+
+                print(f"Executing command: {cmd}")
+                stdout, stderr = server.run_command(cmd)
+                print(f"stdout: {stdout}")
+                print(f"stderr: {stderr}")
+            else:
+                print(f"No server found for region: {issue_region}")
+
+            previous_timestamp = timestamp
+
+
 if __name__ == "__main__":
-    app()
+    typer.run(issue_requests)
