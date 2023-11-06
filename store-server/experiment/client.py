@@ -261,7 +261,7 @@ def issue_requests(trace_file_path: str):
     print("Create instance finished.")
 
     previous_timestamp = None
-    s3_args = "--endpoint-url http://35.152.51.48:8002 --no-verify-ssl --no-sign-request"
+    s3_args = "--endpoint-url http://15.160.94.202:8002 --no-verify-ssl --no-sign-request"
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
@@ -281,10 +281,12 @@ def issue_requests(trace_file_path: str):
 
             if True and server:
                 if op == "write":
+                    print("Write operation")
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
                     cmd = f"aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
+                    print("Read operation")
                     cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
 
                 print(f"Executing command: {cmd}")
