@@ -191,18 +191,20 @@ def create_instance(
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
                 {clone_cmd} '
         
-        cmd2 =  'curl -sSL https://install.python-poetry.org | python3 -;\
+        cmd2 =  'cd skystore; curl -sSL https://install.python-poetry.org | python3 -;\
                 /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
                 pip3 install -r requirements.txt; cargo install just --force; \
                 cd ..;\
-                skystore exit;'
-        cmd3 = 'skystore init --config {config_file_path};'
-        server.run_command(cmd1)
+                skystore exit; skystore init --config {config_file_path};'
+        stdout, stderr = server.run_command(cmd1)
+        print(f"stdout1: {stdout}")
+        print(f"stderr1: {stderr}")
         print("stage 3 finished.")
-        server.run_command(cmd2)
+        stdout, stderr = server.run_command(cmd2)
+        print(f"stdout2: {stdout}")
+        print(f"stderr2: {stderr}")
         print("stage 4 finished.")
-        server.run_command(cmd3)
 
         print("stage 5 finished.")
 
