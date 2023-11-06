@@ -157,7 +157,7 @@ def create_instance(
             "client_from_region": server.region_tag,
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
-        server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}")
+        check_stderr(server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}"))
 
         check_stderr(
             server.run_command(
@@ -179,10 +179,11 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/lynnliu030/skystore"
-        clone_cmd = f"git clone {url}; cd skystore; git checkout test;"
-        cmd = f'sudo apt-get update; sudo apt remove python3-apt -y; \
-                sudo apt-get install --reinstall python3-apt;\
+        url = "https://github.com/shaopu1225/skystore.git"
+        clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
+        cmd = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+                sudo apt autoclean; sudo apt install python3-apt; \
+                sudo apt-get update; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
                 {clone_cmd}\
                 curl -sSL https://install.python-poetry.org | python3 -;\
