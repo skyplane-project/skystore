@@ -194,15 +194,15 @@ def create_instance(
                 {clone_cmd} '
         
         cmd2 = f'/home/ubuntu/.cargo/bin/cargo install just --force; \
-                cd /home/ubuntu/skystore/s3-proxy; /home/ubuntu/.cargo/bin/just install-local-s3; \
                 sudo apt install pkg-config libssl-dev; \
-                cd ..; \
+                cd /home/ubuntu/skystore; \
                 curl -sSL https://install.python-poetry.org | python3 -;\
                 /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
                 pip3 install -r requirements.txt; \
-                cd ..;\
-                
+                cd ../s3-proxy;\
+                /home/ubuntu/.cargo/bin/just install-local-s3; \
+                cd ..; \
                 skystore exit; ' 
         cmd3 = f'cd /home/ubuntu/skystore; /home/ubuntu/.local/bin/skystore init --config {config_file_path} '
         stdout, stderr = server.run_command(cmd1)
