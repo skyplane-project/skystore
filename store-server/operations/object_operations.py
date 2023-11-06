@@ -28,7 +28,7 @@ from operations.schemas.object_schemas import (
     LogicalPartResponse,
     MultipartResponse,
 )
-from operations.schemas.bucket_schemas import DBLogicalBucket, HeadBucketRequest
+from operations.schemas.bucket_schemas import DBLogicalBucket
 from sqlalchemy.orm import selectinload, joinedload, Session
 from itertools import zip_longest
 from sqlalchemy import select
@@ -180,24 +180,6 @@ async def complete_delete_objects(
         except Exception as e:
             logger.error(f"Error occurred while committing changes: {e}")
             return Response(status_code=500, content="Error committing changes")
-
-
-@router.post("/head_bucket")
-async def head_bucket(request: HeadBucketRequest, db: Session = Depends(get_session)):
-    stmt = select(DBLogicalBucket).where(
-        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
-    )
-    bucket = await db.scalar(stmt)
-
-    if bucket is None:
-        return Response(status_code=404, content="Not Found")
-
-    logger.debug(f"head_bucket: {request} -> {bucket}")
-
-    return Response(
-        status_code=200,
-        content="Bucket exists",
-    )
 
 
 @router.post(
