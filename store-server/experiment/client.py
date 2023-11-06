@@ -173,11 +173,15 @@ def create_instance(
             sudo update-alternatives --config python3"
         )
 
+        print("stage1 finished.")
+
         server.run_command(make_sysctl_tcp_tuning_command(cc="cubic"))
         server.run_command(
             f"aws configure set aws_access_key_id {aws_credentials()[0]};\
             aws configure set aws_secret_access_key {aws_credentials()[1]}"
         )
+
+        print("stage 2 finished.")
 
         # Set up other stuff
         url = "https://github.com/shaopu1225/skystore.git"
@@ -194,6 +198,8 @@ def create_instance(
                 cd ..;\
                 skystore exit; skystore init --config {config_file_path};'
         check_stderr(server.run_command(cmd))
+
+        print("stage 3 finished.")
 
         # server.run_command(f"rm {config_file_path}")
 
@@ -252,8 +258,10 @@ def issue_requests(trace_file_path: str):
         gcp_instance_class="n2-standard-32",
     )
 
+    print("Create instance finished.")
+
     previous_timestamp = None
-    s3_args = "--endpoint-url http://18.102.70.80:8002 --no-verify-ssl --no-sign-request"
+    s3_args = "--endpoint-url http://35.152.51.48:8002 --no-verify-ssl --no-sign-request"
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
