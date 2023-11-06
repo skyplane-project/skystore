@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import requests
+from enum import Enum
 
 app = typer.Typer(name="skystore")
 env = os.environ.copy()
@@ -18,10 +19,20 @@ DEFAULT_STORE_SERVER_PATH = os.path.join(
 )
 
 
+class Policy(str, Enum):
+    copy_on_read = "copy_on_read"
+    read = "read"
+    write_local = "write_local"
+    push = "push"
+
+
 @app.command()
 def init(
     config_file: str = typer.Option(
         ..., "--config", help="Path to the init config file"
+    ),
+    start_server: bool = typer.Option(
+        False, "--start-server", help="Whether to start the server on localhost or not"
     ),
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
@@ -29,10 +40,8 @@ def init(
     sky_s3_binary_path: str = typer.Option(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
-    pull_policy: str = typer.Option(
-        "read",
-        "--policy",
-        help="Policy to pull from the bucket, either 'read' or 'copy_on_read'",
+    policy: Policy = typer.Option(
+        Policy.write_local, "--policy", help="Policy to use for data placement"
     ),
 ):
     with open(config_file, "r") as f:
@@ -53,7 +62,12 @@ def init(
         "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID"),
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
+<<<<<<< HEAD
         "PULL_POLICY": pull_policy,
+=======
+        "LOCAL_SERVER": str(start_server).lower(),
+        "POLICY": policy,
+>>>>>>> 9b2e9bf85ce8236e0fe22a2636dfff44b27e1c05
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
     }
     env = {k: v for k, v in env.items() if v is not None}
@@ -101,14 +115,23 @@ def init(
 def register(
     register_config: str = typer.Option(
         ..., "--config", help="Path to the register config file"
-    )
+    ),
+    local_test: bool = typer.Option(
+        False, "--local", help="Whether it is a local test or not"
+    ),
 ):
+    # read from LOCAL_SERVER environmental variable instead
+    if local_test:
+        server_addr = "localhost"
+    else:
+        server_addr = "15.160.154.191"
+
     try:
         with open(register_config, "r") as f:
             config = json.load(f)
 
         resp = requests.post(
-            "http://localhost:3000/register_buckets",
+            f"http://{server_addr}:3000/register_buckets",
             json={"bucket": config["bucket"], "config": config["config"]},
         )
         if resp.status_code == 200:
