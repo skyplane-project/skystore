@@ -155,6 +155,8 @@ def create_instance(
             + [f"gcp:{region}" for region in gcp_region_list]
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
+            "skystore_bucket_prefix": "skystore",
+            "policy": "write-local",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}"))
@@ -203,7 +205,7 @@ def create_instance(
         cmd3 = f'cd /home/ubuntu/skystore; \
                  export AWS_ACCESS_KEY_ID={aws_credentials()[0]};\
                  export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]};\
-                /home/ubuntu/.local/bin/skystore init --config {config_file_path}; '
+                 nohup python3.9 -m /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &'
         server.run_command(cmd1)
         server.run_command(cmd2)
         server.run_command(cmd3)
