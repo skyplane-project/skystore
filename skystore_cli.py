@@ -61,7 +61,7 @@ def init(
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
         "LOCAL_SERVER": str(start_server).lower(),
-        "POLICY": policy 
+        "POLICY": policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
     }
     env = {k: v for k, v in env.items() if v is not None}
