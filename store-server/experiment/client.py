@@ -188,16 +188,20 @@ def create_instance(
         clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
         cmd1 = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update;\
+                sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
+                sudo update-alternatives --config python3; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
                 {clone_cmd} '
         
-        cmd2 = f'curl -sSL https://install.python-poetry.org | python3 -; cd skystore;\
+        cmd2 = f'sudo apt install pkg-config libssl-dev; \
+                curl -sSL https://install.python-poetry.org | python3 -; cd skystore;\
                 /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
                 pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
                 cd ..;\
+                cd s3-proxy; /home/ubuntu/.cargo/bin/just install-local-s3; \
                 skystore exit; ' 
-        cmd3 = f'/home/ubuntu/.local/bin/skystore init --config {config_file_path} '
+        cmd3 = f'cd /home/ubuntu/skystore; /home/ubuntu/.local/bin/skystore init --config {config_file_path} '
         stdout, stderr = server.run_command(cmd1)
         print(f"stdout1: {stdout}")
         print(f"stderr1: {stderr}")
