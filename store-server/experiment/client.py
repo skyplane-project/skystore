@@ -206,8 +206,14 @@ def create_instance(
                  export AWS_ACCESS_KEY_ID={aws_credentials()[0]};\
                  export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]};\
                  nohup python3.9 -m /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &'
-        server.run_command(cmd1)
-        server.run_command(cmd2)
+        stdout, stderr = server.run_command(cmd1)
+        print("stdout:", stdout)
+        print("stderr:", stderr)
+        print("stage 3 finished.")
+        stdout, stderr = server.run_command(cmd2)
+        print("stdout:", stdout)
+        print("stderr:", stderr)
+        print("stage 4 finished.")
         server.run_command(cmd3)
         print("stage 5 finished.")
 
