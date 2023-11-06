@@ -200,7 +200,10 @@ def create_instance(
                 /home/ubuntu/.cargo/bin/just install-local-s3; \
                 cd ..; \
                 skystore exit; ' 
-        cmd3 = f'cd /home/ubuntu/skystore; /home/ubuntu/.local/bin/skystore init --config {config_file_path}; echo "init finished"; '
+        cmd3 = f'cd /home/ubuntu/skystore; 
+                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]};\
+                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]};\
+                /home/ubuntu/.local/bin/skystore init --config {config_file_path}; echo "init finished"; '
         server.run_command(cmd1)
         server.run_command(cmd2)
         server.run_command(cmd3)
