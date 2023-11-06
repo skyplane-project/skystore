@@ -112,6 +112,7 @@ impl SkyProxy {
                             || http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap()
                         {
                             // Bucket already exists, no action needed
+                            println!("Bucket {} already exists", skystore_bucket_name)
                         } else {
                             //panic!("Bbucket: {} not exists", e);
                             bucket_exists = false;
@@ -130,6 +131,7 @@ impl SkyProxy {
                         Err(e) => {
                             if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                                 // Bucket already exists, no action needed
+                                println!("Bucket {} already exists", skystore_bucket_name)
                             } else {
                                 panic!("Failed to create bucket: {}", e);
                             }
