@@ -57,7 +57,7 @@ def create_instance(
         assert tup[1].strip() == "", f"Command failed, err: {tup[1]}"
 
     # validate arguments
-    aws_region_list = ["eu-south-1"]
+    aws_region_list = ["us-west-1"]
 
     # validate AWS regions
     aws_region_list = aws_region_list if enable_aws else []

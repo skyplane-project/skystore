@@ -165,7 +165,8 @@ def create_instance(
             )
         )
         server.run_command(
-            "sudo add-apt-repository universe;\
+            "sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+            sudo apt autoclean; sudo apt install python3-apt -y; \
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 python3-apt pkg-config libssl-dev -y\
             sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1;\
@@ -182,7 +183,7 @@ def create_instance(
         url = "https://github.com/shaopu1225/skystore.git"
         clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
         cmd = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
-                sudo apt autoclean; sudo apt install python3-apt; \
+                sudo apt autoclean; sudo apt install python3-apt -y; \
                 sudo apt-get update; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
                 {clone_cmd}\
