@@ -185,7 +185,7 @@ def create_instance(
         url = "https://github.com/shaopu1225/skystore.git"
         clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
         cmd1 = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
-                sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; sudo pip3 install awscli\
+                sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; sudo pip3 install awscli; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
                 sudo update-alternatives --config python3; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
@@ -194,17 +194,17 @@ def create_instance(
         cmd2 = f'/home/ubuntu/.cargo/bin/cargo install just --force; \
                 sudo apt install pkg-config libssl-dev; \
                 cd /home/ubuntu/skystore; \
-                curl -sSL https://install.python-poetry.org | python3 -;\
-                /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
-                export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
+                curl -sSL https://install.python-poetry.org | python3 -; \
+                /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1; \
+                export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server; \
                 pip3 install -r requirements.txt; \
-                cd ../s3-proxy;\
+                cd ../s3-proxy; \
                 /home/ubuntu/.cargo/bin/just install-local-s3; \
                 cd ..; \
                 skystore exit; ' 
         cmd3 = f'cd /home/ubuntu/skystore; \
-                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]};\
-                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]};\
+                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
+                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                  nohup python3.9 -m /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &'
         stdout, stderr = server.run_command(cmd1)
         print("stdout:", stdout)
