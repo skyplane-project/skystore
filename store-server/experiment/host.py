@@ -159,7 +159,8 @@ def create_instance(
             )
         )
         server.run_command(
-            "sudo add-apt-repository universe;\
+            "sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+                sudo apt autoclean; sudo apt install python3-apt -y; \
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 -y"
         )

@@ -253,7 +253,7 @@ def issue_requests(trace_file_path: str):
     )
 
     previous_timestamp = None
-    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
+    s3_args = "--endpoint-url http://18.102.70.80:8002 --no-verify-ssl --no-sign-request"
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
