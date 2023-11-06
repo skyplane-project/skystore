@@ -18,11 +18,13 @@ DEFAULT_STORE_SERVER_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "store-server"
 )
 
+
 class Policy(str, Enum):
     copy_on_read = "copy_on_read"
     read = "read"
     write_local = "write_local"
     push = "push"
+
 
 @app.command()
 def init(

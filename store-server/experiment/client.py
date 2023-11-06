@@ -7,17 +7,16 @@ from skyplane.compute.const_cmds import make_sysctl_tcp_tuning_command
 from skyplane.utils import logger
 from skyplane.utils.fn import do_parallel
 
+from skyplane.compute.aws.aws_auth import AWSAuthentication
+import csv
+import time
+from datetime import datetime
+
 all_aws_regions = compute.AWSCloudProvider.region_list()
 all_azure_regions = compute.AzureCloudProvider.region_list()
 all_gcp_regions = compute.GCPCloudProvider.region_list()
 all_gcp_regions_standard = compute.GCPCloudProvider.region_list_standard()
 all_ibmcloud_regions = compute.IBMCloudProvider.region_list()
-from skyplane.compute.aws.aws_auth import AWSAuthentication
-import csv
-import time
-from datetime import datetime
-from typing import Dict, List
-import typer
 
 
 def aws_credentials():
@@ -69,7 +68,9 @@ def create_instance(
         raise typer.Abort()
 
     # validate GCP regions
-    assert not enable_gcp_standard or enable_gcp, f"GCP is disabled but GCP standard is enabled"
+    assert (
+        not enable_gcp_standard or enable_gcp
+    ), "GCP is disabled but GCP standard is enabled"
     if not enable_gcp:
         gcp_region_list = []
     elif not all(r in all_gcp_regions for r in gcp_region_list):
@@ -138,7 +139,9 @@ def create_instance(
             ssh_cmd = instance.get_ssh_cmd()
             print(ssh_cmd)
             ssh_parts = ssh_cmd.split(" ", 1)
-            modified_ssh_cmd = f"{ssh_parts[0]} -o StrictHostKeyChecking=accept-new {ssh_parts[1]}"
+            modified_ssh_cmd = (
+                f"{ssh_parts[0]} -o StrictHostKeyChecking=accept-new {ssh_parts[1]}"
+            )
             f.write(modified_ssh_cmd + "\n")
 
         f.close()
@@ -156,17 +159,23 @@ def create_instance(
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}")
 
-        check_stderr(server.run_command("echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections"))
+        check_stderr(
+            server.run_command(
+                "echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections"
+            )
+        )
         server.run_command(
             "sudo add-apt-repository universe;\
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 python3-apt pkg-config libssl-dev -y\
-            sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; sudo update-alternatives --config python3"
+            sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1;\
+            sudo update-alternatives --config python3"
         )
 
         server.run_command(make_sysctl_tcp_tuning_command(cc="cubic"))
         server.run_command(
-            f"aws configure set aws_access_key_id {aws_credentials()[0]}; aws configure set aws_secret_access_key {aws_credentials()[1]}"
+            f"aws configure set aws_access_key_id {aws_credentials()[0]};\
+            aws configure set aws_secret_access_key {aws_credentials()[1]}"
         )
 
         # Set up other stuff
@@ -176,7 +185,8 @@ def create_instance(
                 sudo apt-get install --reinstall python3-apt;\
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
                 {clone_cmd}\
-                curl -sSL https://install.python-poetry.org | python3 -; /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
+                curl -sSL https://install.python-poetry.org | python3 -;\
+                /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
                 pip3 install -r requirements.txt; cargo install just --force; \
                 cd ..;\
@@ -223,7 +233,9 @@ def issue_requests(trace_file_path: str):
     enable_aws = len(regions_dict["aws"]) > 0
     enable_gcp = len(regions_dict["gcp"]) > 0
     enable_azure = len(regions_dict["azure"]) > 0
-    print(f"enable_aws: {enable_aws}, enable_gcp: {enable_gcp}, enable_azure: {enable_azure}")
+    print(
+        f"enable_aws: {enable_aws}, enable_gcp: {enable_gcp}, enable_azure: {enable_azure}"
+    )
     instances_dict = create_instance(
         aws_region_list=regions_dict.get("aws", []),
         azure_region_list=regions_dict.get("azure", []),
