@@ -173,15 +173,11 @@ def create_instance(
             sudo update-alternatives --config python3"
         )
 
-        print("stage 1 finished.")
-
         server.run_command(make_sysctl_tcp_tuning_command(cc="cubic"))
         server.run_command(
             f"aws configure set aws_access_key_id {aws_credentials()[0]};\
             aws configure set aws_secret_access_key {aws_credentials()[1]}"
         )
-
-        print("stage 2 finished.")
 
         # Set up other stuff
         url = "https://github.com/shaopu1225/skystore.git"
@@ -204,18 +200,10 @@ def create_instance(
                 /home/ubuntu/.cargo/bin/just install-local-s3; \
                 cd ..; \
                 skystore exit; ' 
-        cmd3 = f'cd /home/ubuntu/skystore; /home/ubuntu/.local/bin/skystore init --config {config_file_path} '
-        stdout, stderr = server.run_command(cmd1)
-        print(f"stdout1: {stdout}")
-        print(f"stderr1: {stderr}")
-        print("stage 3 finished.")
-        stdout, stderr = server.run_command(cmd2)
-        print(f"stdout2: {stdout}")
-        print(f"stderr2: {stderr}")
-        print("stage 4 finished.")
-        stdout, stderr = server.run_command(cmd3)
-        print(f"stdout3: {stdout}")
-        print(f"stderr3: {stderr}")
+        cmd3 = f'cd /home/ubuntu/skystore; /home/ubuntu/.local/bin/skystore init --config {config_file_path}; echo "init finished"; '
+        server.run_command(cmd1)
+        server.run_command(cmd2)
+        server.run_command(cmd3)
         print("stage 5 finished.")
 
         # server.run_command(f"rm {config_file_path}")
