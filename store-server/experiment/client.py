@@ -173,7 +173,7 @@ def create_instance(
             sudo update-alternatives --config python3"
         )
 
-        print("stage1 finished.")
+        print("stage 1 finished.")
 
         server.run_command(make_sysctl_tcp_tuning_command(cc="cubic"))
         server.run_command(
@@ -187,17 +187,17 @@ def create_instance(
         url = "https://github.com/shaopu1225/skystore.git"
         clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
         cmd = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
-                sudo apt autoclean; sudo apt install python3-apt -y; \
-                sudo apt-get update; \
+                sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update;\
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
-                {clone_cmd}\
+                {clone_cmd} \
                 curl -sSL https://install.python-poetry.org | python3 -;\
                 /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
                 pip3 install -r requirements.txt; cargo install just --force; \
                 cd ..;\
                 skystore exit; skystore init --config {config_file_path};'
-        check_stderr(server.run_command(cmd))
+        server.run_command(cmd)
+
 
         print("stage 3 finished.")
 
@@ -261,7 +261,7 @@ def issue_requests(trace_file_path: str):
     print("Create instance finished.")
 
     previous_timestamp = None
-    s3_args = "--endpoint-url http://15.160.94.202:8002 --no-verify-ssl --no-sign-request"
+    s3_args = "--endpoint-url http://18.102.50.76:8002 --no-verify-ssl --no-sign-request"
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
