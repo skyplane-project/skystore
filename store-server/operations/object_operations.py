@@ -218,7 +218,8 @@ async def locate_object(
             chosen_locator = locator
             reason = "exact match"
             break
-    else:
+        
+    if chosen_locator is None:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
@@ -402,6 +403,8 @@ async def start_upload(
     ).scalar_one_or_none()
     physical_bucket_locators = logical_bucket.physical_bucket_locators
 
+    primary_write_region = None 
+    
     if primary_exists:
         # Assume that physical bucket locators for this region already exists and we don't need to create them
         # TODO: I think this is the pull-on-read scenario?
@@ -414,8 +417,12 @@ async def start_upload(
                 for locator in physical_bucket_locators
                 if locator.is_primary or locator.need_warmup
             ]
+            primary_write_region = [locator.location_tag for locator in physical_bucket_locators if locator.is_primary]
+            assert len(primary_write_region) == 1, "should only have one primary write region"
+            primary_write_region = primary_write_region[0]
         else:
             upload_to_region_tags = [request.client_from_region]
+            primary_write_region = request.client_from_region
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -462,7 +469,7 @@ async def start_upload(
                 status_code=500,
                 content=f"No physical bucket locator found for upload region tag {region_tag}",
             )
-
+            
         locators.append(
             DBPhysicalObjectLocator(
                 logical_object=logical_object,
@@ -473,7 +480,7 @@ async def start_upload(
                 key=physical_bucket_locator.prefix + request.key,
                 lock_acquired_ts=datetime.utcnow(),
                 status=Status.pending,
-                is_primary=physical_bucket_locator.is_primary,
+                is_primary=(region_tag == primary_write_region), # NOTE: location of first write is primary
             )
         )
 
