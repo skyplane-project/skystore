@@ -84,12 +84,13 @@ def init(
         )
 
     # Start the skystore server
-    subprocess.Popen(
-        f"cd {DEFAULT_STORE_SERVER_PATH}; "
-        "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
-        shell=True,
-        env=env,
-    )
+    if start_server: 
+        subprocess.Popen(
+            f"cd {DEFAULT_STORE_SERVER_PATH}; "
+            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
+            shell=True,
+            env=env,
+        )
 
     time.sleep(2)
 
