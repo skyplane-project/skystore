@@ -31,10 +31,9 @@ import os
 
 router = APIRouter()
 init_region_tags = (
-    # os.getenv("INIT_REGIONS").split(",")
-    # if os.getenv("INIT_REGIONS")
-    # else DEFAULT_INIT_REGIONS
-    DEFAULT_INIT_REGIONS
+    os.getenv("INIT_REGIONS").split(",")
+    if os.getenv("INIT_REGIONS")
+    else DEFAULT_INIT_REGIONS
 )
 skystore_bucket_prefix = (
     os.getenv("SKYSTORE_BUCKET_PREFIX")
