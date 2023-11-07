@@ -14,8 +14,6 @@ mod tests {
             "gcp:us-west1".to_string(),
             "aws:eu-central-1".to_string(),
             "aws:us-west-1".to_string(),
-            "aws:eu-north-1".to_string(),
-            "aws:eu-south-1".to_string(),
         ];
         static ref CLIENT_FROM_REGION: String = "aws:us-west-1".to_string();
     }

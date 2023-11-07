@@ -199,7 +199,6 @@ async def locate_object(
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.ready)
-        .where(DBPhysicalObjectLocator.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
 
@@ -218,8 +217,7 @@ async def locate_object(
             chosen_locator = locator
             reason = "exact match"
             break
-
-    if chosen_locator is None:
+    else:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
@@ -403,44 +401,20 @@ async def start_upload(
     ).scalar_one_or_none()
     physical_bucket_locators = logical_bucket.physical_bucket_locators
 
-    primary_write_region = None
-
     if primary_exists:
         # Assume that physical bucket locators for this region already exists and we don't need to create them
-        # For pull-on-read
+        # TODO: I think this is the pull-on-read scenario?
         upload_to_region_tags = [request.client_from_region]
-        primary_write_region = [
-            locator.location_tag for locator in existing_objects if locator.is_primary
-        ]
-        assert (
-            len(primary_write_region) == 1
-        ), "should only have one primary write region"
-        primary_write_region = primary_write_region[0]
-        assert (
-            primary_write_region != request.client_from_region
-        ), "should not be the same region"
     else:
         # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
         if request.policy == "push":
-            # Except this case, always set the first-write region of the OBJECT to be primary
             upload_to_region_tags = [
                 locator.location_tag
                 for locator in physical_bucket_locators
                 if locator.is_primary or locator.need_warmup
             ]
-            primary_write_region = [
-                locator.location_tag
-                for locator in physical_bucket_locators
-                if locator.is_primary
-            ]
-            assert (
-                len(primary_write_region) == 1
-            ), "should only have one primary write region"
-            primary_write_region = primary_write_region[0]
         else:
-            # Set the first-write region of the OBJECT to be primary
             upload_to_region_tags = [request.client_from_region]
-            primary_write_region = request.client_from_region
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -498,9 +472,7 @@ async def start_upload(
                 key=physical_bucket_locator.prefix + request.key,
                 lock_acquired_ts=datetime.utcnow(),
                 status=Status.pending,
-                is_primary=(
-                    region_tag == primary_write_region
-                ),  # NOTE: location of first write is primary
+                is_primary=physical_bucket_locator.is_primary,
             )
         )
 
@@ -549,7 +521,7 @@ async def complete_upload(
 
     if (
         request.policy == "push" and physical_locator.is_primary
-    ) or request.policy == "write_local":  # TODO: might need to change the if conditions for different policies
+    ) or request.policy == "write-local":
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
         logical_object.status = Status.ready

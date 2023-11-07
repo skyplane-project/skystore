@@ -433,12 +433,12 @@ def test_get_object(client):
 
 
 def test_get_object_pull_logic(client):
-    """Test that the `get_object` endpoint works using write_local logic."""
+    """Test that the `get_object` endpoint works using write-local logic."""
 
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-bucket-write-local",
             "client_from_region": "aws:us-west-1",
         },
     )
@@ -458,11 +458,11 @@ def test_get_object_pull_logic(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket-write_local",
-            "key": "my-key-write_local",
+            "bucket": "my-get-bucket-write-local",
+            "key": "my-key-write-local",
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
-            "policy": "write_local",  # write local policy
+            "policy": "write-local",  # write local policy
         },
     )
     resp.raise_for_status()
@@ -475,7 +475,7 @@ def test_get_object_pull_logic(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00",
-                "policy": "write_local",  # write local policy
+                "policy": "write-local",  # write local policy
             },
         ).raise_for_status()
 
@@ -483,8 +483,8 @@ def test_get_object_pull_logic(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket-write_local",
-            "key": "my-key-write_local",
+            "bucket": "my-get-bucket-write-local",
+            "key": "my-key-write-local",
             "client_from_region": "aws:us-east-1",
         },
     )
@@ -494,7 +494,7 @@ def test_get_object_pull_logic(client):
     assert resp_data == {
         "tag": "aws:us-east-1",
         "bucket": "skystore-us-east-1",
-        "key": "my-key-write_local",
+        "key": "my-key-write-local",
         "region": "us-east-1",
         "cloud": "aws",
         "size": 100,

@@ -84,13 +84,12 @@ def init(
         )
 
     # Start the skystore server
-    if start_server:
-        subprocess.Popen(
-            f"cd {DEFAULT_STORE_SERVER_PATH}; "
-            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
-            shell=True,
-            env=env,
-        )
+    subprocess.Popen(
+        f"cd {DEFAULT_STORE_SERVER_PATH}; "
+        "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
+        shell=True,
+        env=env,
+    )
 
     time.sleep(2)
 
@@ -121,8 +120,7 @@ def register(
     if local_test:
         server_addr = "localhost"
     else:
-        # NOTE: ip address set to be the remote store-server addr
-        server_addr = "54.183.123.82"
+        server_addr = "15.160.154.191"
 
     try:
         with open(register_config, "r") as f:

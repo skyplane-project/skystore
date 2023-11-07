@@ -108,9 +108,7 @@ impl SkyProxy {
                 {
                     Ok(_) => {}
                     Err(e) => {
-                        if e.to_string().contains("BucketAlreadyOwnedByYou")
-                            || http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap()
-                        {
+                        if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                             // Bucket already exists, no action needed
                         } else {
                             //panic!("Bbucket: {} not exists", e);
@@ -128,10 +126,7 @@ impl SkyProxy {
                     {
                         Ok(_) => {}
                         Err(e) => {
-                            if e.to_string().contains("BucketAlreadyOwnedByYou")
-                                || http::StatusCode::INTERNAL_SERVER_ERROR
-                                    == e.status_code().unwrap()
-                            {
+                            if http::StatusCode::INTERNAL_SERVER_ERROR == e.status_code().unwrap() {
                                 // Bucket already exists, no action needed
                             } else {
                                 panic!("Failed to create bucket: {}", e);
@@ -146,8 +141,7 @@ impl SkyProxy {
             base_path: if local_server {
                 "http://127.0.0.1:3000".to_string()
             } else {
-                // NOTE: ip address set to be the remote store-server addr
-                "http://54.183.123.82:3000".to_string()
+                "http://18.102.61.249:3000".to_string()
             },
             ..Default::default()
         };
@@ -284,9 +278,9 @@ impl S3 for SkyProxy {
             let dir_conf = self.dir_conf.clone();
 
             // TODO: fix
-            // if bucket name starts with $skystore_bucket_prefix, then it's a skybucket already created during initialization
+            // if bucket name starts with skystore-, then it's a skybucket already created during initialization
             // so we don't need to create it again
-            if bucket_name.starts_with(&self.skystore_bucket_prefix) {
+            if bucket_name.starts_with("skystore-") {
                 let system_time: SystemTime = Utc::now().into();
                 let timestamp: s3s::dto::Timestamp = system_time.into();
 
@@ -660,7 +654,7 @@ impl S3 for SkyProxy {
                         let response_blob = input_blobs.pop();
 
                         tokio::spawn(async move {
-                            let start_upload_resp_result = apis::start_upload(
+                            let start_upload_resp = apis::start_upload(
                                 &dir_conf_clone,
                                 models::StartUploadRequest {
                                     bucket: bucket.clone(),
@@ -672,57 +666,54 @@ impl S3 for SkyProxy {
                                     policy: Some(policy.clone()),
                                 },
                             )
-                            .await;
+                            .await
+                            .unwrap();
+                            let locators = start_upload_resp.locators;
 
-                            // In case of multi-concurrent GET request with copy_on_read policy,
-                            // only upload if start_upload returns successful, this indicates that the object is not in the local object store
-                            // status neither pending nor ready
-                            if let Ok(start_upload_resp) = start_upload_resp_result {
-                                let locators = start_upload_resp.locators;
-                                let request_template = clone_put_object_request(
-                                    &new_put_object_request(bucket.clone(), key.clone()),
-                                    None,
-                                );
+                            let request_template = clone_put_object_request(
+                                &new_put_object_request(bucket.clone(), key.clone()),
+                                None,
+                            );
 
-                                for (locator, input_blob) in
-                                    locators.into_iter().zip(input_blobs.into_iter())
-                                {
-                                    let client: Arc<Box<dyn ObjectStoreClient>> =
-                                        store_clients_clone.get(&locator.tag).unwrap().clone();
-                                    let req = S3Request::new(clone_put_object_request(
-                                        &request_template,
-                                        Some(input_blob),
-                                    ))
-                                    .map_input(|mut input| {
-                                        input.bucket = locator.bucket.clone();
-                                        input.key = locator.key.clone();
-                                        input
-                                    });
+                            for (locator, input_blob) in
+                                locators.into_iter().zip(input_blobs.into_iter())
+                            {
+                                let client: Arc<Box<dyn ObjectStoreClient>> =
+                                    store_clients_clone.get(&locator.tag).unwrap().clone();
+                                let req = S3Request::new(clone_put_object_request(
+                                    &request_template,
+                                    Some(input_blob),
+                                ))
+                                .map_input(|mut input| {
+                                    input.bucket = locator.bucket.clone();
+                                    input.key = locator.key.clone();
+                                    input
+                                });
 
-                                    let put_resp = client.put_object(req).await.unwrap();
-                                    let e_tag = put_resp.output.e_tag.unwrap();
-                                    let head_resp = client
-                                        .head_object(S3Request::new(new_head_object_request(
-                                            locator.bucket.clone(),
-                                            locator.key.clone(),
-                                        )))
-                                        .await
-                                        .unwrap();
-                                    apis::complete_upload(
-                                        &dir_conf_clone,
-                                        models::PatchUploadIsCompleted {
-                                            id: locator.id,
-                                            size: head_resp.output.content_length as u64,
-                                            etag: e_tag.clone(),
-                                            last_modified: timestamp_to_string(
-                                                head_resp.output.last_modified.unwrap(),
-                                            ),
-                                            policy: Some(policy.clone()),
-                                        },
-                                    )
+                                let put_resp = client.put_object(req).await.unwrap();
+                                let e_tag = put_resp.output.e_tag.unwrap();
+                                let head_resp = client
+                                    .head_object(S3Request::new(new_head_object_request(
+                                        locator.bucket.clone(),
+                                        locator.key.clone(),
+                                    )))
                                     .await
                                     .unwrap();
-                                }
+
+                                apis::complete_upload(
+                                    &dir_conf_clone,
+                                    models::PatchUploadIsCompleted {
+                                        id: locator.id,
+                                        size: head_resp.output.content_length as u64,
+                                        etag: e_tag.clone(),
+                                        last_modified: timestamp_to_string(
+                                            head_resp.output.last_modified.unwrap(),
+                                        ),
+                                        policy: Some(policy.clone()),
+                                    },
+                                )
+                                .await
+                                .unwrap();
                             }
                         });
 
