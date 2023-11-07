@@ -1,4 +1,4 @@
-use crate::{objstore_client::ObjectStoreClient, type_utils::parse_range};
+use crate::{objstore_client::ObjectStoreClient, utils::type_utils::parse_range};
 use azure_core::{Body, SeekableStream};
 use azure_storage::StorageCredentials;
 use azure_storage_blobs::prelude::*;

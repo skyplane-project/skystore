@@ -1,5 +1,5 @@
 use crate::objstore_client::ObjectStoreClient;
-use crate::type_utils::parse_range;
+use crate::utils::type_utils::parse_range;
 use google_cloud_default::WithAuthExt;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::delete::DeleteBucketRequest;

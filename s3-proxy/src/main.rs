@@ -8,15 +8,18 @@ use tracing::info;
 mod client_impls;
 mod objstore_client;
 mod skyproxy;
-mod stream_utils;
-mod type_utils;
+mod utils {
+    pub mod stream_utils;
+    pub mod type_utils;
+}
 
 use crate::skyproxy::SkyProxy;
-use crate::type_utils::new_head_object_request;
+use crate::utils::type_utils::new_head_object_request;
 use futures::future::FutureExt;
 use s3s::S3Error;
 use std::env;
 use tower::Service;
+pub mod skyproxy_test;
 
 #[derive(serde::Deserialize)]
 struct WarmupRequest {
@@ -54,10 +57,18 @@ async fn main() {
     let skystore_bucket_prefix: String =
         env::var("SKYSTORE_BUCKET_PREFIX").expect("SKYSTORE_BUCKET_PREFIX is missing");
 
+    let local_server: bool = env::var("LOCAL_SERVER")
+        .map(|s| s.parse::<bool>().unwrap())
+        .unwrap_or(true);
+
+    let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
+
     let proxy = SkyProxy::new(
         init_regions,
         client_from_region,
         local_run,
+        local_server,
+        policy,
         skystore_bucket_prefix,
     )
     .await;
