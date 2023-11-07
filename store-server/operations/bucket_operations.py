@@ -62,6 +62,8 @@ async def register_buckets(
     db.add(logical_bucket)
 
     added_loc_tags = set()
+    # TODO: remove the logic of physical bucket primary region, set it as object-level for now
+    # Look at start_upload function
     for location in request.config.physical_locations:
         physical_bucket_locator = DBPhysicalBucketLocator(
             logical_bucket=logical_bucket,
