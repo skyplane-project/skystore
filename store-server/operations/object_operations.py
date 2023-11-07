@@ -530,6 +530,7 @@ async def complete_upload(
     if (
         request.policy == "push" and physical_locator.is_primary
     ) or request.policy == "write-local":
+        print("Does status being updaetd???")
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
         logical_object.status = Status.ready
