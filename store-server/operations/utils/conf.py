@@ -67,8 +67,8 @@ DEFAULT_INIT_REGIONS = [
     "aws:us-east-1",
     "gcp:us-west1",
     "aws:eu-central-1",
-    # "aws:eu-south-1",
-    # "aws:eu-north-1"
+    "aws:eu-south-1",
+    "aws:eu-north-1",
 ]
 
 DEFAULT_SKYSTORE_BUCKET_PREFIX = "skystore"
