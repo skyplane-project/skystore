@@ -217,7 +217,9 @@ def create_instance(
         print("stdout:", stdout)
         print("stderr:", stderr)
         print("stage 4 finished.")
-        server.run_command(cmd3)
+        stdout, stderr = server.run_command(cmd3)
+        print("stdout:", stdout)
+        print("stderr:", stderr)
         print("stage 5 finished.")
 
         # server.run_command(f"rm {config_file_path}")
