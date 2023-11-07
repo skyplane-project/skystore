@@ -121,6 +121,7 @@ def register(
     if local_test:
         server_addr = "localhost"
     else:
+        # NOTE: ip address set to be the remote store-server addr
         server_addr = "3.101.67.150"
 
     try:

@@ -204,7 +204,12 @@ def create_instance(
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server; \
                 pip3 install -r requirements.txt; \
                 cd ../s3-proxy; \
-                /home/ubuntu/.cargo/bin/just install-local-s3; \
+                  /home/ubuntu/.cargo/bin/cargo install --force \
+                --git https://github.com/Nugine/s3s \
+                --rev 0cc49cf24c05eeb6a809882d1a7b76e953822c0d \
+                --bin s3s-fs \
+                --features="binary" \
+                s3s-fs; \
                 cd ..; \
                 skystore exit; '
         cmd3 = f"cd /home/ubuntu/skystore; \

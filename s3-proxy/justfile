@@ -37,7 +37,7 @@ run-registry:
     registry:2
 
 install-local-s3:
-  /home/ubuntu/.cargo/bin/cargo install --force \
+  cargo install --force \
     --git https://github.com/Nugine/s3s \
     --rev 0cc49cf24c05eeb6a809882d1a7b76e953822c0d \
     --bin s3s-fs \

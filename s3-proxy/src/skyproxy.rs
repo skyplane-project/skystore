@@ -143,6 +143,7 @@ impl SkyProxy {
             base_path: if local_server {
                 "http://127.0.0.1:3000".to_string()
             } else {
+                // NOTE: ip address set to be the remote store-server addr
                 "http://3.101.67.150:3000".to_string()
             },
             ..Default::default()
@@ -670,7 +671,8 @@ impl S3 for SkyProxy {
                             )
                             .await;
 
-                            // only upload if start_upload is successful, this indicates that the object is not in the local object store
+                            // In case of multi-concurrent GET request with copy_on_read policy,
+                            // only upload if start_upload returns successful, this indicates that the object is not in the local object store
                             // status neither pending nor ready
                             if let Ok(start_upload_resp) = start_upload_resp_result {
                                 let locators = start_upload_resp.locators;
