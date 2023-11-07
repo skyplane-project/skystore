@@ -11,6 +11,7 @@ from operations.schemas.bucket_schemas import (
     DeleteBucketIsCompleted,
     LocateBucketRequest,
     LocateBucketResponse,
+    HeadBucketRequest,
     BucketStatus,
 )
 from datetime import datetime
@@ -355,6 +356,24 @@ async def list_buckets(db: Session = Depends(get_session)) -> List[BucketRespons
         )
         for bucket in buckets
     ]
+
+
+@router.post("/head_bucket")
+async def head_bucket(request: HeadBucketRequest, db: Session = Depends(get_session)):
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+
+    logger.debug(f"head_bucket: {request} -> {bucket}")
+
+    return Response(
+        status_code=200,
+        content="Bucket exists",
+    )
 
 
 @router.post(
