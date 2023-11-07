@@ -207,8 +207,7 @@ def create_instance(
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build; \
-                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 & \
-                sleep 10; '
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &'
         stdout, stderr = server.run_command(cmd1)
         print("stdout:", stdout)
         print("stderr:", stderr)
@@ -280,6 +279,8 @@ def issue_requests(trace_file_path: str):
     )
 
     print("Create instance finished.")
+
+    time.sleep(10)
 
     previous_timestamp = None
     s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"    # put object requires signature

@@ -178,7 +178,7 @@ def create_instance(
         # install cargo
         server.run_command(
             "curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
-            git clone https://github.com/skyplane-project/skystore; cd skystore/store-server;\
+            git clone https://github.com/shaopu1225/skystore; cd skystore/store-server; git checkout skystore-main;\
             pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
             nohup python3.9 -m uvicorn app:app --reload --host 0.0.0.0 --port 3000 > /dev/null 2>&1 &"
         )
