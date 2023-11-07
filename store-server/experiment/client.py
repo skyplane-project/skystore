@@ -159,7 +159,11 @@ def create_instance(
             "policy": "write_local",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
-        check_stderr(server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}"))
+        check_stderr(
+            server.run_command(
+                f"echo '{json.dumps(config_content)}' > {config_file_path}"
+            )
+        )
 
         check_stderr(
             server.run_command(
@@ -184,15 +188,15 @@ def create_instance(
         # Set up other stuff
         url = "https://github.com/shaopu1225/skystore.git"
         clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
-        cmd1 = f'sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+        cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
                 sudo update-alternatives --config python3; \
                 sudo pip3 install awscli; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
-                {clone_cmd} '
-        
-        cmd2 = f'/home/ubuntu/.cargo/bin/cargo install just --force; \
+                {clone_cmd} "
+
+        cmd2 = '/home/ubuntu/.cargo/bin/cargo install just --force; \
                 sudo apt install pkg-config libssl-dev; \
                 cd /home/ubuntu/skystore; \
                 curl -sSL https://install.python-poetry.org | python3 -; \
@@ -202,24 +206,15 @@ def create_instance(
                 cd ../s3-proxy; \
                 /home/ubuntu/.cargo/bin/just install-local-s3; \
                 cd ..; \
-                skystore exit; ' 
-        cmd3 = f'cd /home/ubuntu/skystore; \
+                skystore exit; '
+        cmd3 = f"cd /home/ubuntu/skystore; \
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build; \
-                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &'
-        stdout, stderr = server.run_command(cmd1)
-        print("stdout:", stdout)
-        print("stderr:", stderr)
-        print("stage 3 finished.")
-        stdout, stderr = server.run_command(cmd2)
-        print("stdout:", stdout)
-        print("stderr:", stderr)
-        print("stage 4 finished.")
-        stdout, stderr = server.run_command(cmd3)
-        print("stdout:", stdout)
-        print("stderr:", stderr)
-        print("stage 5 finished.")
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &"
+        server.run_command(cmd1)
+        server.run_command(cmd2)
+        server.run_command(cmd3)
 
         # server.run_command(f"rm {config_file_path}")
 
@@ -284,7 +279,7 @@ def issue_requests(trace_file_path: str):
     time.sleep(10)
 
     previous_timestamp = None
-    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"    # get/put object requires signature
+    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"  # get/put object requires signature
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
@@ -304,18 +299,14 @@ def issue_requests(trace_file_path: str):
 
             if server:
                 if op == "write":
-                    print("Write operation")
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
                     cmd = f"aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
-                    print("Read operation")
                     cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
 
                 print(f"Executing command: {cmd}")
-                stdout, stderr = server.run_command(cmd)
-                print(f"stdout: {stdout}")
-                print(f"stderr: {stderr}")
+                server.run_command(cmd)
             else:
                 print(f"No server found for region: {issue_region}")
 
