@@ -120,7 +120,7 @@ def register(
     if local_test:
         server_addr = "localhost"
     else:
-        server_addr = "54.176.175.11"
+        server_addr = "13.57.12.1"
 
     try:
         with open(register_config, "r") as f:
