@@ -187,7 +187,7 @@ def create_instance(
 
         # Set up other stuff
         url = "https://github.com/shaopu1225/skystore.git"
-        clone_cmd = f"git clone {url}; cd skystore; git checkout skystore-main;"
+        clone_cmd = f"git clone {url}; cd skystore; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
