@@ -407,11 +407,17 @@ async def start_upload(
     
     if primary_exists:
         # Assume that physical bucket locators for this region already exists and we don't need to create them
-        # TODO: I think this is the pull-on-read scenario?
+        # For pull-on-read 
         upload_to_region_tags = [request.client_from_region]
+        primary_write_region = [locator.location_tag for locator in existing_objects if locator.is_primary]
+        assert len(primary_write_region) == 1, "should only have one primary write region"
+        primary_write_region = primary_write_region[0]
+        assert primary_write_region != request.client_from_region, "should not be the same region"
     else:
         # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
         if request.policy == "push":
+            # TODO: bug, might need to look 
+            # Except this case, always set the first-write region of the OBJECT to be primary 
             upload_to_region_tags = [
                 locator.location_tag
                 for locator in physical_bucket_locators
@@ -421,6 +427,7 @@ async def start_upload(
             assert len(primary_write_region) == 1, "should only have one primary write region"
             primary_write_region = primary_write_region[0]
         else:
+            # Set the first-write region of the OBJECT to be primary
             upload_to_region_tags = [request.client_from_region]
             primary_write_region = request.client_from_region
 
@@ -529,8 +536,7 @@ async def complete_upload(
 
     if (
         request.policy == "push" and physical_locator.is_primary
-    ) or request.policy == "write_local":
-        print("Does status being updaetd???")
+    ) or request.policy == "write_local": # TODO: might need to change the if conditions for different policies 
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
         logical_object.status = Status.ready

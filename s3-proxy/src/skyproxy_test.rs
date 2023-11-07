@@ -29,7 +29,7 @@ mod tests {
             CLIENT_FROM_REGION.clone(),
             true,
             true,
-            "push".to_string(),
+            "push".to_string(), // "copy_on_read"
             "skystore".to_string(),
         )
         .await
