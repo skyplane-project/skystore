@@ -145,7 +145,7 @@ impl SkyProxy {
             base_path: if local_server {
                 "http://127.0.0.1:3000".to_string()
             } else {
-                "http://54.219.183.243:3000".to_string()
+                "http://13.56.19.184:3000".to_string()
             },
             ..Default::default()
         };
