@@ -204,11 +204,11 @@ def create_instance(
                 cd ..; \
                 skystore exit; ' 
         cmd3 = f'cd /home/ubuntu/skystore; \
-                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
-                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
-                 /home/ubuntu/.cargo/bin/cargo build; \
-                 nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &; \
-                    sleep 10; '
+                export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
+                export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
+                /home/ubuntu/.cargo/bin/cargo build; \
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 & \
+                sleep 10; '
         stdout, stderr = server.run_command(cmd1)
         print("stdout:", stdout)
         print("stderr:", stderr)
