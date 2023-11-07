@@ -284,7 +284,7 @@ def issue_requests(trace_file_path: str):
     time.sleep(10)
 
     previous_timestamp = None
-    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"    # put object requires signature
+    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"    # get/put object requires signature
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
@@ -302,7 +302,7 @@ def issue_requests(trace_file_path: str):
             server = instances_dict.get(server_key)
             print("server: ", server)
 
-            if True and server:
+            if server:
                 if op == "write":
                     print("Write operation")
                     filename = f"{data_id}.data"
