@@ -155,9 +155,15 @@ def create_instance(
             + [f"gcp:{region}" for region in gcp_region_list]
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
+            "skystore_bucket_prefix": "skystore",
+            "policy": "write_local",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
-        server.run_command(f"echo '{json.dumps(config_content)}' > {config_file_path}")
+        check_stderr(
+            server.run_command(
+                f"echo '{json.dumps(config_content)}' > {config_file_path}"
+            )
+        )
 
         check_stderr(
             server.run_command(
@@ -165,7 +171,8 @@ def create_instance(
             )
         )
         server.run_command(
-            "sudo add-apt-repository universe;\
+            "sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+            sudo apt autoclean; sudo apt install python3-apt -y; \
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 python3-apt pkg-config libssl-dev -y\
             sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1;\
@@ -179,19 +186,40 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/lynnliu030/skystore"
-        clone_cmd = f"git clone {url}; cd skystore; git checkout test;"
-        cmd = f'sudo apt-get update; sudo apt remove python3-apt -y; \
-                sudo apt-get install --reinstall python3-apt;\
+        url = "https://github.com/shaopu1225/skystore.git"
+        clone_cmd = f"git clone {url}; cd skystore; "
+        cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+                sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
+                sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
+                sudo update-alternatives --config python3; \
+                sudo pip3 install awscli; \
                 curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
-                {clone_cmd}\
-                curl -sSL https://install.python-poetry.org | python3 -;\
-                /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1;\
-                export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server;\
-                pip3 install -r requirements.txt; cargo install just --force; \
-                cd ..;\
-                skystore exit; skystore init --config {config_file_path};'
-        check_stderr(server.run_command(cmd))
+                {clone_cmd} "
+
+        cmd2 = '/home/ubuntu/.cargo/bin/cargo install just --force; \
+                sudo apt install pkg-config libssl-dev; \
+                cd /home/ubuntu/skystore; \
+                curl -sSL https://install.python-poetry.org | python3 -; \
+                /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1; \
+                export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server; \
+                pip3 install -r requirements.txt; \
+                cd ../s3-proxy; \
+                  /home/ubuntu/.cargo/bin/cargo install --force \
+                --git https://github.com/Nugine/s3s \
+                --rev 0cc49cf24c05eeb6a809882d1a7b76e953822c0d \
+                --bin s3s-fs \
+                --features="binary" \
+                s3s-fs; \
+                cd ..; \
+                skystore exit; '
+        cmd3 = f"cd /home/ubuntu/skystore; \
+                export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
+                export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
+                /home/ubuntu/.cargo/bin/cargo build; \
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &"
+        server.run_command(cmd1)
+        server.run_command(cmd2)
+        server.run_command(cmd3)
 
         # server.run_command(f"rm {config_file_path}")
 
@@ -250,8 +278,13 @@ def issue_requests(trace_file_path: str):
         gcp_instance_class="n2-standard-32",
     )
 
+    print("Create instance finished.")
+
+    # wait for the init background task to finish
+    time.sleep(10)
+
     previous_timestamp = None
-    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl --no-sign-request"
+    s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"  # get/put object requires signature
 
     with open(trace_file_path, "r") as f:
         csv_reader = csv.reader(f)
@@ -269,7 +302,7 @@ def issue_requests(trace_file_path: str):
             server = instances_dict.get(server_key)
             print("server: ", server)
 
-            if True and server:
+            if server:
                 if op == "write":
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)

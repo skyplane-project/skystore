@@ -3,14 +3,14 @@
     "config": {
         "physical_locations": [
             {
-                "name": "aws:us-west-1",
+                "name": "aws:us-east-2",
                 "cloud": "aws",
-                "region": "us-west-1",
-                "bucket": "my-sky-bucket-1",
+                "region": "us-east-2",
+                "bucket": "my-sky-bucket-2",
                 "is_primary": true
             }
         ]
-    }
+    },
     "skystore_bucket_prefix" : "skystore"
     
 }

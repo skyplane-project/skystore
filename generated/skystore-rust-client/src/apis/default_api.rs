@@ -124,10 +124,28 @@ pub enum LocateBucketError {
     UnknownValue(serde_json::Value),
 }
 
+/// struct for typed errors of method [`locate_bucket_status`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum LocateBucketStatusError {
+    Status404(),
+    Status422(crate::models::HttpValidationError),
+    UnknownValue(serde_json::Value),
+}
+
 /// struct for typed errors of method [`locate_object`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum LocateObjectError {
+    Status404(),
+    Status422(crate::models::HttpValidationError),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`locate_object_status`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum LocateObjectStatusError {
     Status404(),
     Status422(crate::models::HttpValidationError),
     UnknownValue(serde_json::Value),
@@ -729,6 +747,45 @@ pub async fn locate_bucket(
     }
 }
 
+/// Given the bucket name, return physical bucket status. Currently only used for testing metadata cleanup
+pub async fn locate_bucket_status(
+    configuration: &configuration::Configuration,
+    locate_bucket_request: crate::models::LocateBucketRequest,
+) -> Result<crate::models::BucketStatus, Error<LocateBucketStatusError>> {
+    let local_var_configuration = configuration;
+
+    let local_var_client = &local_var_configuration.client;
+
+    let local_var_uri_str = format!("{}/locate_bucket_status", local_var_configuration.base_path);
+    let mut local_var_req_builder =
+        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+        local_var_req_builder =
+            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&locate_bucket_request);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<LocateBucketStatusError> =
+            serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent {
+            status: local_var_status,
+            content: local_var_content,
+            entity: local_var_entity,
+        };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
 /// Given the logical object information, return one or zero physical object locators.
 pub async fn locate_object(
     configuration: &configuration::Configuration,
@@ -758,6 +815,45 @@ pub async fn locate_object(
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
         let local_var_entity: Option<LocateObjectError> =
+            serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent {
+            status: local_var_status,
+            content: local_var_content,
+            entity: local_var_entity,
+        };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
+/// Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup.
+pub async fn locate_object_status(
+    configuration: &configuration::Configuration,
+    locate_object_request: crate::models::LocateObjectRequest,
+) -> Result<crate::models::ObjectStatus, Error<LocateObjectStatusError>> {
+    let local_var_configuration = configuration;
+
+    let local_var_client = &local_var_configuration.client;
+
+    let local_var_uri_str = format!("{}/locate_object_status", local_var_configuration.base_path);
+    let mut local_var_req_builder =
+        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+        local_var_req_builder =
+            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&locate_object_request);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<LocateObjectStatusError> =
             serde_json::from_str(&local_var_content).ok();
         let local_var_error = ResponseContent {
             status: local_var_status,
