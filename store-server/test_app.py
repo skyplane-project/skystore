@@ -934,3 +934,81 @@ async def test_metadata_clean_up(client):
     # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
     for locator in resp.json():
         assert locator["status"] == "ready"
+
+
+def test_record_metrics(client):
+    # Check list metrics for empty statistics table
+    resp = client.post(
+        "/list_metrics",
+        json={"client_region": "us-east-1"},
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["count"] == 0
+    assert resp_data["metrics"] == []
+
+    # Try sending a record metric read request
+    resp = client.post(
+        "/record_metrics",
+        json={
+            "requested_region": "aws:us-west-1",
+            "client_region": "us-east-1",
+            "operation": "read",
+            "latency": 1000,
+            "object_size": 1000,
+        },
+    )
+    resp.raise_for_status()
+    assert resp.status_code == 200
+
+    # Try sending a record metric write request
+    resp = client.post(
+        "/record_metrics",
+        json={
+            "requested_region": "aws:us-west-2",
+            "client_region": "us-east-1",
+            "operation": "write",
+            "latency": 1000,
+            "object_size": 5000,
+        },
+    )
+    resp.raise_for_status()
+    assert resp.status_code == 200
+
+    # Try sending an invalid record metric request
+    resp = client.post(
+        "/record_metrics",
+        json={
+            "requested_region": "aws:us-west-2",
+            "client_region": "us-east-1",
+            "operation": "invalid_operation",
+            "latency": 1000,
+            "object_size": 5000,
+        },
+    )
+    assert resp.status_code == 422
+
+    # Check list metrics for client region
+    resp = client.post(
+        "/list_metrics",
+        json={"client_region": "us-east-1"},
+    )
+    resp.raise_for_status()
+    resp_data = resp.json()
+    assert resp_data["count"] == 2
+    assert resp_data["metrics"] == [
+        {
+            "requested_region": "aws:us-west-1",
+            "client_region": "us-east-1",
+            "operation": "read",
+            "latency": 1000,
+            "object_size": 1000,
+        },
+        {
+            "requested_region": "aws:us-west-2",
+            "client_region": "us-east-1",
+            "operation": "write",
+            "latency": 1000,
+            "object_size": 5000,
+        },
+    ]

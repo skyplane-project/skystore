@@ -7,9 +7,10 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Float,
 )
 from sqlalchemy.orm import relationship
-from pydantic import BaseModel, Field, NonNegativeInt
+from pydantic import BaseModel, Field, NonNegativeInt, validator
 from operations.utils.conf import Base, Status
 from sqlalchemy.dialects.postgresql import BIGINT
 from typing import Dict, List, Literal, Optional
@@ -99,6 +100,17 @@ class DBPhysicalObjectLocator(Base):
         back_populates="physical_object_locators",
         foreign_keys=[logical_object_id],
     )
+
+
+class DBStatisticsObject(Base):
+    __tablename__ = "statistics_table"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    requested_region = Column(String)
+    client_region = Column(String)
+    operation = Column(String)
+    latency = Column(Float)
+    object_size = Column(BIGINT)
 
 
 class LocateObjectRequest(BaseModel):
@@ -315,3 +327,37 @@ class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
     op_type: List[str]  # {'replace', 'delete', 'add'}
+
+
+class RecordMetricsRequest(BaseModel):
+    client_region: str
+    requested_region: str
+    # read or write
+    operation: str
+    latency: float
+    object_size: NonNegativeInt
+
+    @validator("operation")
+    def c_match(cls, value):
+        if value not in ["read", "write"]:
+            raise ValueError(
+                f"RecordMetrics operation must be read or write, not {value}"
+            )
+        return value
+
+
+class ListMetricsRequest(BaseModel):
+    client_region: str
+
+
+class ListMetricsObject(BaseModel):
+    client_region: str
+    requested_region: str
+    operation: str
+    latency: float
+    object_size: NonNegativeInt
+
+
+class ListMetricsResponse(BaseModel):
+    metrics: List[ListMetricsObject]
+    count: int

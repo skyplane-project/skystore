@@ -12,15 +12,15 @@
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ObjectStatus {
-    #[serde(rename = "status")]
-    pub status: crate::models::Status,
+pub struct ListMetricsRequest {
+    #[serde(rename = "client_region")]
+    pub client_region: String,
 }
 
-impl ObjectStatus {
-    pub fn new(status: crate::models::Status) -> ObjectStatus {
-        ObjectStatus {
-            status,
+impl ListMetricsRequest {
+    pub fn new(client_region: String) -> ListMetricsRequest {
+        ListMetricsRequest {
+            client_region,
         }
     }
 }

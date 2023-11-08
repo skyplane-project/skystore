@@ -1,6 +1,7 @@
 import uuid
 from operations.schemas.object_schemas import (
     DBLogicalObject,
+    DBStatisticsObject,
     DBPhysicalObjectLocator,
     DBLogicalMultipartUploadPart,
     DBPhysicalMultipartUploadPart,
@@ -28,6 +29,10 @@ from operations.schemas.object_schemas import (
     LogicalPartResponse,
     MultipartResponse,
     DeleteMarker,
+    RecordMetricsRequest,
+    ListMetricsRequest,
+    ListMetricsObject,
+    ListMetricsResponse,
 )
 from operations.schemas.bucket_schemas import DBLogicalBucket
 from sqlalchemy.orm import selectinload, Session
@@ -1546,3 +1551,50 @@ async def locate_object_status(
         object_status_lst.append(ObjectStatus(status=locator.status))
     # return object status
     return object_status_lst
+
+
+@router.post("/record_metrics")
+async def record_metrics(
+    request: RecordMetricsRequest, db: Session = Depends(get_session)
+) -> Response:
+    new_statistic = DBStatisticsObject(
+        requested_region=request.requested_region,
+        client_region=request.client_region,
+        operation=request.operation,
+        latency=request.latency,
+        object_size=request.object_size,
+    )
+
+    db.add(new_statistic)
+    await db.commit()
+
+    # Using barebones response as no special return values
+    return Response(
+        status_code=200,
+        content="Recorded metrics successfully",
+    )
+
+
+@router.post("/list_metrics")
+async def list_metrics(
+    request: ListMetricsRequest, db: Session = Depends(get_session)
+) -> ListMetricsResponse:
+    stmt = select(DBStatisticsObject).where(
+        DBStatisticsObject.client_region == request.client_region
+    )
+    objects = (await db.scalars(stmt)).all()
+
+    logger.debug(f"list_metrics: {request} -> {objects}")
+
+    metrics = [
+        ListMetricsObject(
+            client_region=metric.client_region,
+            requested_region=metric.requested_region,
+            operation=metric.operation,
+            latency=metric.latency,
+            object_size=metric.object_size,
+        )
+        for metric in objects
+    ]
+
+    return ListMetricsResponse(metrics=metrics, count=len(metrics))

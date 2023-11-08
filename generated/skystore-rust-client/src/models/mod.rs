@@ -40,6 +40,12 @@ pub mod healthcheck_response;
 pub use self::healthcheck_response::HealthcheckResponse;
 pub mod http_validation_error;
 pub use self::http_validation_error::HttpValidationError;
+pub mod list_metrics_object;
+pub use self::list_metrics_object::ListMetricsObject;
+pub mod list_metrics_request;
+pub use self::list_metrics_request::ListMetricsRequest;
+pub mod list_metrics_response;
+pub use self::list_metrics_response::ListMetricsResponse;
 pub mod list_object_request;
 pub use self::list_object_request::ListObjectRequest;
 pub mod list_parts_request;
@@ -70,8 +76,13 @@ pub mod patch_upload_multipart_upload_part;
 pub use self::patch_upload_multipart_upload_part::PatchUploadMultipartUploadPart;
 pub mod physical_location;
 pub use self::physical_location::PhysicalLocation;
+<<<<<<< HEAD
 pub mod put_bucket_versioning_request;
 pub use self::put_bucket_versioning_request::PutBucketVersioningRequest;
+=======
+pub mod record_metrics_request;
+pub use self::record_metrics_request::RecordMetricsRequest;
+>>>>>>> 36c1789 (Record/list metrics changes)
 pub mod register_bucket_request;
 pub use self::register_bucket_request::RegisterBucketRequest;
 pub mod start_upload_request;
