@@ -309,7 +309,7 @@ async def locate_bucket(
     stmt = (
         select(DBPhysicalBucketLocator)
         .join(DBLogicalBucket)
-        .where(DBLogicalBucket.name == request.bucket)
+        .where(DBLogicalBucket.bucket == request.bucket)
         .where(DBLogicalBucket.status == Status.ready)
     )
     locators = (await db.scalars(stmt)).all()
