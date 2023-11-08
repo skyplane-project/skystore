@@ -57,7 +57,7 @@ def create_instance(
         assert tup[1].strip() == "", f"Command failed, err: {tup[1]}"
 
     # validate arguments
-    aws_region_list = ["eu-south-1"]
+    aws_region_list = ["us-west-1"]
 
     # validate AWS regions
     aws_region_list = aws_region_list if enable_aws else []
@@ -159,7 +159,8 @@ def create_instance(
             )
         )
         server.run_command(
-            "sudo add-apt-repository universe;\
+            "sudo apt remove python3-apt -y; sudo apt autoremove -y; \
+                sudo apt autoclean; sudo apt install python3-apt -y; \
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
             sudo apt install python3.9 -y"
         )
@@ -177,8 +178,8 @@ def create_instance(
         # install cargo
         server.run_command(
             "curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
-            git clone https://github.com/skyplane-project/skystore; cd skystore/store-server;\
-            pip3 install -r requirements.txt; cargo install just --force; \
+            git clone https://github.com/skyplane-project/skystore.git; cd skystore/store-server; \
+            pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
             nohup python3.9 -m uvicorn app:app --reload --host 0.0.0.0 --port 3000 > /dev/null 2>&1 &"
         )
 
