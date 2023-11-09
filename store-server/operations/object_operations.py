@@ -224,6 +224,8 @@ async def locate_object(
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
 
+    print("chosen locator: ", chosen_locator)
+
     logger.debug(
         f"locate_object: chosen locator with strategy {reason} out of {len(locators)}, {request} -> {chosen_locator}"
     )
@@ -437,10 +439,28 @@ async def start_upload(
                 len(primary_write_region) == 1
             ), "should only have one primary write region"
             primary_write_region = primary_write_region[0]
-        else:
-            # Set the first-write region of the OBJECT to be primary
+        elif request.policy == "write_local":
+            # Write to the local region and set the first-write region of the OBJECT to be primary
             upload_to_region_tags = [request.client_from_region]
             primary_write_region = request.client_from_region
+        else:
+            print("read or copy on read")
+            # for the write op with "read" and "copy_on_read" policy
+            upload_to_region_tags = [
+                locator.location_tag
+                for locator in physical_bucket_locators
+                if locator.is_primary
+            ]
+            print("upload to region tags: ", upload_to_region_tags)
+            primary_write_region = [
+                locator.location_tag
+                for locator in physical_bucket_locators
+                if locator.is_primary
+            ]
+            assert (
+                len(primary_write_region) == 1
+            ), "should only have one primary write region"
+            primary_write_region = primary_write_region[0]
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -548,7 +568,7 @@ async def complete_upload(
     physical_locator.lock_acquired_ts = None
 
     if (
-        request.policy == "push" and physical_locator.is_primary
+        physical_locator.is_primary
     ) or request.policy == "write_local":  # TODO: might need to change the if conditions for different policies
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
