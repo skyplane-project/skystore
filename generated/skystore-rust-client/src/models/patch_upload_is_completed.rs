@@ -18,6 +18,8 @@ pub struct PatchUploadIsCompleted {
     pub etag: String,
     #[serde(rename = "last_modified")]
     pub last_modified: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
     #[serde(rename = "policy", skip_serializing_if = "Option::is_none")]
     pub policy: Option<String>,
 }
@@ -29,6 +31,7 @@ impl PatchUploadIsCompleted {
             size,
             etag,
             last_modified,
+            version_id: None,
             policy: None,
         }
     }

@@ -17,6 +17,11 @@ pub trait ObjectStoreClient: Send + Sync + 'static {
         req: S3Request<DeleteBucketInput>,
     ) -> S3Result<S3Response<DeleteBucketOutput>>;
 
+    async fn put_bucket_versioning(
+        &self,
+        req: S3Request<PutBucketVersioningInput>,
+    ) -> S3Result<S3Response<PutBucketVersioningOutput>>;
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,

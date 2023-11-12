@@ -22,6 +22,7 @@ pub struct SkyProxy {
     pub client_from_region: String,
     pub policy: String,
     pub skystore_bucket_prefix: String,
+    pub version_enable: bool,
 }
 
 impl SkyProxy {
@@ -32,6 +33,7 @@ impl SkyProxy {
         local_server: bool,
         policy: String,
         skystore_bucket_prefix: String,
+        version_enable: bool,
     ) -> Self {
         let mut store_clients = HashMap::new();
 
@@ -54,7 +56,7 @@ impl SkyProxy {
                 let skystore_bucket_name = format!("{}-{}", skystore_bucket_prefix, region);
                 match client
                     .create_bucket(S3Request::new(new_create_bucket_request(
-                        skystore_bucket_name,
+                        skystore_bucket_name.clone(),
                         Some(r),
                     )))
                     .await
@@ -67,6 +69,29 @@ impl SkyProxy {
                         }
                     }
                 };
+                // if creating bucket succeed or the bucket already exists, we can continue to check whether versioning
+                // status should change this time
+                let st;
+                if version_enable {
+                    st = "Enabled".to_string();
+                } else {
+                    st = "Suspended".to_string();
+                }
+                match client
+                    .put_bucket_versioning(S3Request::new(new_put_bucket_versioning_request(
+                        skystore_bucket_name.clone(),
+                        VersioningConfiguration {
+                            status: Some(BucketVersioningStatus::from(st)),
+                            ..Default::default()
+                        },
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        panic!("Failed to change bucket versioning status: {}", e)
+                    }
+                }
             }
         } else {
             // Real object store configuration (regions: init regions)
@@ -75,9 +100,12 @@ impl SkyProxy {
                 let (provider, region) = (split[0], split[1]);
 
                 let client: Box<dyn ObjectStoreClient> = match provider {
-                    "azure" => {
-                        Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
-                    }
+                    "azure" => Box::new(
+                        crate::client_impls::azure::AzureObjectStoreClient::new(
+                            /* version_enable.clone(), */
+                        )
+                        .await,
+                    ),
                     "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
                     "aws" => Box::new(
                         crate::client_impls::s3::S3ObjectStoreClient::new(format!(
@@ -139,6 +167,29 @@ impl SkyProxy {
                         }
                     }
                 }
+                // if creating bucket succeed or the bucket already exists, we can continue to check whether versioning
+                // status should change this time
+                let st;
+                if version_enable {
+                    st = "Enabled".to_string();
+                } else {
+                    st = "Suspended".to_string();
+                }
+                match client_arc
+                    .put_bucket_versioning(S3Request::new(new_put_bucket_versioning_request(
+                        skystore_bucket_name.clone(),
+                        VersioningConfiguration {
+                            status: Some(BucketVersioningStatus::from(st)),
+                            ..Default::default()
+                        },
+                    )))
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        panic!("Failed to change bucket versioning status: {}", e)
+                    }
+                }
             }
         }
 
@@ -162,6 +213,7 @@ impl SkyProxy {
             client_from_region,
             policy,
             skystore_bucket_prefix,
+            version_enable,
         }
     }
 }
@@ -174,6 +226,7 @@ impl Clone for SkyProxy {
             client_from_region: self.client_from_region.clone(),
             skystore_bucket_prefix: self.skystore_bucket_prefix.clone(),
             policy: self.policy.clone(),
+            version_enable: self.version_enable.clone(),
         }
     }
 }
@@ -198,6 +251,7 @@ impl SkyProxy {
         &self,
         bucket: String,
         key: String,
+        version_id: Option<String>,
     ) -> Result<Option<models::LocateObjectResponse>, s3s::S3Error> {
         let locate_resp = apis::locate_object(
             &self.dir_conf,
@@ -205,6 +259,7 @@ impl SkyProxy {
                 bucket,
                 key,
                 client_from_region: self.client_from_region.clone(),
+                version_id,
             },
         )
         .await;
@@ -302,10 +357,30 @@ impl S3 for SkyProxy {
                 continue;
             }
 
+            let version_enable = self.version_enable.clone();
+
             tasks.spawn(async move {
                 let create_bucket_req = new_create_bucket_request(bucket_name.clone(), None);
                 client
                     .create_bucket(S3Request::new(create_bucket_req))
+                    .await
+                    .unwrap();
+
+                // change bucket versioning setting
+                let st;
+                if version_enable {
+                    st = "Enabled".to_string();
+                } else {
+                    st = "Suspended".to_string();
+                }
+                client
+                    .put_bucket_versioning(S3Request::new(new_put_bucket_versioning_request(
+                        bucket_name.clone(),
+                        VersioningConfiguration {
+                            status: Some(BucketVersioningStatus::from(st)),
+                            ..Default::default()
+                        },
+                    )))
                     .await
                     .unwrap();
 
@@ -488,6 +563,7 @@ impl S3 for SkyProxy {
             models::HeadObjectRequest {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
+                version_id: req.input.version_id.clone(),
             },
         )
         .await;
@@ -497,6 +573,7 @@ impl S3 for SkyProxy {
                 content_length: resp.size as i64,
                 e_tag: Some(resp.etag),
                 last_modified: Some(string_to_timestamp(&resp.last_modified)),
+                version_id: resp.version_id,
                 ..Default::default()
             },
             Err(_) => {
@@ -523,6 +600,7 @@ impl S3 for SkyProxy {
                     bucket: req.input.bucket.clone(),
                     key: req.input.key.clone(),
                     client_from_region: self.client_from_region.clone(),
+                    version_id: None,
                     warmup_regions,
                 },
             )
@@ -558,6 +636,7 @@ impl S3 for SkyProxy {
                         .head_object(S3Request::new(new_head_object_request(
                             locator.bucket.clone(),
                             locator.key.clone(),
+                            copy_resp.output.version_id.clone(), // retrieve the version id from the copy response
                         )))
                         .await
                         .unwrap();
@@ -572,6 +651,7 @@ impl S3 for SkyProxy {
                                 head_output.output.last_modified.unwrap(),
                             ),
                             policy: Some(policy),
+                            version_id: head_output.output.version_id,
                         },
                     )
                     .await
@@ -631,13 +711,16 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<GetObjectOutput>> {
         let bucket = req.input.bucket.clone();
         let key = req.input.key.clone();
+        let version_id = req.input.version_id.clone();
 
-        let locator = self.locate_object(bucket.clone(), key.clone()).await?;
+        let locator = self.locate_object(bucket.clone(), key.clone(), version_id.clone()).await?;
 
         match locator {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
+                    println!("Pulling object from remote store");
                     if location.tag != self.client_from_region {
+                        println!("Pulling object from remote store: {}", location.tag);
                         let get_resp = self
                             .store_clients
                             .get(&location.tag)
@@ -649,8 +732,7 @@ impl S3 for SkyProxy {
                             }))
                             .await?;
                         let data = get_resp.output.body.unwrap();
-
-                        // Spawn a background task to store the object in the local object store
+                   
                         let dir_conf_clone = self.dir_conf.clone();
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
@@ -658,7 +740,8 @@ impl S3 for SkyProxy {
 
                         let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
-
+                        
+                        // Spawn a background task to store the object in the local object store
                         tokio::spawn(async move {
                             let start_upload_resp_result = apis::start_upload(
                                 &dir_conf_clone,
@@ -666,6 +749,7 @@ impl S3 for SkyProxy {
                                     bucket: bucket.clone(),
                                     key: key.clone(),
                                     client_from_region: client_from_region_clone.clone(),
+                                    version_id: None,   // set a random value, since this will be overwritten by complete upload following
                                     is_multipart: false,
                                     copy_src_bucket: None,
                                     copy_src_key: None,
@@ -705,6 +789,7 @@ impl S3 for SkyProxy {
                                         .head_object(S3Request::new(new_head_object_request(
                                             locator.bucket.clone(),
                                             locator.key.clone(),
+                                            put_resp.output.version_id.clone(), // retrieve the version id from the put response
                                         )))
                                         .await
                                         .unwrap();
@@ -718,6 +803,7 @@ impl S3 for SkyProxy {
                                                 head_resp.output.last_modified.unwrap(),
                                             ),
                                             policy: Some(policy.clone()),
+                                            version_id: head_resp.output.version_id,
                                         },
                                     )
                                     .await
@@ -734,6 +820,7 @@ impl S3 for SkyProxy {
                             missing_meta: get_resp.output.missing_meta,
                             parts_count: get_resp.output.parts_count,
                             tag_count: get_resp.output.tag_count,
+                            version_id: get_resp.output.version_id,
                             ..Default::default()
                         });
                         return Ok(response);
@@ -775,14 +862,17 @@ impl S3 for SkyProxy {
         req: S3Request<PutObjectInput>,
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
-        let locator = self
-            .locate_object(req.input.bucket.clone(), req.input.key.clone())
-            .await?;
-        if let Some(locator) = locator {
-            return Ok(S3Response::new(PutObjectOutput {
-                e_tag: locator.etag,
-                ..Default::default()
-            }));
+        // TODO: only works when versioning is disabled
+        if self.version_enable == false {
+            let locator = self
+                .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
+                .await?;
+            if let Some(locator) = locator {
+                return Ok(S3Response::new(PutObjectOutput {
+                    e_tag: locator.etag,
+                    ..Default::default()
+                }));
+            }
         }
 
         let start_upload_resp = apis::start_upload(
@@ -791,6 +881,7 @@ impl S3 for SkyProxy {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 is_multipart: false,
                 copy_src_bucket: None,
                 copy_src_key: None,
@@ -809,6 +900,7 @@ impl S3 for SkyProxy {
             .into_iter()
             .zip(input_blobs.into_iter())
             .for_each(|(locator, input_blob)| {
+                println!("put in locator: {:?}", locator);
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
@@ -841,7 +933,11 @@ impl S3 for SkyProxy {
                         None => {
                             // Fetch from S3 when content_length is not provided
                             let head_resp = client
-                                .head_object(S3Request::new(new_head_object_request(bucket, key)))
+                                .head_object(S3Request::new(new_head_object_request(
+                                    bucket,
+                                    key,
+                                    put_resp.output.version_id.clone(),
+                                )))
                                 .await
                                 .unwrap();
                             (
@@ -859,6 +955,7 @@ impl S3 for SkyProxy {
                             etag: e_tag.clone(),
                             last_modified,
                             policy: Some(policy_clone),
+                            version_id: put_resp.output.version_id,
                         },
                     )
                     .await
@@ -885,18 +982,34 @@ impl S3 for SkyProxy {
         req: S3Request<DeleteObjectsInput>,
     ) -> S3Result<S3Response<DeleteObjectsOutput>> {
         // Send start delete objects request
-        let keys: Vec<_> = req
+        let object_identifiers: Vec<_> = req
             .input
             .delete
             .objects
             .iter()
-            .map(|obj| obj.key.clone())
+            // .map(|obj| obj.key.clone())
             .collect();
+
+        // transform the object identifiers vcector to HashMap
+        let mut id_map: HashMap<String, Vec<String>> = HashMap::new();
+        for obj in &req.input.delete.objects {
+            if id_map.contains_key(&obj.key) {
+                if let Some(version_id) = obj.version_id.clone() {
+                    id_map.get_mut(&obj.key).unwrap().push(version_id);
+                }
+            } else {
+                // allocate a new vector to store the version ids
+                // if we don't set version ids explicitly, the vector will be empty
+                // this indicates we want to delete all versions of the object
+                id_map.insert(obj.key.clone(), vec![]);
+            }
+        }
+
         let delete_objects_resp = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
-                keys: keys.clone(),
+                object_identifiers: id_map,
                 multipart_upload_ids: None,
             },
         )
@@ -912,10 +1025,12 @@ impl S3 for SkyProxy {
                 //      Deal with it on server & dataplane side
                 return Ok(S3Response::new(DeleteObjectsOutput {
                     deleted: Some(
-                        keys.iter()
-                            .map(|key| DeletedObject {
-                                key: Some(key.clone()),
+                        object_identifiers
+                            .iter()
+                            .map(|object| DeletedObject {
+                                key: Some(object.key.clone()),
                                 delete_marker: false,
+                                version_id: object.version_id.clone(),
                                 ..Default::default()
                             })
                             .collect(),
@@ -1051,7 +1166,8 @@ impl S3 for SkyProxy {
                     .is_some()
                 {
                     Ok(S3Response::new(DeleteObjectOutput {
-                        delete_marker: false, // TODO: add versioning support
+                        delete_marker: false,
+                        version_id: req.input.version_id,
                         ..Default::default()
                     }))
                 } else {
@@ -1082,10 +1198,10 @@ impl S3 for SkyProxy {
         let [dst_bucket, dst_key] = [&req.input.bucket, &req.input.key];
 
         let src_locator = self
-            .locate_object(src_bucket.to_string(), src_key.to_string())
+            .locate_object(src_bucket.to_string(), src_key.to_string(), None)
             .await?;
         let dst_locator = self
-            .locate_object(dst_bucket.to_string(), dst_key.to_string())
+            .locate_object(dst_bucket.to_string(), dst_key.to_string(), None)
             .await?;
 
         if src_locator.is_none() {
@@ -1104,6 +1220,7 @@ impl S3 for SkyProxy {
                     )),
                     ..Default::default()
                 }),
+                version_id: dst_locator.version_id,
                 ..Default::default()
             }));
         };
@@ -1114,6 +1231,7 @@ impl S3 for SkyProxy {
                 bucket: dst_bucket.to_string(),
                 key: dst_key.to_string(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 is_multipart: false,
                 copy_src_bucket: Some(src_bucket.to_string()),
                 copy_src_key: Some(src_key.to_string()),
@@ -1155,6 +1273,7 @@ impl S3 for SkyProxy {
                         .head_object(S3Request::new(new_head_object_request(
                             locator.bucket.clone(),
                             locator.key.clone(),
+                            copy_resp.output.version_id.clone(), // retrieve the version id from the copy response
                         )))
                         .await
                         .unwrap();
@@ -1169,6 +1288,7 @@ impl S3 for SkyProxy {
                                 head_output.output.last_modified.unwrap(),
                             ),
                             policy: Some(policy_clone),
+                            version_id: head_output.output.version_id,
                         },
                     )
                     .await
@@ -1198,7 +1318,7 @@ impl S3 for SkyProxy {
         req: S3Request<CreateMultipartUploadInput>,
     ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
         let locator = self
-            .locate_object(req.input.bucket.clone(), req.input.key.clone())
+            .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
             .await?;
 
         if locator.is_some() {
@@ -1215,6 +1335,7 @@ impl S3 for SkyProxy {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 is_multipart: true,
                 copy_src_bucket: None,
                 copy_src_key: None,
@@ -1265,11 +1386,13 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<AbortMultipartUploadInput>,
     ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
+        let mut id_map = HashMap::new();
+        id_map.insert(req.input.key.clone(), vec![]);
         let delete_start_response = apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
                 bucket: req.input.bucket.clone(),
-                keys: vec![req.input.key.clone()],
+                object_identifiers: id_map,
                 multipart_upload_ids: Some(vec![req.input.upload_id.clone()]),
             },
         )
@@ -1395,6 +1518,7 @@ impl S3 for SkyProxy {
                 key: req.input.key.clone(),
                 multipart_upload_id: req.input.upload_id.clone(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 do_list_parts: Some(false),
                 copy_src_bucket: None,
                 copy_src_key: None,
@@ -1479,7 +1603,7 @@ impl S3 for SkyProxy {
         };
 
         let src_locator = self
-            .locate_object(src_bucket.clone(), src_key.clone())
+            .locate_object(src_bucket.clone(), src_key.clone(), None)
             .await
             .unwrap();
         if src_locator.is_none() {
@@ -1507,6 +1631,7 @@ impl S3 for SkyProxy {
                 key: req.input.key.clone(),
                 multipart_upload_id: req.input.upload_id.clone(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 do_list_parts: Some(false),
                 copy_src_bucket: Some(src_bucket.clone()),
                 copy_src_key: Some(src_key.clone()),
@@ -1584,6 +1709,7 @@ impl S3 for SkyProxy {
                 key: req.input.key.clone(),
                 multipart_upload_id: req.input.upload_id.clone(),
                 client_from_region: self.client_from_region.clone(),
+                version_id: None,
                 do_list_parts: Some(true),
                 copy_src_bucket: None,
                 copy_src_key: None,
@@ -1648,6 +1774,7 @@ impl S3 for SkyProxy {
                 .head_object(S3Request::new(new_head_object_request(
                     locator.bucket.clone(),
                     locator.key.clone(),
+                    resp.output.version_id.clone(), // retrieve the version id from the complete response
                 )))
                 .await
                 .unwrap();
@@ -1660,6 +1787,7 @@ impl S3 for SkyProxy {
                     size: head_resp.output.content_length as u64,
                     last_modified: timestamp_to_string(head_resp.output.last_modified.unwrap()),
                     policy: Some(self.policy.clone()),
+                    version_id: resp.output.version_id,
                 },
             )
             .await
@@ -1671,6 +1799,7 @@ impl S3 for SkyProxy {
             models::HeadObjectRequest {
                 bucket: req.input.bucket.clone(),
                 key: req.input.key.clone(),
+                version_id: None,
             },
         )
         .await
@@ -1680,6 +1809,7 @@ impl S3 for SkyProxy {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
             e_tag: Some(head_resp.etag),
+            version_id: head_resp.version_id,
             ..Default::default()
         }))
     }

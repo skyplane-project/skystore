@@ -29,10 +29,24 @@ mod tests {
         SkyProxy::new(
             REGIONS.clone(),
             CLIENT_FROM_REGION.clone(),
-            true,
+            false,
             true,
             "push".to_string(),
             "skystore".to_string(),
+            false,
+        )
+        .await
+    }
+
+    async fn setup_sky_proxy_version_enabled() -> SkyProxy {
+        SkyProxy::new(
+            REGIONS.clone(),
+            CLIENT_FROM_REGION.clone(),
+            false,
+            true,
+            "push".to_string(),
+            "skystore".to_string(),
+            true,
         )
         .await
     }
@@ -65,6 +79,7 @@ mod tests {
     #[serial]
     async fn test_put_then_get() {
         let proxy = setup_sky_proxy().await;
+        let versioning_proxy = setup_sky_proxy_version_enabled().await;
 
         // create a bucket
         let bucket_name = generate_unique_bucket_name();
@@ -132,6 +147,23 @@ mod tests {
 
             let body = result_bytes.concat();
             assert!(body == "abcdefg".to_string().into_bytes());
+        }
+        // test repeated put request with version enabling, it should return success
+        {
+            let mut request1 =
+                new_put_object_request(bucket_name.to_string(), "my-key".to_string());
+            let mut request2 =
+                new_put_object_request(bucket_name.to_string(), "my-key".to_string());
+            let body = "abcdefg".to_string().into_bytes();
+            request1.body = Some(s3s::Body::from(body.clone()).into());
+            request2.body = Some(s3s::Body::from(body).into());
+
+            let req1 = S3Request::new(request1);
+            let req2 = S3Request::new(request2);
+            let resp1 = versioning_proxy.put_object(req1).await.unwrap().output;
+            let resp2 = versioning_proxy.put_object(req2).await.unwrap().output;
+            assert!(resp1.e_tag.is_some());
+            assert!(resp2.e_tag.is_some());
         }
     }
 

@@ -1,9 +1,9 @@
 set export
 
 # Set this before running test 
-AWS_ACCESS_KEY_ID := "aws_access_key_id_dummy"
-AWS_SECRET_ACCESS_KEY := "aws_secret_access_key_dummy"
-AWS_REGION := "us-west-dummy"
+# AWS_ACCESS_KEY_ID := "aws_access_key_id_dummy"
+# AWS_SECRET_ACCESS_KEY := "aws_secret_access_key_dummy"
+# AWS_REGION := "us-west-dummy"
 
 # set dotenv-load
 

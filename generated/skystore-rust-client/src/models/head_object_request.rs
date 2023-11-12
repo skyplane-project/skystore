@@ -14,10 +14,16 @@ pub struct HeadObjectRequest {
     pub bucket: String,
     #[serde(rename = "key")]
     pub key: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
 }
 
 impl HeadObjectRequest {
     pub fn new(bucket: String, key: String) -> HeadObjectRequest {
-        HeadObjectRequest { bucket, key }
+        HeadObjectRequest {
+            bucket,
+            key,
+            version_id: None,
+        }
     }
 }

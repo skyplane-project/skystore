@@ -16,6 +16,8 @@ pub struct StartWarmupRequest {
     pub key: String,
     #[serde(rename = "client_from_region")]
     pub client_from_region: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
     #[serde(rename = "warmup_regions")]
     pub warmup_regions: Vec<String>,
 }
@@ -31,6 +33,7 @@ impl StartWarmupRequest {
             bucket,
             key,
             client_from_region,
+            version_id: None,
             warmup_regions,
         }
     }

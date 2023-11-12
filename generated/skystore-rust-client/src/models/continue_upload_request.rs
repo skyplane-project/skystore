@@ -16,6 +16,8 @@ pub struct ContinueUploadRequest {
     pub key: String,
     #[serde(rename = "client_from_region")]
     pub client_from_region: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
     #[serde(rename = "multipart_upload_id")]
     pub multipart_upload_id: String,
     #[serde(rename = "do_list_parts", skip_serializing_if = "Option::is_none")]
@@ -37,6 +39,7 @@ impl ContinueUploadRequest {
             bucket,
             key,
             client_from_region,
+            version_id: None,
             multipart_upload_id,
             do_list_parts: None,
             copy_src_bucket: None,

@@ -43,6 +43,9 @@ def init(
     policy: Policy = typer.Option(
         Policy.write_local, "--policy", help="Policy to use for data placement"
     ),
+    enable_version: bool = typer.Option(
+        False, "--version", help="Whether to enable the version or not"
+    ),
 ):
     with open(config_file, "r") as f:
         config = json.load(f)
@@ -65,6 +68,7 @@ def init(
         "LOCAL_SERVER": str(start_server).lower(),
         "POLICY": policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
+        "VERSION_ENABLE": str(enable_version).lower(),
     }
     env = {k: v for k, v in env.items() if v is not None}
 

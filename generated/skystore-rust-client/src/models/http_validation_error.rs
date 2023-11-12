@@ -14,12 +14,6 @@ pub struct HttpValidationError {
     pub detail: Option<Vec<crate::models::ValidationError>>,
 }
 
-impl Default for HttpValidationError {
-    fn default() -> Self {
-        HttpValidationError::new()
-    }
-}
-
 impl HttpValidationError {
     pub fn new() -> HttpValidationError {
         HttpValidationError { detail: None }

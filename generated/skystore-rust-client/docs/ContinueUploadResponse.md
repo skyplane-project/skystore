@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **bucket** | **String** |  | 
 **region** | **String** |  | 
 **key** | **String** |  | 
+**version_id** | Option<**String**> |  | [optional]
 **size** | Option<**u64**> |  | [optional]
 **last_modified** | Option<**String**> |  | [optional]
 **etag** | Option<**String**> |  | [optional]

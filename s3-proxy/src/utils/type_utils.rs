@@ -12,6 +12,16 @@ pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> Crea
     builder.build().unwrap()
 }
 
+pub fn new_put_bucket_versioning_request(
+    bucket: String,
+    versioning_configuration: VersioningConfiguration,
+) -> PutBucketVersioningInput {
+    let mut builder = PutBucketVersioningInput::builder();
+    builder.set_bucket(bucket);
+    builder.set_versioning_configuration(versioning_configuration);
+    builder.build().unwrap()
+}
+
 #[allow(dead_code)]
 pub fn new_head_bucket_request(bucket: String, _region: Option<String>) -> HeadBucketInput {
     let mut builder = HeadBucketInput::builder();
@@ -86,10 +96,15 @@ pub fn new_copy_object_request(
     builder.build().unwrap()
 }
 
-pub fn new_head_object_request(bucket: String, key: String) -> HeadObjectInput {
+pub fn new_head_object_request(
+    bucket: String,
+    key: String,
+    version_id: Option<String>,
+) -> HeadObjectInput {
     let mut builder = HeadObjectInput::builder();
     builder.set_bucket(bucket);
     builder.set_key(key);
+    builder.set_version_id(version_id);
     builder.build().unwrap()
 }
 

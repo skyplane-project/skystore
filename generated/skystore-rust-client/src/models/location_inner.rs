@@ -11,12 +11,6 @@
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LocationInner {}
 
-impl Default for LocationInner {
-    fn default() -> Self {
-        LocationInner::new()
-    }
-}
-
 impl LocationInner {
     pub fn new() -> LocationInner {
         LocationInner {}

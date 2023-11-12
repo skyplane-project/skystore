@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **bucket** | **String** |  | 
 **key** | **String** |  | 
 **client_from_region** | **String** |  | 
+**version_id** | Option<**String**> |  | [optional]
 **is_multipart** | **bool** |  | 
 **copy_src_bucket** | Option<**String**> |  | [optional]
 **copy_src_key** | Option<**String**> |  | [optional]
