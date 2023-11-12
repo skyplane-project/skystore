@@ -30,6 +30,8 @@ class DBLogicalObject(Base):
     etag = Column(String)
     status = Column(Enum(Status))
 
+    version = Column(Integer, nullable=False, default=0)
+
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
@@ -40,7 +42,10 @@ class DBLogicalObject(Base):
 
     # Add relationship to physical object
     physical_object_locators = relationship(
-        "DBPhysicalObjectLocator", back_populates="logical_object"
+        "DBPhysicalObjectLocator",
+        back_populates="logical_object",
+        foreign_keys="[DBPhysicalObjectLocator.logical_object_id, DBPhysicalObjectLocator.logical_object_version]",
+        primaryjoin="and_(DBLogicalObject.id==DBPhysicalObjectLocator.logical_object_id, DBLogicalObject.version==DBPhysicalObjectLocator.logical_object_version)",
     )
 
 
@@ -71,6 +76,8 @@ class DBPhysicalObjectLocator(Base):
     status = Column(Enum(Status))
     is_primary = Column(Boolean, nullable=False, default=False)
 
+    version_id = Column(String)  # mimic the type and name of the field in S3
+
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
         "DBPhysicalMultipartUploadPart",
@@ -82,8 +89,16 @@ class DBPhysicalObjectLocator(Base):
     logical_object_id = Column(
         Integer, ForeignKey("logical_objects.id"), nullable=False
     )
+
+    logical_object_version = Column(
+        BIGINT, ForeignKey("logical_objects.version"), nullable=False
+    )
+
     logical_object = relationship(
-        "DBLogicalObject", back_populates="physical_object_locators"
+        "DBLogicalObject",
+        back_populates="physical_object_locators",
+        foreign_keys=[logical_object_id, logical_object_version],
+        primaryjoin="and_(DBLogicalObject.id==DBPhysicalObjectLocator.logical_object_id, DBLogicalObject.version==DBPhysicalObjectLocator.logical_object_version)",
     )
 
 
@@ -91,6 +106,7 @@ class LocateObjectRequest(BaseModel):
     bucket: str
     key: str
     client_from_region: str
+    version_id: Optional[str] = None
 
 
 class LocateObjectResponse(BaseModel):
@@ -101,7 +117,7 @@ class LocateObjectResponse(BaseModel):
     bucket: str
     region: str
     key: str
-
+    version_id: Optional[str] = None
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
@@ -175,7 +191,7 @@ class PatchUploadIsCompleted(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
-
+    version_id: Optional[str] = None
     policy: Optional[str] = "push"
 
 
@@ -238,6 +254,7 @@ class ObjectStatus(BaseModel):
 class HeadObjectRequest(BaseModel):
     bucket: str
     key: str
+    version_id: Optional[str] = None
 
 
 class HeadObjectResponse(BaseModel):
@@ -246,6 +263,7 @@ class HeadObjectResponse(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
+    version_id: Optional[str] = None
 
 
 class MultipartResponse(BaseModel):
@@ -275,7 +293,7 @@ class HealthcheckResponse(BaseModel):
 
 class DeleteObjectsRequest(BaseModel):
     bucket: str
-    keys: List[str]
+    object_identifiers: Dict[str, set[str]]
     multipart_upload_ids: Optional[List[str]] = None
 
 

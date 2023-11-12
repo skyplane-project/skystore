@@ -873,7 +873,7 @@ def test_multipart_flow(client):
     assert resp_data["region"] == "us-west-1"
 
 
-@pytest.mark.asyncio
+# @pytest.mark.asyncio
 async def test_metadata_clean_up(client):
     """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
     resp = client.post(

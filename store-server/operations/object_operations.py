@@ -29,14 +29,17 @@ from operations.schemas.object_schemas import (
     MultipartResponse,
 )
 from operations.schemas.bucket_schemas import DBLogicalBucket
-from sqlalchemy.orm import selectinload, joinedload, Session
+from sqlalchemy.orm import selectinload, Session
 from itertools import zip_longest
 from sqlalchemy import select
+from sqlalchemy import and_
+from sqlalchemy import func
 from operations.utils.conf import Status
 from fastapi import APIRouter, Response, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
+
 
 router = APIRouter()
 
@@ -60,7 +63,7 @@ async def start_delete_objects(
         if multipart_upload_id:
             stmt = (
                 select(DBLogicalObject)
-                .options(joinedload(DBLogicalObject.physical_object_locators))
+                .options(selectinload(DBLogicalObject.physical_object_locators))
                 .where(DBLogicalObject.bucket == request.bucket)
                 .where(DBLogicalObject.key == key)
                 .where(
@@ -72,52 +75,75 @@ async def start_delete_objects(
         else:
             stmt = (
                 select(DBLogicalObject)
-                .options(joinedload(DBLogicalObject.physical_object_locators))
+                .options(selectinload(DBLogicalObject.physical_object_locators))
                 .where(DBLogicalObject.bucket == request.bucket)
                 .where(DBLogicalObject.key == key)
                 .where(DBLogicalObject.status == Status.ready)
             )
-        logical_obj = await db.scalar(stmt)
-        if logical_obj is None:
-            return Response(status_code=404, content="Object not found")
+        # multiple versioning support
+        logical_objs = (await db.scalars(stmt)).all()
+        stmt1 = (
+            select(DBLogicalObject)
+            .where(DBLogicalObject.bucket == request.bucket)
+            .where(DBLogicalObject.key == key)
+            .where(DBLogicalObject.status == Status.ready)
+        )
+        print("logical_objs: ", logical_objs)
+        print("All logical objs with this key: ", (await db.scalars(stmt1)).all())
+        if len(logical_objs) == 0:
+            return Response(status_code=404, content="Objects not found")
 
         locators = []
-        for physical_locator in logical_obj.physical_object_locators:
-            if physical_locator.status not in Status.ready and not multipart_upload_id:
-                logger.error(
-                    f"Cannot delete physical object. Current status is {physical_locator.status}"
+        for logical_obj in logical_objs:
+            for physical_locator in logical_obj.physical_object_locators:
+                # if the set is empty, delete all the versions
+                if (
+                    len(request.object_identifiers[key]) > 0
+                    and physical_locator.version_id
+                    not in request.object_identifiers[key]
+                ):
+                    continue  # skip if the version_id is not in the request
+
+                if (
+                    physical_locator.status not in Status.ready
+                    and not multipart_upload_id
+                ):
+                    logger.error(
+                        f"Cannot delete physical object. Current status is {physical_locator.status}"
+                    )
+                    return Response(
+                        status_code=409,
+                        content="Cannot delete physical object in current state",
+                    )
+
+                physical_locator.status = Status.pending_deletion
+                physical_locator.lock_acquired_ts = datetime.utcnow()
+                locators.append(
+                    LocateObjectResponse(
+                        id=physical_locator.id,
+                        tag=physical_locator.location_tag,
+                        cloud=physical_locator.cloud,
+                        bucket=physical_locator.bucket,
+                        region=physical_locator.region,
+                        key=physical_locator.key,
+                        size=physical_locator.logical_object.size,
+                        last_modified=physical_locator.logical_object.last_modified,
+                        etag=physical_locator.logical_object.etag,
+                        multipart_upload_id=physical_locator.multipart_upload_id,
+                        version_id=physical_locator.version_id,
+                    )
                 )
-                return Response(
-                    status_code=409,
-                    content="Cannot delete physical object in current state",
-                )
 
-            physical_locator.status = Status.pending_deletion
-            physical_locator.lock_acquired_ts = datetime.utcnow()
-            locators.append(
-                LocateObjectResponse(
-                    id=physical_locator.id,
-                    tag=physical_locator.location_tag,
-                    cloud=physical_locator.cloud,
-                    bucket=physical_locator.bucket,
-                    region=physical_locator.region,
-                    key=physical_locator.key,
-                    size=physical_locator.logical_object.size,
-                    last_modified=physical_locator.logical_object.last_modified,
-                    etag=physical_locator.logical_object.etag,
-                    multipart_upload_id=physical_locator.multipart_upload_id,
-                )
-            )
+            logical_obj.status = Status.pending_deletion
 
-        logical_obj.status = Status.pending_deletion
+            # TODO: should we commit here or after deleteing all the logical objects versions?
+            try:
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Error occurred while committing changes: {e}")
+                return Response(status_code=500, content="Error committing changes")
 
-        try:
-            await db.commit()
-        except Exception as e:
-            logger.error(f"Error occurred while committing changes: {e}")
-            return Response(status_code=500, content="Error committing changes")
-
-        logger.debug(f"start_delete_object: {request} -> {logical_obj}")
+            logger.debug(f"start_delete_object: {request} -> {logical_obj}")
 
         locator_dict[key] = locators
 
@@ -167,9 +193,17 @@ async def complete_delete_objects(
 
         await db.delete(physical_locator)
 
-        remaining_physical_locators_stmt = select(DBPhysicalObjectLocator).where(
-            DBPhysicalObjectLocator.logical_object_id
-            == physical_locator.logical_object.id
+        # only delete the logical object with same version if there is no other physical object locator if possible
+        remaining_physical_locators_stmt = (
+            select(DBPhysicalObjectLocator)
+            .where(
+                DBPhysicalObjectLocator.logical_object_id
+                == physical_locator.logical_object.id
+            )
+            .where(
+                DBPhysicalObjectLocator.logical_object_version
+                == physical_locator.logical_object.version
+            )
         )
         remaining_physical_locators = await db.execute(remaining_physical_locators_stmt)
         if not remaining_physical_locators.all():
@@ -195,7 +229,14 @@ async def locate_object(
     """Given the logical object information, return one or zero physical object locators."""
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.ready)
@@ -207,22 +248,42 @@ async def locate_object(
         return Response(status_code=404, content="Object Not Found")
 
     chosen_locator = None
+    newest_version = 0
     reason = ""
 
     # if request.get_primary:
     #     chosen_locator = next(locator for locator in locators if locator.is_primary)
     #     reason = "exact match (primary)"
     # else:
-    for locator in locators:
-        if locator.location_tag == request.client_from_region:
-            chosen_locator = locator
-            reason = "exact match"
-            break
 
-    if chosen_locator is None:
-        # find the primary locator
-        chosen_locator = next(locator for locator in locators if locator.is_primary)
-        reason = "fallback to primary"
+    if request.version_id is not None:
+        # find the locator with the exact version
+        for locator in locators:
+            if locator.version_id == request.version_id:
+                chosen_locator = locator
+                reason = "exact match"
+                break
+    else:
+        for locator in locators:
+            # always read the lastest version
+            if (
+                locator.location_tag == request.client_from_region
+                and locator.version >= newest_version
+            ):
+                chosen_locator = locator
+                newest_version = locator.version
+                reason = "exact match"
+                break
+
+        if chosen_locator is None:
+            # find the primary locator
+            for locator in locators:
+                # always read the lastest version
+                if locator.is_primary and locator.version >= newest_version:
+                    chosen_locator = locator
+                    newest_version = locator.version
+                    reason = "primary"
+                    break
 
     print("chosen locator: ", chosen_locator)
 
@@ -242,6 +303,7 @@ async def locate_object(
         size=chosen_locator.logical_object.size,
         last_modified=chosen_locator.logical_object.last_modified,
         etag=chosen_locator.logical_object.etag,
+        version_id=chosen_locator.version_id,
     )
 
 
@@ -252,7 +314,7 @@ async def start_warmup(
     """Given the logical object information and warmup regions, return one or zero physical object locators."""
     stmt = (
         select(DBPhysicalObjectLocator)
-        .options(joinedload(DBPhysicalObjectLocator.logical_object))
+        .options(selectinload(DBPhysicalObjectLocator.logical_object))
         .join(DBLogicalObject)
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
@@ -263,8 +325,15 @@ async def start_warmup(
     if not locators:
         return Response(status_code=404, content="Object Not Found")
 
-    # Transfer from primary locator
-    primary_locator = next(locator for locator in locators if locator.is_primary)
+    newest_version = 0
+
+    # TODO: Transfer from primary locator, select the most recent logical object version
+    for locator in locators:
+        if locator.is_primary and locator.version >= newest_version:
+            primary_locator = locator
+            newest_version = locator.version
+            break
+
     if primary_locator is None:
         logger.error("No primary locator found.")
         return Response(status_code=500, content="Internal Server Error")
@@ -308,6 +377,7 @@ async def start_warmup(
             key=physical_bucket_locator.prefix + request.key,
             status=Status.pending,
             is_primary=False,
+            version_id=primary_locator.version_id,  # same version of the primary locator
         )
         secondary_locators.append(secondary_locator)
         db.add(secondary_locator)
@@ -324,6 +394,7 @@ async def start_warmup(
             bucket=primary_locator.bucket,
             region=primary_locator.region,
             key=primary_locator.key,
+            version_id=primary_locator.version_id,
         ),
         dst_locators=[
             LocateObjectResponse(
@@ -333,6 +404,7 @@ async def start_warmup(
                 bucket=locator.bucket,
                 region=locator.region,
                 key=locator.key,
+                version_id=locator.version_id,
             )
             for locator in secondary_locators
         ],
@@ -347,36 +419,77 @@ async def start_upload(
 
     existing_objects_stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.ready)
     )
     existing_objects = (await db.scalars(existing_objects_stmt)).all()
     # Parse results for the object_already_exists check
-    object_already_exists = any(
-        locator.location_tag == request.client_from_region
-        for locator in existing_objects
-    )
+    # object_already_exists = any(
+    #     locator.location_tag == request.client_from_region
+    #     for locator in existing_objects
+    # )
 
-    if object_already_exists:
-        logger.error("This exact object already exists")
-        return Response(status_code=409, content="Conflict, object already exists")
+    # should not do this when versioning is enabled
+    # if object_already_exists:
+    #     logger.error("This exact object already exists")
+    #     return Response(status_code=409, content="Conflict, object already exists")
+
     existing_tags = set(locator.location_tag for locator in existing_objects)
     primary_exists = any(locator.is_primary for locator in existing_objects)
 
+    # version_id is None: should copy the latest version of the object
+    # version_id is not None, should copy the corresponding version
     if (request.copy_src_bucket is not None) and (request.copy_src_key is not None):
         copy_src_stmt = (
             select(DBPhysicalObjectLocator)
-            .join(DBLogicalObject)
+            .join(
+                DBLogicalObject,
+                and_(
+                    DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                    DBLogicalObject.version
+                    == DBPhysicalObjectLocator.logical_object_version,
+                ),
+            )
             .where(DBLogicalObject.bucket == request.copy_src_bucket)
             .where(DBLogicalObject.key == request.copy_src_key)
             .where(DBLogicalObject.status == Status.ready)
         )
+
+        if request.version_id is not None:
+            copy_src_stmt = copy_src_stmt.where(
+                DBPhysicalObjectLocator.version_id == request.version_id
+            )
+
         copy_src_locators = (await db.scalars(copy_src_stmt)).all()
-        copy_src_locators_map = {
-            locator.location_tag: locator for locator in copy_src_locators
-        }
+
+        copy_src_locators_map = {}  # location_tag -> copy_src_locator
+
+        if request.version_id is not None:
+            # assert len(copy_src_locators) > 0, "should have this copy_src_locator"
+            copy_src_locators_map = {
+                locator.location_tag: locator for locator in copy_src_locators
+            }
+        else:  # copy the latest version of the object
+            for src_locator in copy_src_locators:
+                tag = src_locator.location_tag
+                if tag not in copy_src_locators_map or (
+                    tag in copy_src_locators_map
+                    and copy_src_locators_map[tag].version < src_locator.version
+                ):
+                    copy_src_locators_map[tag] = src_locator
+
+        # copy_src_locators_map = {
+        #     locator.location_tag: locator for locator in copy_src_locators
+        # }
         copy_src_locations = set(locator.location_tag for locator in copy_src_locators)
     else:
         copy_src_locations = None
@@ -393,8 +506,38 @@ async def start_upload(
         )
         db.add(logical_object)
     else:
-        await db.refresh(existing_objects[0], ["logical_object"])
-        logical_object = existing_objects[0].logical_object
+        # fetach the latest version of the object
+        if request.version_id is None:
+            newest_version = 0
+            for existing_object in existing_objects:
+                await db.refresh(existing_object, ["logical_object"])
+                if existing_object.version >= newest_version:
+                    newest_version = existing_object.version
+                    # select the newest version of the object
+                    logical_object = existing_object.logical_object
+        else:
+            # fetch the specific version
+            for existing_object in existing_objects:
+                await db.refresh(existing_object, ["logical_object"])
+                if existing_object.version_id == request.version_id:
+                    logical_object = existing_object.logical_object
+                    break
+
+        # if it is copy-on-read, no need to create new logical object
+        if request.policy != "copy_on_read":
+            # version support: create a new logical object based on the previous logical object fields (the previous newest version)
+            logical_object = DBLogicalObject(
+                bucket=logical_object.bucket,
+                key=logical_object.key,
+                size=logical_object.size,
+                last_modified=logical_object.last_modified,  # this field should be the current timestamp, here we can just ignore since this will be updated in the complete upload step
+                etag=logical_object.etag,
+                status=Status.pending,
+                multipart_upload_id=logical_object.multipart_upload_id,
+                version=logical_object.version
+                + 1,  # increment version_id for each logical object
+            )
+            db.add(logical_object)
 
     logical_bucket = (
         await db.execute(
@@ -414,9 +557,11 @@ async def start_upload(
         primary_write_region = [
             locator.location_tag for locator in existing_objects if locator.is_primary
         ]
-        assert (
-            len(primary_write_region) == 1
-        ), "should only have one primary write region"
+        # assert (
+        #     len(primary_write_region) == 1
+        # ), "should only have one primary write region"
+
+        # but we can choose wheatever idx in the primary_write_region list
         primary_write_region = primary_write_region[0]
         assert (
             primary_write_region != request.client_from_region
@@ -435,32 +580,14 @@ async def start_upload(
                 for locator in physical_bucket_locators
                 if locator.is_primary
             ]
-            assert (
-                len(primary_write_region) == 1
-            ), "should only have one primary write region"
+            # assert (
+            #     len(primary_write_region) == 1
+            # ), "should only have one primary write region"
             primary_write_region = primary_write_region[0]
-        elif request.policy == "write_local":
+        else:
             # Write to the local region and set the first-write region of the OBJECT to be primary
             upload_to_region_tags = [request.client_from_region]
             primary_write_region = request.client_from_region
-        else:
-            print("read or copy on read")
-            # for the write op with "read" and "copy_on_read" policy
-            upload_to_region_tags = [
-                locator.location_tag
-                for locator in physical_bucket_locators
-                if locator.is_primary
-            ]
-            print("upload to region tags: ", upload_to_region_tags)
-            primary_write_region = [
-                locator.location_tag
-                for locator in physical_bucket_locators
-                if locator.is_primary
-            ]
-            assert (
-                len(primary_write_region) == 1
-            ), "should only have one primary write region"
-            primary_write_region = primary_write_region[0]
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -489,7 +616,6 @@ async def start_upload(
             f"copy_src_buckets={copy_src_buckets}, "
             f"copy_src_keys={copy_src_keys}"
         )
-
     locators = []
     for region_tag in upload_to_region_tags:
         if region_tag in existing_tags:
@@ -510,7 +636,7 @@ async def start_upload(
 
         locators.append(
             DBPhysicalObjectLocator(
-                logical_object=logical_object,
+                logical_object=logical_object,  # link the physical object with the new logical object
                 location_tag=region_tag,
                 cloud=physical_bucket_locator.cloud,
                 region=physical_bucket_locator.region,
@@ -539,6 +665,7 @@ async def start_upload(
                 bucket=locator.bucket,
                 region=locator.region,
                 key=locator.key,
+                # version_id=locator.version_id,
             )
             for locator in locators
         ],
@@ -553,8 +680,15 @@ async def complete_upload(
 ):
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
-        .options(joinedload(DBPhysicalObjectLocator.logical_object))
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
+        .options(selectinload(DBPhysicalObjectLocator.logical_object))
         .where(DBPhysicalObjectLocator.id == request.id)
     )
     physical_locator = await db.scalar(stmt)
@@ -566,10 +700,15 @@ async def complete_upload(
 
     physical_locator.status = Status.ready
     physical_locator.lock_acquired_ts = None
+    physical_locator.version_id = request.version_id
 
+    # TODO: might need to change the if conditions for different policies
     if (
-        physical_locator.is_primary
-    ) or request.policy == "write_local":  # TODO: might need to change the if conditions for different policies
+        (request.policy == "push" and physical_locator.is_primary)
+        or request.policy == "write_local"
+        or request.policy == "copy_on_read"
+    ):
+        # NOTE: might not need to update the logical object for consecutive reads for copy_on_read
         # await db.refresh(physical_locator, ["logical_object"])
         logical_object = physical_locator.logical_object
         logical_object.status = Status.ready
@@ -585,7 +724,14 @@ async def set_multipart_id(
 ):
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBPhysicalObjectLocator.id == request.id)
     )
     physical_locator = await db.scalar(stmt)
@@ -607,7 +753,14 @@ async def append_part(
 ):
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBPhysicalObjectLocator.id == request.id)
     )
     physical_locator = await db.scalar(stmt)
@@ -673,7 +826,14 @@ async def continue_upload(
 ) -> List[ContinueUploadResponse]:
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.pending)
@@ -682,18 +842,43 @@ async def continue_upload(
     locators = (await db.scalars(stmt)).all()
     if len(locators) == 0:
         return Response(status_code=404, content="Not Found")
-
+    locators_dict = {}
+    for locator in locators:
+        # only save the ones with newest versions:
+        if locator.location_tag not in locators_dict or (
+            locator.location_tag in locators_dict
+            and locators_dict[locator.location_tag].version < locator.version
+        ):
+            locators_dict[locator.location_tag] = locator
+    locators = list(locators_dict.values())
     copy_src_buckets, copy_src_keys = [], []
     if request.copy_src_bucket is not None and request.copy_src_key is not None:
         physical_src_locators = (
             await db.scalars(
                 select(DBPhysicalObjectLocator)
-                .join(DBLogicalObject)
+                .join(
+                    DBLogicalObject,
+                    and_(
+                        DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                        DBLogicalObject.version
+                        == DBPhysicalObjectLocator.logical_object_version,
+                    ),
+                )
                 .where(DBLogicalObject.bucket == request.copy_src_bucket)
                 .where(DBLogicalObject.key == request.copy_src_key)
                 .where(DBLogicalObject.status == Status.ready)
             )
         ).all()
+        # only save the ones with newest versions:
+        physical_src_locators_dict = {}
+        for locator in physical_src_locators:
+            if locator.location_tag not in physical_src_locators_dict or (
+                locator.location_tag in physical_src_locators_dict
+                and physical_src_locators_dict[locator.location_tag].version
+                < locator.version
+            ):
+                physical_src_locators_dict[locator.location_tag] = locator
+        physical_src_locators = list(physical_src_locators_dict.values())
         src_tags = {locator.location_tag for locator in physical_src_locators}
         dst_tags = {locator.location_tag for locator in locators}
         if src_tags != dst_tags:
@@ -753,7 +938,19 @@ async def list_objects(
     if logical_bucket is None:
         return Response(status_code=404, content="Bucket Not Found")
 
-    stmt = select(DBLogicalObject).where(
+    stmt = select(
+        [
+            DBLogicalObject.id,
+            DBLogicalObject.bucket,
+            DBLogicalObject.key,
+            DBLogicalObject.size,
+            DBLogicalObject.etag,
+            DBLogicalObject.last_modified,
+            DBLogicalObject.status,
+            DBLogicalObject.multipart_upload_id,
+            func.max(DBLogicalObject.version),
+        ]
+    ).where(
         DBLogicalObject.bucket == logical_bucket.bucket,
         DBLogicalObject.status == Status.ready,
     )
@@ -763,7 +960,7 @@ async def list_objects(
         stmt = stmt.where(DBLogicalObject.key > request.start_after)
 
     # Sort keys before return
-    stmt = stmt.order_by(DBLogicalObject.key)
+    stmt = stmt.group_by(DBLogicalObject.key).order_by(DBLogicalObject.key)
 
     # Limit the number of returned objects if specified
     if request.max_keys is not None:
@@ -799,22 +996,52 @@ async def head_object(
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.ready)
     )
-    obj = await db.scalar(stmt)
+    # TODO: should only head the latest version of the object?
+    obj_lst = (await db.scalars(stmt)).all()
 
-    if obj is None:
+    if len(obj_lst) == 0:
         return Response(status_code=404, content="Not Found")
 
-    logger.debug(f"head_object: {request} -> {obj}")
+    logical_object = None
+
+    # if the version id is not given, find the latest version of the object
+    # otherwise, find the logical object linked with the given physical version id
+    if request.version_id is not None:
+        for logical_obj in obj_lst:
+            for physical_obj in logical_obj.physical_object_locators:
+                await db.refresh(physical_obj, ["physical_object_locators"])
+                if physical_obj.version_id == request.version_id:
+                    logical_object = logical_obj
+                    break
+            if logical_object is not None:
+                break
+
+        if logical_object is None:
+            return Response(
+                status_code=404,
+                content="Not Found the version {}".format(request.version_id),
+            )
+    else:
+        newest_version = 0
+        # find the latest version of the object
+        for object in obj_lst:
+            if object.version >= newest_version:
+                logical_object = object
+                newest_version = object.version
+
+    logger.debug(f"head_object: {request} -> {logical_object}")
 
     return HeadObjectResponse(
-        bucket=obj.bucket,
-        key=obj.key,
-        size=obj.size,
-        etag=obj.etag,
-        last_modified=obj.last_modified,
+        bucket=logical_object.bucket,
+        key=logical_object.key,
+        size=logical_object.size,
+        etag=logical_object.etag,
+        last_modified=logical_object.last_modified,
+        version_id=request.version_id,
     )
 
 
+# TODO: Can multipart upload upload an object with the same key of some other object? (I don't think so)
 @router.post("/list_multipart_uploads")
 async def list_multipart_uploads(
     request: ListObjectRequest, db: Session = Depends(get_session)
@@ -826,6 +1053,15 @@ async def list_multipart_uploads(
         .where(DBLogicalObject.status == Status.pending)
     )
     objects = (await db.scalars(stmt)).all()
+
+    # only keep the latest version of the object
+    objects_dict = {}
+    for obj in objects:
+        if obj.key not in objects_dict or (
+            obj.key in objects_dict and objects_dict[obj.key].version < obj.version
+        ):
+            objects_dict[obj.key] = obj
+    objects = list(objects_dict.values())
 
     logger.debug(f"list_multipart_uploads: {request} -> {objects}")
 
@@ -839,6 +1075,7 @@ async def list_multipart_uploads(
     ]
 
 
+# TODO: consider only the latest version of the object?
 @router.post("/list_parts")
 async def list_parts(
     request: ListPartsRequest, db: Session = Depends(get_session)
@@ -854,8 +1091,20 @@ async def list_parts(
     if len(objects) == 0:
         return Response(status_code=404, content="Object Multipart Not Found")
 
+    for object in objects:
+        await db.refresh(object, ["multipart_upload_parts"])
+
+    # only keep the latest version of the object
+    # TODO: change to sort method of list
+    objects_dict = {}
+    for obj in objects:
+        if obj.key not in objects_dict or (
+            obj.key in objects_dict and objects_dict[obj.key].version < obj.version
+        ):
+            objects_dict[obj.key] = obj
+    objects = list(objects_dict.values())
+
     assert len(objects) == 1, "should only have one object"
-    await db.refresh(objects[0], ["multipart_upload_parts"])
 
     logger.debug(
         f"list_parts: {request} -> {objects[0], objects[0].multipart_upload_parts}"
@@ -873,6 +1122,7 @@ async def list_parts(
     ]
 
 
+# TODO: I think we need to return a list
 @router.post(
     "/locate_object_status",
     responses={
@@ -888,7 +1138,14 @@ async def locate_object_status(
 
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        .join(
+            DBLogicalObject,
+            and_(
+                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                DBLogicalObject.version
+                == DBPhysicalObjectLocator.logical_object_version,
+            ),
+        )
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
     )
@@ -905,7 +1162,8 @@ async def locate_object_status(
             chosen_locator = locator
             reason = "exact match"
             break
-    else:
+
+    if chosen_locator is None:
         # find the primary locator
         chosen_locator = next(locator for locator in locators if locator.is_primary)
         reason = "fallback to primary"
