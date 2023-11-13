@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -67,7 +67,14 @@ async def rm_lock_on_timeout(minutes: int = 10, test: bool = False):
                     # get all physical objects corresponding to a given logical object
                     stmt3 = (
                         select(DBPhysicalObjectLocator)
-                        .join(DBLogicalObject)
+                        .join(
+                            DBLogicalObject,
+                            and_(
+                                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
+                                DBLogicalObject.version
+                                == DBPhysicalObjectLocator.logical_object_version,
+                            ),
+                        )
                         .where(
                             logical_obj.id == DBPhysicalObjectLocator.logical_object_id
                         )

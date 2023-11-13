@@ -713,7 +713,9 @@ impl S3 for SkyProxy {
         let key = req.input.key.clone();
         let version_id = req.input.version_id.clone();
 
-        let locator = self.locate_object(bucket.clone(), key.clone(), version_id.clone()).await?;
+        let locator = self
+            .locate_object(bucket.clone(), key.clone(), version_id.clone())
+            .await?;
 
         match locator {
             Some(location) => {
@@ -732,7 +734,7 @@ impl S3 for SkyProxy {
                             }))
                             .await?;
                         let data = get_resp.output.body.unwrap();
-                   
+
                         let dir_conf_clone = self.dir_conf.clone();
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
@@ -740,7 +742,7 @@ impl S3 for SkyProxy {
 
                         let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
-                        
+
                         // Spawn a background task to store the object in the local object store
                         tokio::spawn(async move {
                             let start_upload_resp_result = apis::start_upload(
@@ -749,7 +751,7 @@ impl S3 for SkyProxy {
                                     bucket: bucket.clone(),
                                     key: key.clone(),
                                     client_from_region: client_from_region_clone.clone(),
-                                    version_id: None,   // set a random value, since this will be overwritten by complete upload following
+                                    version_id: None, // set a random value, since this will be overwritten by complete upload following
                                     is_multipart: false,
                                     copy_src_bucket: None,
                                     copy_src_key: None,

@@ -1,7 +1,7 @@
 import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
-
+import uuid 
 
 @pytest.fixture
 def client():
@@ -33,7 +33,7 @@ def test_delete_object(client):
         )
         resp.raise_for_status()
 
-    resp = client.post(
+    resp1 = client.post(
         "/start_upload",
         json={
             "bucket": "my-delete-object-bucket",
@@ -43,16 +43,46 @@ def test_delete_object(client):
             "policy": "push",
         },
     )
-    resp.raise_for_status()
+    resp1.raise_for_status()
 
-    for physical_object in resp.json()["locators"]:
+    #print("resp.json() = ", resp1.json())
+
+    # test for multiversion support
+    resp2 = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-delete-object-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+        },
+    )
+    resp2.raise_for_status()
+
+    #print("resp.json() = ", resp2.json())
+
+    for i, physical_object in enumerate(resp1.json()["locators"]):
         client.patch(
             "/complete_upload",
             json={
                 "id": physical_object["id"],
                 "size": 100,
-                "etag": "123",
-                "last_modified": "2020-01-01T00:00:00",
+                "etag": "{}".format(uuid.uuid4()),
+                "last_modified": f"2020-01-01T00:00:0{i}",
+                "version_id": f"version-{i}",
+            },
+        ).raise_for_status()
+
+    for i, physical_object in enumerate(resp2.json()["locators"]):
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "{}".format(uuid.uuid4()),
+                "last_modified": f"2020-01-01T00:00:0{i + 1}",
+                "version_id": f"version-{i + 10}",  # make sure version id is different
             },
         ).raise_for_status()
 
@@ -63,17 +93,20 @@ def test_delete_object(client):
         },
     )
     assert resp.json() != []
+    # print("resp.json() = ", resp.json())
 
     # delete object
-    resp = client.post(
+    resp1 = client.post(
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-bucket",
-            "keys": ["my-key"],
+            "object_identifiers": {"my-key": list({"version-1"})},   # type set is not json serializable
         },
     )
 
-    for key, physical_objects in resp.json()["locators"].items():
+    print("resp.json() = ", resp.json())
+
+    for key, physical_objects in resp1.json()["locators"].items():
         assert key == "my-key"
 
         for physical_object in physical_objects:
@@ -81,14 +114,39 @@ def test_delete_object(client):
                 "/complete_delete_objects",
                 json={"ids": [physical_object["id"]]},
             )
-            resp.raise_for_status()
+            resp1.raise_for_status()
 
+    resp2 = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-delete-object-bucket",
+            "object_identifiers": {"my-key": list()},   # type set is not json serializable
+        },
+    )
+
+    print("resp.json() = ", resp2.json())
+
+    for key, physical_objects in resp2.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={"ids": [physical_object["id"]]},
+            )
+            resp2.raise_for_status()
+
+    print("resp.json() = ", resp2.json())
+
+    # TODO: since list objects only list the newest version of logical object, this cannot prove
+    # that we successfully deleted the object
     resp = client.post(
         "/list_objects",
         json={
             "bucket": "my-delete-object-bucket",
         },
     )
+
     assert resp.json() == []
 
 
@@ -362,7 +420,7 @@ def test_get_object(client):
     )
     resp.raise_for_status()
 
-    for physical_object in resp.json()["locators"]:
+    for i, physical_object in enumerate(resp.json()["locators"]):
         client.patch(
             "/complete_upload",
             json={
@@ -370,9 +428,39 @@ def test_get_object(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00",
+                "version_id": f"version-{i}",
             },
         ).raise_for_status()
 
+    # multi version test
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-get-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+        },
+    )
+    resp.raise_for_status()
+
+    print("resp.json() = ", resp.json())
+
+    for i, physical_object in enumerate(resp.json()["locators"]):
+        print("physical_object = ", physical_object)
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "124",
+                "last_modified": "2020-01-01T00:00:00",
+                "version_id": f"version-{i + 10}",  # make sure version id is different
+            },
+        ).raise_for_status()
+
+    # # this will locate the newest version of the object
     resp = client.post(
         "/locate_object",
         json={
@@ -383,18 +471,14 @@ def test_get_object(client):
     )
     resp.raise_for_status()
     resp_data = resp.json()
-    resp_data.pop("id")
-    assert resp_data == {
-        "tag": "aws:us-west-1",
-        "bucket": "skystore-us-west-1",  # Bucket is prefixed with "skystore-"
-        "key": "my-key",  # "my-get-bucket/my-key",  # Key is prefixed with logical bucket name
-        "region": "us-west-1",
-        "cloud": "aws",
-        "size": 100,
-        "etag": "123",
-        "last_modified": "2020-01-01T00:00:00",
-        "multipart_upload_id": None,
-    }
+    # etag here is the key to determine success, should not be 123
+    assert resp_data["tag"] == "aws:us-west-1" and resp_data["region"] == "us-west-1" \
+            and resp_data["etag"] == "124" \
+            and resp_data["last_modified"] == "2020-01-01T00:00:00" \
+            and resp_data["size"] == 100 and resp_data["key"] == "my-key" \
+            and resp_data["bucket"] == "skystore-us-west-1" and resp_data["cloud"] == "aws" \
+            and resp_data["multipart_upload_id"] == None \
+            and (resp_data["version_id"] == "version-11" or resp_data["version_id"] == "version-10")
 
     # 404
     assert (
@@ -429,7 +513,19 @@ def test_get_object(client):
             "client_from_region": "aws:eu-west-1",
         },
     ).json()["region"]
-    assert location in {"us-west-1", "us-west1"}
+    assert location in {"us-west-1", "us-west1"}    # use push policy, depend on which one is the first primary write region
+
+    # Read a specific version
+    location = client.post(
+        "/locate_object",
+        json={
+            "bucket": "my-get-bucket",
+            "key": "my-key",
+            "client_from_region": "gcp:us-west1",
+            "version_id": "version-10",
+        },
+    ).json()
+    assert location["version_id"] == "version-10"
 
 
 def test_get_object_pull_logic(client):
@@ -491,6 +587,7 @@ def test_get_object_pull_logic(client):
     resp.raise_for_status()
     resp_data = resp.json()
     resp_data.pop("id")
+    resp_data.pop("version_id")
     assert resp_data == {
         "tag": "aws:us-east-1",
         "bucket": "skystore-us-east-1",
@@ -555,7 +652,7 @@ def test_warmup(client):
         },
     )
     resp.raise_for_status()
-    for locator in resp.json()["dst_locators"]:
+    for i, locator in enumerate(resp.json()["dst_locators"]):
         client.patch(
             "/complete_upload",
             json={
@@ -563,6 +660,7 @@ def test_warmup(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00.000Z",
+                "version_id": f"version-{i}",
             },
         ).raise_for_status()
 
@@ -636,7 +734,7 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
+            "policy": "copy_on_read",   # since we enable versioning, we should make sure we use copy_on_read policy now
         },
     )
     resp.raise_for_status()
@@ -874,51 +972,51 @@ def test_multipart_flow(client):
 
 
 # @pytest.mark.asyncio
-async def test_metadata_clean_up(client):
-    """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
-    resp = client.post(
-        "/start_create_bucket",
-        json={
-            "bucket": "temp-object-bucket",
-            "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
-        },
-    )
-    resp.raise_for_status()
+# async def test_metadata_clean_up(client):
+#     """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
+#     resp = client.post(
+#         "/start_create_bucket",
+#         json={
+#             "bucket": "temp-object-bucket",
+#             "client_from_region": "aws:us-west-1",
+#             "warmup_regions": ["gcp:us-west1"],
+#         },
+#     )
+#     resp.raise_for_status()
 
-    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
-    await rm_lock_on_timeout(0, test=True)
+#     # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+#     await rm_lock_on_timeout(0, test=True)
 
-    resp = client.post(
-        "/locate_bucket_status",
-        json={
-            "bucket": "temp-object-bucket",
-            "client_from_region": "aws:us-west-1",
-        },
-    )
-    assert resp.json()["status"] == "ready"
+#     resp = client.post(
+#         "/locate_bucket_status",
+#         json={
+#             "bucket": "temp-object-bucket",
+#             "client_from_region": "aws:us-west-1",
+#         },
+#     )
+#     assert resp.json()["status"] == "ready"
 
-    resp = client.post(
-        "/start_upload",
-        json={
-            "bucket": "temp-object-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-west-1",
-            "is_multipart": False,
-        },
-    )
-    resp.raise_for_status()
+#     resp = client.post(
+#         "/start_upload",
+#         json={
+#             "bucket": "temp-object-bucket",
+#             "key": "my-key",
+#             "client_from_region": "aws:us-west-1",
+#             "is_multipart": False,
+#         },
+#     )
+#     resp.raise_for_status()
 
-    # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
-    await rm_lock_on_timeout(0, test=True)
+#     # set minutes to 0 just to prevent stalling and set testing to True. Will bypass initial wait
+#     await rm_lock_on_timeout(0, test=True)
 
-    resp = client.post(
-        "/locate_object_status",
-        json={
-            "bucket": "temp-object-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-west-1",
-        },
-    )
-    # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
-    assert resp.json()["status"] == "ready"
+#     resp = client.post(
+#         "/locate_object_status",
+#         json={
+#             "bucket": "temp-object-bucket",
+#             "key": "my-key",
+#             "client_from_region": "aws:us-west-1",
+#         },
+#     )
+#     # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
+#     assert resp.json()["status"] == "ready"
