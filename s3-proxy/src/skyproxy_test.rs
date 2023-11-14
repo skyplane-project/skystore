@@ -240,7 +240,7 @@ mod tests {
         }
 
         let delete_object_input =
-            new_delete_object_request(bucket_name.to_string(), "my-single-key".to_string());
+            new_delete_object_request(bucket_name.to_string(), "my-single-key".to_string(), None);
         let delete_object_req = S3Request::new(delete_object_input);
         proxy.delete_object(delete_object_req).await.unwrap().output;
 

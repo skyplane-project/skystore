@@ -13,7 +13,7 @@ pub struct DeleteObjectsRequest {
     #[serde(rename = "bucket")]
     pub bucket: String,
     #[serde(rename = "object_identifiers")]
-    pub object_identifiers: ::std::collections::HashMap<String, Vec<String>>,
+    pub object_identifiers: ::std::collections::HashMap<String, Vec<i32>>,
     #[serde(
         rename = "multipart_upload_ids",
         skip_serializing_if = "Option::is_none"
@@ -24,7 +24,7 @@ pub struct DeleteObjectsRequest {
 impl DeleteObjectsRequest {
     pub fn new(
         bucket: String,
-        object_identifiers: ::std::collections::HashMap<String, Vec<String>>,
+        object_identifiers: ::std::collections::HashMap<String, Vec<i32>>,
     ) -> DeleteObjectsRequest {
         DeleteObjectsRequest {
             bucket,

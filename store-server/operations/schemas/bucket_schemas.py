@@ -33,6 +33,8 @@ class DBLogicalBucket(Base):
     # Add relationship to logical object
     logical_objects = relationship("DBLogicalObject", back_populates="logical_bucket")
 
+    version_enabled = Column(Boolean, default=False)
+
 
 class DBPhysicalBucketLocator(Base):
     __tablename__ = "physical_bucket_locators"

@@ -17,7 +17,7 @@ pub struct StartUploadRequest {
     #[serde(rename = "client_from_region")]
     pub client_from_region: String,
     #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<String>,
+    pub version_id: Option<i32>,
     #[serde(rename = "is_multipart")]
     pub is_multipart: bool,
     #[serde(rename = "copy_src_bucket", skip_serializing_if = "Option::is_none")]

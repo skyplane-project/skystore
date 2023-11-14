@@ -21,7 +21,7 @@ pub struct HeadObjectResponse {
     #[serde(rename = "last_modified")]
     pub last_modified: String,
     #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<String>,
+    pub version_id: Option<i32>,
 }
 
 impl HeadObjectResponse {

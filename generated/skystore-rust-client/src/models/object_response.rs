@@ -20,6 +20,8 @@ pub struct ObjectResponse {
     pub etag: String,
     #[serde(rename = "last_modified")]
     pub last_modified: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<i32>,
 }
 
 impl ObjectResponse {
@@ -36,6 +38,7 @@ impl ObjectResponse {
             size,
             etag,
             last_modified,
+            version_id: None,
         }
     }
 }

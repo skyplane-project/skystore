@@ -65,10 +65,15 @@ pub fn new_get_object_request(bucket: String, key: String) -> GetObjectInput {
     builder.build().unwrap()
 }
 
-pub fn new_delete_object_request(bucket: String, key: String) -> DeleteObjectInput {
+pub fn new_delete_object_request(
+    bucket: String,
+    key: String,
+    version_id: Option<String>,
+) -> DeleteObjectInput {
     let mut builder = DeleteObjectInput::builder();
     builder.set_bucket(bucket);
     builder.set_key(key);
+    builder.set_version_id(version_id);
     builder.build().unwrap()
 }
 

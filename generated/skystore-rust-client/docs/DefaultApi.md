@@ -16,6 +16,7 @@ Method | HTTP request | Description
 [**list_buckets**](DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
 [**list_multipart_uploads**](DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 [**list_objects**](DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
+[**list_objects_versioning**](DefaultApi.md#list_objects_versioning) | **POST** /list_objects_versioning | List Objects Versioning
 [**list_parts**](DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 [**locate_bucket**](DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 [**locate_bucket_status**](DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
@@ -361,6 +362,34 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## list_objects_versioning
+
+> Vec<crate::models::ObjectResponse> list_objects_versioning(list_object_request)
+List Objects Versioning
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**list_object_request** | [**ListObjectRequest**](ListObjectRequest.md) |  | [required] |
+
+### Return type
+
+[**Vec<crate::models::ObjectResponse>**](ObjectResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## list_parts
 
 > Vec<crate::models::LogicalPartResponse> list_parts(list_parts_request)
@@ -481,7 +510,7 @@ No authorization required
 
 ## locate_object_status
 
-> crate::models::ObjectStatus locate_object_status(locate_object_request)
+> Vec<crate::models::ObjectStatus> locate_object_status(locate_object_request)
 Locate Object Status
 
 Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup.
@@ -495,7 +524,7 @@ Name | Type | Description  | Required | Notes
 
 ### Return type
 
-[**crate::models::ObjectStatus**](ObjectStatus.md)
+[**Vec<crate::models::ObjectStatus>**](ObjectStatus.md)
 
 ### Authorization
 

@@ -67,14 +67,7 @@ async def rm_lock_on_timeout(minutes: int = 10, test: bool = False):
                     # get all physical objects corresponding to a given logical object
                     stmt3 = (
                         select(DBPhysicalObjectLocator)
-                        .join(
-                            DBLogicalObject,
-                            and_(
-                                DBLogicalObject.id == DBPhysicalObjectLocator.logical_object_id,
-                                DBLogicalObject.version
-                                == DBPhysicalObjectLocator.logical_object_version,
-                            ),
-                        )
+                        .join(DBLogicalObject)
                         .where(
                             logical_obj.id == DBPhysicalObjectLocator.logical_object_id
                         )

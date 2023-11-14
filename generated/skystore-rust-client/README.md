@@ -37,6 +37,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**list_buckets**](docs/DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
 *DefaultApi* | [**list_multipart_uploads**](docs/DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
+*DefaultApi* | [**list_objects_versioning**](docs/DefaultApi.md#list_objects_versioning) | **POST** /list_objects_versioning | List Objects Versioning
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 *DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 *DefaultApi* | [**locate_bucket_status**](docs/DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
