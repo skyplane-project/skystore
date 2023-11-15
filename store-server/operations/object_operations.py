@@ -49,6 +49,7 @@ router = APIRouter()
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
+
     if request.multipart_upload_ids and len(request.object_identifiers) != len(
         request.multipart_upload_ids
     ):
@@ -134,8 +135,8 @@ async def start_delete_objects(
                         last_modified=physical_locator.logical_object.last_modified,
                         etag=physical_locator.logical_object.etag,
                         multipart_upload_id=physical_locator.multipart_upload_id,
-                        version_id=physical_locator.version_id,
-                        version=physical_locator.logical_object.id,
+                        version_id=physical_locator.version_id, # this is already an optional string, might be None.
+                        version=physical_locator.logical_object.id
                     )
                 )
             
@@ -227,6 +228,7 @@ async def locate_object(
     request: LocateObjectRequest, db: Session = Depends(get_session)
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
+
     if request.version_id is not None:
         stmt = (
             select(DBLogicalObject)
@@ -306,6 +308,7 @@ async def start_warmup(
     request: StartWarmupRequest, db: Session = Depends(get_session)
 ) -> StartWarmupResponse:
     """Given the logical object information and warmup regions, return one or zero physical object locators."""
+    
     if request.version_id is not None:
         stmt = (
             select(DBLogicalObject)
@@ -420,11 +423,21 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
+    
+    version_enabled = (await db.execute(
+        select(DBLogicalBucket.version_enabled)
+        .where(DBLogicalBucket.bucket == request.bucket)
+    )).all()[0]
+
+    if not version_enabled and request.version_id:
+        return Response(status_code=400, content="Versioning is not enabled")
+
     # The case we will contain a version_id are:
     # 1. pull_on_read 
     # 2. copy
     # Under those cases, we will not create new logical objects
     # also do NOT allow repeated upload of the same logical version to the same region
+    # When the version is disabled,
     if request.version_id is not None:
         existing_objects_stmt = (
             select(DBLogicalObject)
@@ -510,9 +523,9 @@ async def start_upload(
     else:
         logical_object = existing_object
 
-        # if it is copy-on-read, no need to create new logical object
-        # copy also does not need to create new logical object
-        if request.policy != "copy_on_read":
+        # NOT copy-on-read, NOT copy,
+        # And the version must be enabled
+        if request.policy != "copy_on_read" and ((request.copy_src_bucket is None) or (request.copy_src_key is None)) and version_enabled:
             # version support: create a new logical object based on the previous logical object fields (the previous newest version)
             logical_object = DBLogicalObject(
                 bucket=logical_object.bucket,
@@ -629,7 +642,7 @@ async def start_upload(
 
         locators.append(
             DBPhysicalObjectLocator(
-                logical_object=logical_object,  # link the physical object with the new logical object
+                logical_object=logical_object,  # link the physical object with the logical object
                 location_tag=region_tag,
                 cloud=physical_bucket_locator.cloud,
                 region=physical_bucket_locator.region,
@@ -801,12 +814,13 @@ async def append_part(
 async def continue_upload(
     request: ContinueUploadRequest, db: Session = Depends(get_session)
 ) -> List[ContinueUploadResponse]:
+    # NOTE: currently, always choose the newest version
     stmt = (
         select(DBLogicalObject)
         .options(selectinload(DBLogicalObject.physical_object_locators))
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
-        .where(DBLogicalObject.status == Status.pending)
+        # .where(DBLogicalObject.status == Status.pending)
         .where(DBLogicalObject.multipart_upload_id == request.multipart_upload_id)
         .order_by(DBLogicalObject.id.desc())    # select the latest version
         #.first()

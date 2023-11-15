@@ -38,6 +38,7 @@ docs/PatchUploadIsCompleted.md
 docs/PatchUploadMultipartUploadId.md
 docs/PatchUploadMultipartUploadPart.md
 docs/PhysicalLocation.md
+docs/PutBucketVersioningRequest.md
 docs/RegisterBucketRequest.md
 docs/StartUploadRequest.md
 docs/StartUploadResponse.md
@@ -86,6 +87,7 @@ src/models/patch_upload_is_completed.rs
 src/models/patch_upload_multipart_upload_id.rs
 src/models/patch_upload_multipart_upload_part.rs
 src/models/physical_location.rs
+src/models/put_bucket_versioning_request.rs
 src/models/register_bucket_request.rs
 src/models/start_upload_request.rs
 src/models/start_upload_response.rs

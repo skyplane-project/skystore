@@ -186,7 +186,7 @@ def test_delete_objects(client):
     assert resp.json() == []
 
 
-# def test_locate_objects(client):
+# def test_put_bucket_versioning(client):
 #     resp = client.post(
 #         "/register_buckets",
 #         json={
@@ -226,138 +226,16 @@ def test_delete_objects(client):
 #     )
 #     resp.raise_for_status()
 
-#     # Upload to a primary location
+#     # put bucket versioning test
 #     resp = client.post(
-#         "/start_upload",
+#         "/put_bucket_versioning",
 #         json={
 #             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:us-west-1",
-#             "is_multipart": False,
-#             "policy": "push",
+#             "versioning": True,
 #         },
 #     )
-#     resp.raise_for_status()
 
-#     for physical_object in resp.json()["locators"]:
-#         client.patch(
-#             "/complete_upload",
-#             json={
-#                 "id": physical_object["id"],
-#                 "size": 100,
-#                 "etag": "123",
-#                 "last_modified": "2023-07-01T00:00:00",
-#             },
-#         ).raise_for_status()
-
-#     # Check if object can be located from primary region
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:us-west-1",
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["tag"] == "aws:us-west-1"
-#     assert resp_data["region"] == "us-west-1"
-
-#     # Check if object can be located from warmup region
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "gcp:us-west1",
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["tag"] == "gcp:us-west1"
-#     assert resp_data["region"] == "us-west1"
-
-#     # Check if object can be located from a non-warmup region
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:us-east-2",
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["tag"] == "aws:us-west-1"
-#     assert resp_data["region"] == "us-west-1"
-
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:eu-central-1",
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["tag"] == "aws:us-west-1"
-#     assert resp_data["region"] == "us-west-1"
-
-#     # upload an object with same key
-
-#     # Upload to a primary location AGAIN
-#     resp = client.post(
-#         "/start_upload",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:us-west-1",
-#             "is_multipart": False,
-#             "policy": "push",
-#         },
-#     )
-#     resp.raise_for_status()
-
-#     for physical_object in resp.json()["locators"]:
-#         client.patch(
-#             "/complete_upload",
-#             json={
-#                 "id": physical_object["id"],
-#                 "size": 100,
-#                 "etag": "123",
-#                 "last_modified": "2023-07-01T00:00:00",
-#             },
-#         ).raise_for_status()
-
-#     # try to locate without designating a version, it should return the newest version
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:eu-central-1",
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["version"] == 2
-
-#     # try to locate with a specific version, it should return the specific version
-#     resp = client.post(
-#         "/locate_object",
-#         json={
-#             "bucket": "test-bucket-register",
-#             "key": "my-key",
-#             "client_from_region": "aws:eu-central-1",
-#             "version_id": 1,
-#         },
-#     )
-#     resp.raise_for_status()
-#     resp_data = resp.json()
-#     assert resp_data["version"] == 1
-
+#     print("resp.json() = ", resp.json())
 
 def test_get_objects(client):
     """Test that the `get_object` endpoint returns the correct object."""
@@ -577,7 +455,7 @@ def test_get_object_write_local_and_pull(client):
         "etag": "123",
         "last_modified": "2020-01-01T00:00:00",
         "multipart_upload_id": None,
-        "version": 1,
+        "version": 3,   # NOTE: If you run this test separately, this version number will be different
     }
 
     # Try copy_on_read policy, first write to the primary region
@@ -614,7 +492,7 @@ def test_get_object_write_local_and_pull(client):
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
             "policy": "copy_on_read",  # copy_on_read policy
-            "version_id": 2,
+            "version_id": 4,
         },
     )
     resp.raise_for_status()
@@ -715,10 +593,11 @@ def test_warmup(client):
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "warmup_regions": ["aws:us-west-1"],
-            "version_id": 1,
+            "version_id": 5,    #NOTE: If you run this test separately, this version number will be different
         },
     )
     resp.raise_for_status()
+    #print("resp.json() = ", resp.json())
     for i, locator in enumerate(resp.json()["dst_locators"]):
         client.patch(
             "/complete_upload",
@@ -738,12 +617,12 @@ def test_warmup(client):
             "bucket": "my-warmup-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-west-1",
-            "version_id": 1,    # should be able to locate this version from warmup region
+            "version_id": 5,    # should be able to locate this version from warmup region
         },
     )
     assert resp.json()["region"] == "us-west-1"
     # check we have fetched the specific version
-    assert resp.json()["version"] == 1
+    assert resp.json()["version"] == 5
 
     # now it should have two logical objects version still (warmup should not create new versions)
     resp = client.post(

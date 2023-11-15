@@ -11,6 +11,7 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
+use core::panic;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -719,11 +720,7 @@ impl S3 for SkyProxy {
             .map(|id| id.parse::<i32>().unwrap());
 
         let locator = self
-            .locate_object(
-                bucket.clone(),
-                key.clone(),
-                vid.clone(),
-            )
+            .locate_object(bucket.clone(), key.clone(), vid.clone())
             .await?;
 
         match locator {
@@ -879,11 +876,7 @@ impl S3 for SkyProxy {
         // TODO: only works when versioning is disabled
         if self.version_enable == false {
             let locator = self
-                .locate_object(
-                    req.input.bucket.clone(),
-                    req.input.key.clone(),
-                    None,
-                )
+                .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
                 .await?;
             if let Some(locator) = locator {
                 return Ok(S3Response::new(PutObjectOutput {
@@ -1239,18 +1232,10 @@ impl S3 for SkyProxy {
         let [dst_bucket, dst_key] = [&req.input.bucket, &req.input.key];
 
         let src_locator = self
-            .locate_object(
-                src_bucket.to_string(),
-                src_key.to_string(),
-                None,
-            )
+            .locate_object(src_bucket.to_string(), src_key.to_string(), None)
             .await?;
         let dst_locator = self
-            .locate_object(
-                dst_bucket.to_string(),
-                dst_key.to_string(),
-                None,
-            )
+            .locate_object(dst_bucket.to_string(), dst_key.to_string(), None)
             .await?;
 
         if src_locator.is_none() {
@@ -1368,11 +1353,7 @@ impl S3 for SkyProxy {
         req: S3Request<CreateMultipartUploadInput>,
     ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
         let locator = self
-            .locate_object(
-                req.input.bucket.clone(),
-                req.input.key.clone(),
-                None,
-            )
+            .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
             .await?;
 
         if locator.is_some() {
@@ -1657,11 +1638,7 @@ impl S3 for SkyProxy {
         };
 
         let src_locator = self
-            .locate_object(
-                src_bucket.clone(),
-                src_key.clone(),
-                None,
-            )
+            .locate_object(src_bucket.clone(), src_key.clone(), None)
             .await
             .unwrap();
         if src_locator.is_none() {
@@ -1872,5 +1849,57 @@ impl S3 for SkyProxy {
             version_id: head_resp.version_id.map(|id| id.to_string()), // logical version
             ..Default::default()
         }))
+    }
+
+    #[tracing::instrument(level = "info")]
+    async fn put_bucket_versioning(
+        &self,
+        req: S3Request<PutBucketVersioningInput>,
+    ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
+        let versioning = match req.input.versioning_configuration.status.clone().unwrap().as_str() {
+            "Enabled" => true,
+            "Suspended" => false,
+            _ => {
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    format!("Failed to change bucket versioning setting"),
+                ))
+            }
+        };
+        let resp = apis::put_bucket_versioning(
+            &self.dir_conf,
+            models::PutBucketVersioningRequest {
+                bucket: req.input.bucket.clone(),
+                versioning: versioning,
+            },
+        )
+        .await;
+
+        if let Ok(locators) = resp {
+            for locator in locators {
+                let client = self.store_clients.get(&locator.tag).unwrap().clone();
+                let resp = client
+                    .put_bucket_versioning(S3Request::new(new_put_bucket_versioning_request(
+                        locator.bucket.clone(),
+                        VersioningConfiguration {
+                            status: Some(
+                                req.input
+                                    .versioning_configuration
+                                    .status
+                                    .clone()
+                                    .unwrap()
+                            ),
+                            ..Default::default()
+                        },
+                    )))
+                    .await;
+                if resp.is_err() {
+                    panic!("Failed to change bucket versioning setting");
+                }
+            }
+            Ok(S3Response::new(PutBucketVersioningOutput::default()))
+        } else {
+            panic!("Failed to change bucket versioning setting");
+        }
     }
 }

@@ -22,6 +22,7 @@ Method | HTTP request | Description
 [**locate_bucket_status**](DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 [**locate_object_status**](DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
+[**put_bucket_versioning**](DefaultApi.md#put_bucket_versioning) | **POST** /put_bucket_versioning | Put Bucket Versioning
 [**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
@@ -525,6 +526,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**Vec<crate::models::ObjectStatus>**](ObjectStatus.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## put_bucket_versioning
+
+> Vec<crate::models::LocateBucketResponse> put_bucket_versioning(put_bucket_versioning_request)
+Put Bucket Versioning
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**put_bucket_versioning_request** | [**PutBucketVersioningRequest**](PutBucketVersioningRequest.md) |  | [required] |
+
+### Return type
+
+[**Vec<crate::models::LocateBucketResponse>**](LocateBucketResponse.md)
 
 ### Authorization
 

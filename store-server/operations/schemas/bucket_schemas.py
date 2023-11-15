@@ -33,7 +33,7 @@ class DBLogicalBucket(Base):
     # Add relationship to logical object
     logical_objects = relationship("DBLogicalObject", back_populates="logical_bucket")
 
-    version_enabled = Column(Boolean, default=False)
+    version_enabled = Column(Boolean)
 
 
 class DBPhysicalBucketLocator(Base):
@@ -124,3 +124,7 @@ class DeleteBucketResponse(CreateBucketResponse):
 
 class DeleteBucketIsCompleted(BaseModel):
     id: int
+
+class PutBucketVersioningRequest(BaseModel):
+    bucket: str
+    versioning: bool
