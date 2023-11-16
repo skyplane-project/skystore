@@ -63,9 +63,7 @@ async fn main() {
 
     let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
 
-    let version_enable: bool = env::var("VERSION_ENABLE")
-        .map(|s| s.parse::<bool>().unwrap())
-        .unwrap_or(false);
+    let version_enable: String = env::var("VERSION_ENABLE").expect("VERSION_ENABLE must be set");
 
     let proxy = SkyProxy::new(
         init_regions,

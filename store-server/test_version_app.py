@@ -2,12 +2,16 @@ import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
 import uuid 
+import subprocess as sp
 
 @pytest.fixture
 def client():
     with TestClient(app) as client:
         yield client
 
+# NOTE: Do not change the position of this test, it should be the first test
+def test_remove_db(client):
+    sp.run("rm skystore.db", shell=True)
 
 def test_delete_objects(client):
     """Test that the `delete_object` endpoint functions correctly."""
@@ -15,7 +19,7 @@ def test_delete_objects(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "client_from_region": "aws:us-west-1",
             "warmup_regions": ["gcp:us-west1"],
         },
@@ -33,11 +37,21 @@ def test_delete_objects(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+            "versioning": True,
+        },
+    )
+    #resp.raise_for_status()
+
     # start uploading many objects with the same key
     resp1 = client.post(
         "/start_upload",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -52,7 +66,7 @@ def test_delete_objects(client):
     resp2 = client.post(
         "/start_upload",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -65,7 +79,7 @@ def test_delete_objects(client):
     resp3 = client.post(
         "/start_upload",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -115,7 +129,7 @@ def test_delete_objects(client):
     resp = client.post(
         "/list_objects_versioning",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
         },
     )
     print("resp.json() = ", resp.json())
@@ -127,7 +141,7 @@ def test_delete_objects(client):
     resp1 = client.post(
         "/start_delete_objects",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "object_identifiers": {"my-key": list({"1"})},   # type 'set' is not json serializable, use List instead
         },
     )
@@ -145,7 +159,7 @@ def test_delete_objects(client):
     resp = client.post(
         "/list_objects_versioning",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
         },
     )  
 
@@ -156,7 +170,7 @@ def test_delete_objects(client):
     resp2 = client.post(
         "/start_delete_objects",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
             "object_identifiers": {"my-key": list()},   # type set is not json serializable
         },
     )
@@ -178,7 +192,7 @@ def test_delete_objects(client):
     resp = client.post(
         "/list_objects",
         json={
-            "bucket": "my-delete-object-bucket",
+            "bucket": "my-delete-object-version-bucket",
         },
     )
 
@@ -190,14 +204,14 @@ def test_delete_objects(client):
 #     resp = client.post(
 #         "/register_buckets",
 #         json={
-#             "bucket": "test-bucket-register",
+#             "bucket": "test-version-bucket-register",
 #             "config": {
 #                 "physical_locations": [
 #                     {
 #                         "name": "aws:us-west-1",
 #                         "cloud": "aws",
 #                         "region": "us-west-1",
-#                         "bucket": "my-bucket-1",
+#                         "bucket": "my-version-bucket-1",
 #                         "prefix": "my-prefix-1/",
 #                         "is_primary": True,
 #                         "need_warmup": False,
@@ -206,7 +220,7 @@ def test_delete_objects(client):
 #                         "name": "aws:us-east-2",
 #                         "cloud": "aws",
 #                         "region": "us-east-2",
-#                         "bucket": "my-bucket-2",
+#                         "bucket": "my-version-bucket-2",
 #                         "prefix": "my-prefix-2/",
 #                         "is_primary": False,
 #                         "need_warmup": False,
@@ -215,7 +229,7 @@ def test_delete_objects(client):
 #                         "name": "gcp:us-west1",
 #                         "cloud": "gcp",
 #                         "region": "us-west1",
-#                         "bucket": "my-bucket-3",
+#                         "bucket": "my-version-bucket-3",
 #                         "prefix": "my-prefix-3/",
 #                         "is_primary": False,
 #                         "need_warmup": True,
@@ -230,7 +244,7 @@ def test_delete_objects(client):
 #     resp = client.post(
 #         "/put_bucket_versioning",
 #         json={
-#             "bucket": "test-bucket-register",
+#             "bucket": "test-version-bucket-register",
 #             "versioning": True,
 #         },
 #     )
@@ -243,7 +257,7 @@ def test_get_objects(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "client_from_region": "aws:us-west-1",
             "warmup_regions": ["gcp:us-west1"],
         },
@@ -261,10 +275,19 @@ def test_get_objects(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-get-version-bucket",
+            "versioning": True,
+        },
+    )
+
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -289,7 +312,7 @@ def test_get_objects(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -317,7 +340,7 @@ def test_get_objects(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
         },
@@ -342,7 +365,7 @@ def test_get_objects(client):
         client.post(
             "/locate_object",
             json={
-                "bucket": "my-get-bucket",
+                "bucket": "my-get-version-bucket",
                 "key": "non-existent-my-key",
                 "client_from_region": "aws:us-west-2",
             },
@@ -354,7 +377,7 @@ def test_get_objects(client):
     location = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "gcp:us-west1",
         },
@@ -365,7 +388,7 @@ def test_get_objects(client):
     location = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:eu-west-1",
         },
@@ -376,7 +399,7 @@ def test_get_objects(client):
     location = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket",
+            "bucket": "my-get-version-bucket",
             "key": "my-key",
             "client_from_region": "gcp:us-west1",
             "version_id": 1,
@@ -391,7 +414,7 @@ def test_get_object_write_local_and_pull(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
             "client_from_region": "aws:us-west-1",
         },
     )
@@ -407,11 +430,20 @@ def test_get_object_write_local_and_pull(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-get-version-bucket-write_local",
+            "versioning": True,
+        },
+    )
+
     # Start upload from another region, expected write local
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
             "key": "my-key-write_local",
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
@@ -436,7 +468,7 @@ def test_get_object_write_local_and_pull(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
             "key": "my-key-write_local",
             "client_from_region": "aws:us-east-1",
         },
@@ -462,7 +494,7 @@ def test_get_object_write_local_and_pull(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
             "key": "my-key-write_local",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -487,7 +519,7 @@ def test_get_object_write_local_and_pull(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
             "key": "my-key-write_local",
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
@@ -513,7 +545,7 @@ def test_get_object_write_local_and_pull(client):
     resp = client.post(
         "/list_objects_versioning",
         json={
-            "bucket": "my-get-bucket-write_local",
+            "bucket": "my-get-version-bucket-write_local",
         },
     )
     #print("resp.json() = ", resp.json())
@@ -524,7 +556,7 @@ def test_warmup(client):
     # init region in aws:us-west-1 and aws:us-east-2
     resp = client.post(
         "/start_create_bucket",
-        json={"bucket": "my-warmup-bucket", "client_from_region": "aws:us-east-2"},
+        json={"bucket": "my-warmup-version-bucket", "client_from_region": "aws:us-east-2"},
     )
     resp.raise_for_status()
 
@@ -539,11 +571,20 @@ def test_warmup(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-warmup-version-bucket",
+            "versioning": True,
+        },
+    )
+
     # 1st version
     resp1 = client.post(
         "/start_upload",
         json={
-            "bucket": "my-warmup-bucket",
+            "bucket": "my-warmup-version-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
@@ -554,7 +595,7 @@ def test_warmup(client):
     resp2 = client.post(
         "/start_upload",
         json={
-            "bucket": "my-warmup-bucket",
+            "bucket": "my-warmup-version-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
@@ -589,7 +630,7 @@ def test_warmup(client):
     resp = client.post(
         "/start_warmup",
         json={
-            "bucket": "my-warmup-bucket",
+            "bucket": "my-warmup-version-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "warmup_regions": ["aws:us-west-1"],
@@ -614,7 +655,7 @@ def test_warmup(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-warmup-bucket",
+            "bucket": "my-warmup-version-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-west-1",
             "version_id": 5,    # should be able to locate this version from warmup region
@@ -628,7 +669,7 @@ def test_warmup(client):
     resp = client.post(
         "/list_objects_versioning",
         json={
-            "bucket": "my-warmup-bucket",
+            "bucket": "my-warmup-version-bucket",
         }
     )
 
@@ -638,7 +679,7 @@ def test_warmup(client):
 def test_write_back(client):
     resp = client.post(
         "/start_create_bucket",
-        json={"bucket": "my-writeback-bucket", "client_from_region": "aws:us-east-2"},
+        json={"bucket": "my-writeback-version-bucket", "client_from_region": "aws:us-east-2"},
     )
     resp.raise_for_status()
 
@@ -653,10 +694,19 @@ def test_write_back(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-writeback-version-bucket",
+            "versioning": True,
+        },
+    )
+
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-writeback-bucket",
+            "bucket": "my-writeback-version-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
@@ -678,7 +728,7 @@ def test_write_back(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-writeback-bucket",
+            "bucket": "my-writeback-version-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
         },
@@ -689,7 +739,7 @@ def test_write_back(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-writeback-bucket",
+            "bucket": "my-writeback-version-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -712,7 +762,7 @@ def test_write_back(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-writeback-bucket",
+            "bucket": "my-writeback-version-bucket",
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
         },
@@ -724,7 +774,7 @@ def test_list_objects(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "client_from_region": "aws:us-west-1",
         },
     )
@@ -741,10 +791,19 @@ def test_list_objects(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-list-version-bucket",
+            "versioning": True,
+        },
+    )
+
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -765,7 +824,7 @@ def test_list_objects(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -786,7 +845,7 @@ def test_list_objects(client):
     resp = client.post(
         "/list_objects",
         json={
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "prefix": "my-prefix-1/",
         },
     )
@@ -795,14 +854,14 @@ def test_list_objects(client):
     resp = client.post(
         "/list_objects",
         json={
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "prefix": "my-key",
         },
     )
 
     assert resp.json() == [
         {
-            "bucket": "my-list-bucket",
+            "bucket": "my-list-version-bucket",
             "key": "my-key-1",
             "size": 100,
             "etag": "124",  # should not be 123
@@ -820,7 +879,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "client_from_region": "aws:us-west-1",
             "warmup_regions": ["gcp:us-west1"],
         },
@@ -838,10 +897,19 @@ def test_multipart_flow(client):
         )
         resp.raise_for_status()
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-multipart-version-bucket",
+            "versioning": True,
+        },
+    )
+
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "is_multipart": True,
@@ -868,7 +936,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/list_multipart_uploads",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "prefix": "my-key-multi",
         },
     )
@@ -876,7 +944,7 @@ def test_multipart_flow(client):
     resp_data = resp.json()
     assert resp_data == [
         {
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "key": "my-key-multipart",
             "upload_id": multipart_upload_id,
         }
@@ -886,7 +954,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/continue_upload",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "multipart_upload_id": multipart_upload_id,
@@ -913,7 +981,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/list_parts",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "key": "my-key-multipart",
             "upload_id": multipart_upload_id,
         },
@@ -955,7 +1023,7 @@ def test_multipart_flow(client):
     resp = client.post(
         "/locate_object",
         json={
-            "bucket": "my-multipart-bucket",
+            "bucket": "my-multipart-version-bucket",
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
         },
@@ -972,7 +1040,7 @@ async def test_metadata_clean_up(client):
     resp = client.post(
         "/start_create_bucket",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "client_from_region": "aws:us-west-1",
             "warmup_regions": ["gcp:us-west1"],
         },
@@ -985,18 +1053,27 @@ async def test_metadata_clean_up(client):
     resp = client.post(
         "/locate_bucket_status",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "client_from_region": "aws:us-west-1",
         },
     )
 
     assert resp.json()["status"] == "ready"
 
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "temp-object-version-bucket",
+            "versioning": True,
+        },
+    )
+
     # 1st version
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -1008,7 +1085,7 @@ async def test_metadata_clean_up(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -1020,7 +1097,7 @@ async def test_metadata_clean_up(client):
     resp = client.post(
         "/start_upload",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
@@ -1034,7 +1111,7 @@ async def test_metadata_clean_up(client):
     resp = client.post(
         "/locate_object_status",
         json={
-            "bucket": "temp-object-bucket",
+            "bucket": "temp-object-version-bucket",
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
         },
@@ -1042,3 +1119,67 @@ async def test_metadata_clean_up(client):
     # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
     for obj in resp.json():
         assert obj["status"] == "ready"
+
+def test_disable_bucket_versioning(client):
+    """without bucket versioning, we should only have one logical object version
+        and reject multiple upload requests
+    """
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-version-bucket",
+            "client_from_region": "aws:us-west-1",
+            "warmup_regions": ["gcp:us-west1"],
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+    
+    # 1st upload
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-version-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+        }
+    )
+    resp.raise_for_status()
+
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00",
+            }
+        ).raise_for_status()
+
+    # 2nd upload
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-version-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+        }
+    )
+    # resp.raise_for_status()
+
+    # check result of 2nd upload, shoule be error
+    assert resp.status_code == 409

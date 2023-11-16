@@ -33,7 +33,7 @@ mod tests {
             true,
             "push".to_string(),
             "skystore".to_string(),
-            false,
+            "NULL".to_string(),
         )
         .await
     }
@@ -46,7 +46,7 @@ mod tests {
             true,
             "push".to_string(),
             "skystore".to_string(),
-            true,
+            "enable".to_string(),
         )
         .await
     }
@@ -284,6 +284,7 @@ mod tests {
                 "my-copy-key".to_string(),
                 bucket_name.to_string(),
                 "my-copy-key-copy".to_string(),
+                None,
             );
             let req = S3Request::new(request);
             let resp = proxy.copy_object(req).await.unwrap().output;
@@ -408,6 +409,7 @@ mod tests {
                 2,
                 bucket_name.to_string(),
                 "my-copy-src-key".to_string(),
+                None,
                 None,
             );
 
@@ -569,6 +571,7 @@ mod tests {
                 bucket_name.to_string(),
                 "my-copy-src-key".to_string(),
                 Some("bytes=0-52428799".to_string()),
+                None,
             );
 
             let req = S3Request::new(request);
@@ -586,6 +589,7 @@ mod tests {
                 bucket_name.to_string(),
                 "my-copy-src-key".to_string(),
                 Some(format!("{}{}", "bytes=52428800-", part_size - 1)),
+                None,
             );
 
             let req = S3Request::new(request);
@@ -833,6 +837,69 @@ mod tests {
             let req = S3Request::new(request);
             let resp = proxy.get_object(req).await;
             assert!(resp.is_err());
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_put_bucket_versioning() {
+        // still use the proxy without explicit versioning enabled
+        let proxy = setup_sky_proxy().await;
+
+        let bucket_name = generate_unique_bucket_name();
+        let request = new_create_bucket_request(bucket_name.to_string(), None);
+        let req = S3Request::new(request);
+        proxy.create_bucket(req).await.unwrap().output;
+
+        // put bucket versioning
+        {
+            let request = new_put_bucket_versioning_request(
+                bucket_name.to_string(),
+                VersioningConfiguration {
+                    status: Some("Enabled".to_string().into()),
+                    ..Default::default()
+                },
+            );
+            let req = S3Request::new(request);
+            proxy.put_bucket_versioning(req).await.unwrap();
+
+            // try upload multiple objects with the same key, it should not return error
+            let mut request1 =
+                new_put_object_request(bucket_name.to_string(), "my-key".to_string());
+            let mut request2 =
+                new_put_object_request(bucket_name.to_string(), "my-key".to_string());
+            let body = "abcdefg".to_string().into_bytes();
+            request1.body = Some(s3s::Body::from(body.clone()).into());
+            request2.body = Some(s3s::Body::from(body).into());
+            let resp1 = proxy
+                .put_object(S3Request::new(request1))
+                .await
+                .unwrap()
+                .output;
+            assert!(resp1.version_id.is_some());
+            let resp2 = proxy
+                .put_object(S3Request::new(request2))
+                .await
+                .unwrap()
+                .output;
+            assert!(resp2.version_id.is_some());
+
+            // now suspend the versioning, try upload again, it should return error
+            let request = new_put_bucket_versioning_request(
+                bucket_name.to_string(),
+                VersioningConfiguration {
+                    status: Some("Suspended".to_string().into()),
+                    ..Default::default()
+                },
+            );
+            let req = S3Request::new(request);
+            proxy.put_bucket_versioning(req).await.unwrap();
+            let mut request3 =
+                new_put_object_request(bucket_name.to_string(), "my-key".to_string());
+            let body = "abcdefg".to_string().into_bytes();
+            request3.body = Some(s3s::Body::from(body).into());
+            let resp3 = proxy.put_object(S3Request::new(request3)).await;
+            assert!(resp3.is_err());
         }
     }
 }

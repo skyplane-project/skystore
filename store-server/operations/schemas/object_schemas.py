@@ -31,6 +31,9 @@ class DBLogicalObject(Base):
     etag = Column(String)
     status = Column(Enum(Status))
 
+    version_suspended = Column(Boolean, nullable=False, default=False)
+    delete_marker = Column(Boolean, nullable=False, default=False)
+
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
@@ -290,11 +293,17 @@ class DeleteObjectsRequest(BaseModel):
     object_identifiers: Dict[str, set[int]]
     multipart_upload_ids: Optional[List[str]] = None
 
+class DeleteMarker(BaseModel):
+    delete_marker: bool
+    version_id: Optional[str] = None
 
 class DeleteObjectsResponse(BaseModel):
     locators: Dict[str, List[LocateObjectResponse]]
+    delete_markers: Dict[str, DeleteMarker]    # (is_delete_marker, delete_marker_version_id)
 
 
 class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
+
+

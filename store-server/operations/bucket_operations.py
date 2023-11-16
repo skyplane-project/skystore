@@ -391,7 +391,7 @@ async def put_bucket_versioning(request: PutBucketVersioningRequest, db: Session
     
     logger.debug(f"put_bucket_versioning: {request} -> {bucket}")
 
-    bucket.versioning = request.versioning
+    bucket.version_enabled = request.versioning
 
     # besides changing the logical bucket versioning setting, we should be able to let the
     # proxy side change the corresponding physical bucket versioning setting
@@ -407,7 +407,29 @@ async def put_bucket_versioning(request: PutBucketVersioningRequest, db: Session
                 region=physical_bucket_locator.region,
             )
         )
+
+    await db.commit()
+
     return locators_lst
+
+
+@router.post("/check_version_setting")
+async def check_version_setting(request: HeadBucketRequest, db: Session = Depends(get_session)
+) -> bool:
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+    
+    logger.debug(f"check_version_setting: {request} -> {bucket}")
+
+    # both suspended and enabled versioning setting should be able to upload objects multiple times
+    if bucket.version_enabled is None:
+        return False
+    return True 
 
 
 @router.post(

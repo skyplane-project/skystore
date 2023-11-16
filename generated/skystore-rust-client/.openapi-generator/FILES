@@ -15,6 +15,7 @@ docs/DefaultApi.md
 docs/DeleteBucketIsCompleted.md
 docs/DeleteBucketRequest.md
 docs/DeleteBucketResponse.md
+docs/DeleteMarker.md
 docs/DeleteObjectsIsCompleted.md
 docs/DeleteObjectsRequest.md
 docs/DeleteObjectsResponse.md
@@ -63,6 +64,7 @@ src/models/create_bucket_response.rs
 src/models/delete_bucket_is_completed.rs
 src/models/delete_bucket_request.rs
 src/models/delete_bucket_response.rs
+src/models/delete_marker.rs
 src/models/delete_objects_is_completed.rs
 src/models/delete_objects_request.rs
 src/models/delete_objects_response.rs

@@ -1,11 +1,11 @@
-# DeleteObjectsResponse
+# DeleteMarker
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**locators** | [**::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>**](array.md) |  | 
-**delete_markers** | [**::std::collections::HashMap<String, crate::models::DeleteMarker>**](DeleteMarker.md) |  | 
+**delete_marker** | **bool** |  | 
+**version_id** | Option<**String**> |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

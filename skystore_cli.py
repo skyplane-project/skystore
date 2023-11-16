@@ -25,6 +25,10 @@ class Policy(str, Enum):
     write_local = "write_local"
     push = "push"
 
+class Version(str, Enum):
+    enable = "enable"
+    disable = "suspend"
+    NULL = "NULL"
 
 @app.command()
 def init(
@@ -43,8 +47,8 @@ def init(
     policy: Policy = typer.Option(
         Policy.write_local, "--policy", help="Policy to use for data placement"
     ),
-    enable_version: bool = typer.Option(
-        False, "--version", help="Whether to enable the version or not"
+    enable_version: str = typer.Option(
+        Version.NULL, "--version", help="Whether to enable the version or not"
     ),
 ):
     with open(config_file, "r") as f:

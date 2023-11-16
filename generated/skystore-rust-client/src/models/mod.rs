@@ -22,6 +22,8 @@ pub mod delete_bucket_request;
 pub use self::delete_bucket_request::DeleteBucketRequest;
 pub mod delete_bucket_response;
 pub use self::delete_bucket_response::DeleteBucketResponse;
+pub mod delete_marker;
+pub use self::delete_marker::DeleteMarker;
 pub mod delete_objects_is_completed;
 pub use self::delete_objects_is_completed::DeleteObjectsIsCompleted;
 pub mod delete_objects_request;

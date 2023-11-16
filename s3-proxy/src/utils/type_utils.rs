@@ -89,6 +89,7 @@ pub fn new_copy_object_request(
     src_key: String,
     dst_bucket: String,
     dst_key: String,
+    version_id: Option<String>,
 ) -> CopyObjectInput {
     let mut builder = CopyObjectInput::builder();
     builder.set_bucket(dst_bucket);
@@ -96,7 +97,7 @@ pub fn new_copy_object_request(
     builder.set_copy_source(CopySource::Bucket {
         bucket: src_bucket.into(),
         key: src_key.into(),
-        version_id: None,
+        version_id: version_id.map(|v| v.into()),
     });
     builder.build().unwrap()
 }
@@ -192,6 +193,7 @@ pub fn new_upload_part_copy_request(
     copy_source_bucket: String,
     copy_source_key: String,
     copy_source_range: Option<String>, // e.g. "bytes=0-100"
+    version_id: Option<String>,
 ) -> UploadPartCopyInput {
     let mut builder = UploadPartCopyInput::builder();
     builder.set_bucket(bucket);
@@ -201,7 +203,7 @@ pub fn new_upload_part_copy_request(
     builder.set_copy_source(CopySource::Bucket {
         bucket: copy_source_bucket.into(),
         key: copy_source_key.into(),
-        version_id: None,
+        version_id: version_id.map(|v| v.into()),
     });
     builder.set_copy_source_range(copy_source_range);
     builder.build().unwrap()

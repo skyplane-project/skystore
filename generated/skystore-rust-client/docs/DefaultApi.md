@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**append_part**](DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
+[**check_version_setting**](DefaultApi.md#check_version_setting) | **POST** /check_version_setting | Check Version Setting
 [**complete_create_bucket**](DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
 [**complete_delete_bucket**](DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 [**complete_delete_objects**](DefaultApi.md#complete_delete_objects) | **PATCH** /complete_delete_objects | Complete Delete Objects
@@ -48,6 +49,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**serde_json::Value**](serde_json::Value.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## check_version_setting
+
+> bool check_version_setting(head_bucket_request)
+Check Version Setting
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**head_bucket_request** | [**HeadBucketRequest**](HeadBucketRequest.md) |  | [required] |
+
+### Return type
+
+**bool**
 
 ### Authorization
 

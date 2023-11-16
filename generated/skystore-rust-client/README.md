@@ -26,6 +26,7 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**append_part**](docs/DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
+*DefaultApi* | [**check_version_setting**](docs/DefaultApi.md#check_version_setting) | **POST** /check_version_setting | Check Version Setting
 *DefaultApi* | [**complete_create_bucket**](docs/DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
 *DefaultApi* | [**complete_delete_bucket**](docs/DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 *DefaultApi* | [**complete_delete_objects**](docs/DefaultApi.md#complete_delete_objects) | **PATCH** /complete_delete_objects | Complete Delete Objects
@@ -67,6 +68,7 @@ Class | Method | HTTP request | Description
  - [DeleteBucketIsCompleted](docs/DeleteBucketIsCompleted.md)
  - [DeleteBucketRequest](docs/DeleteBucketRequest.md)
  - [DeleteBucketResponse](docs/DeleteBucketResponse.md)
+ - [DeleteMarker](docs/DeleteMarker.md)
  - [DeleteObjectsIsCompleted](docs/DeleteObjectsIsCompleted.md)
  - [DeleteObjectsRequest](docs/DeleteObjectsRequest.md)
  - [DeleteObjectsResponse](docs/DeleteObjectsResponse.md)
