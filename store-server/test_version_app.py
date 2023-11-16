@@ -166,7 +166,7 @@ def test_delete_objects(client):
     assert len(resp.json()) == 2
 
     # delete objects without setting version id explicitly
-    # this op should cause all objects with the same key to be deleted
+    # Since now the version is enabled, this will insert a delete marker to the DB.
     resp2 = client.post(
         "/start_delete_objects",
         json={
@@ -187,7 +187,64 @@ def test_delete_objects(client):
             )
             resp2.raise_for_status()
 
+
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+        },
+    ) 
+
+    assert len(resp.json()) == 3    # should still have 3 logical objects version, since we insert a delete marker now
+
     # print("resp.json() = ", resp2.json())
+
+    # try delete the delete marker
+    resp3 = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+            "object_identifiers": {"my-key": list({"4"})},   # type set is not json serializable
+        },
+    )
+
+    for key, physical_objects in resp3.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={"ids": [physical_object["id"]]},
+            )
+            resp3.raise_for_status()
+
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+        },
+    )
+
+    assert len(resp.json()) == 2    # should have 2 logical objects version, since we delete the delete marker now
+
+    # delete all the objects
+    resp4 = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+            "object_identifiers": {"my-key": list({"2", "3"})},   # type set is not json serializable
+        },
+    )
+
+    for key, physical_objects in resp4.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={"ids": [physical_object["id"]]},
+            )
+            resp4.raise_for_status()
 
     resp = client.post(
         "/list_objects",

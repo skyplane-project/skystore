@@ -26,8 +26,8 @@ class Policy(str, Enum):
     push = "push"
 
 class Version(str, Enum):
-    enable = "enable"
-    disable = "suspend"
+    enable = "Enabled"
+    disable = "Suspended"
     NULL = "NULL"
 
 @app.command()

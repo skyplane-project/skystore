@@ -31,7 +31,11 @@ class DBLogicalObject(Base):
     etag = Column(String)
     status = Column(Enum(Status))
 
+    # indicat whether it is a one that being uploaded after version suspended
+    # https://docs.aws.amazon.com/AmazonS3/latest/userguide/AddingObjectstoVersionSuspendedBuckets.html
     version_suspended = Column(Boolean, nullable=False, default=False)
+
+    # whether the objects is a delete marker
     delete_marker = Column(Boolean, nullable=False, default=False)
 
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
@@ -239,8 +243,8 @@ class ObjectResponse(BaseModel):
     bucket: str
     key: str
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
-    etag: str
-    last_modified: datetime
+    etag: Optional[str] = None
+    last_modified: Optional[datetime] = None
     version_id: Optional[int] = None    # logical object version
 
 

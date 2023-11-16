@@ -906,6 +906,9 @@ impl S3 for SkyProxy {
         )
         .await
         .unwrap();
+
+        // println!("version_enabled: {}", version_enabled);
+
         if !version_enabled {
             let locator = self
                 .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
@@ -935,11 +938,13 @@ impl S3 for SkyProxy {
         .unwrap();
 
         let mut tasks = tokio::task::JoinSet::new();
-        let locators = start_upload_resp.locators;
+        let locators = start_upload_resp.clone().locators;
         let request_template = clone_put_object_request(&req.input, None);
         let input_blobs = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
         let vid = locators[0].version.map(|id| id.to_string()); // logical version
+
+        println!("upload response: {:?}", start_upload_resp);
 
         locators
             .into_iter()
@@ -1786,7 +1791,7 @@ impl S3 for SkyProxy {
                 key: req.input.key.clone(),
                 multipart_upload_id: req.input.upload_id.clone(),
                 client_from_region: self.client_from_region.clone(),
-                version_id: None,
+                version_id: vid.clone(), // logical version
                 do_list_parts: Some(false),
                 copy_src_bucket: Some(src_bucket.clone()),
                 copy_src_key: Some(src_key.clone()),

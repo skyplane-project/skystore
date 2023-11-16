@@ -46,7 +46,7 @@ mod tests {
             true,
             "push".to_string(),
             "skystore".to_string(),
-            "enable".to_string(),
+            "Enabled".to_string(),
         )
         .await
     }
@@ -884,7 +884,7 @@ mod tests {
                 .output;
             assert!(resp2.version_id.is_some());
 
-            // now suspend the versioning, try upload again, it should return error
+            // now suspend the versioning, try upload again, it should not produce error
             let request = new_put_bucket_versioning_request(
                 bucket_name.to_string(),
                 VersioningConfiguration {
@@ -899,7 +899,7 @@ mod tests {
             let body = "abcdefg".to_string().into_bytes();
             request3.body = Some(s3s::Body::from(body).into());
             let resp3 = proxy.put_object(S3Request::new(request3)).await;
-            assert!(resp3.is_err());
+            assert!(resp3.is_ok());
         }
     }
 }
