@@ -48,7 +48,8 @@ class DBLogicalObject(Base):
 
     # Add relationship to physical object
     physical_object_locators = relationship(
-        "DBPhysicalObjectLocator", back_populates="logical_object",
+        "DBPhysicalObjectLocator",
+        back_populates="logical_object",
     )
 
 
@@ -93,7 +94,6 @@ class DBPhysicalObjectLocator(Base):
         Integer, ForeignKey("logical_objects.id"), nullable=False
     )
 
-
     logical_object = relationship(
         "DBLogicalObject",
         back_populates="physical_object_locators",
@@ -116,8 +116,8 @@ class LocateObjectResponse(BaseModel):
     bucket: str
     region: str
     key: str
-    version_id: Optional[str] = None # must be the physical object version id
-    version: Optional[int] = None # must be the logical object version
+    version_id: Optional[str] = None  # must be the physical object version id
+    version: Optional[int] = None  # must be the logical object version
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
@@ -245,7 +245,7 @@ class ObjectResponse(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: Optional[str] = None
     last_modified: Optional[datetime] = None
-    version_id: Optional[int] = None    # logical object version
+    version_id: Optional[int] = None  # logical object version
 
 
 class ObjectStatus(BaseModel):
@@ -297,17 +297,21 @@ class DeleteObjectsRequest(BaseModel):
     object_identifiers: Dict[str, set[int]]
     multipart_upload_ids: Optional[List[str]] = None
 
+
 class DeleteMarker(BaseModel):
     delete_marker: bool
     version_id: Optional[str] = None
 
+
 class DeleteObjectsResponse(BaseModel):
     locators: Dict[str, List[LocateObjectResponse]]
-    delete_markers: Dict[str, DeleteMarker]    # (is_delete_marker, delete_marker_version_id)
+    delete_markers: Dict[
+        str, DeleteMarker
+    ]  # (key, (is_delete_marker, delete_marker_version_id))
+    op_type: Dict[str, str]  # (key, op_type={'replace', 'delete', 'add'}])
 
 
 class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
-
-
+    op_type: List[str]  # {'replace', 'delete', 'add'}

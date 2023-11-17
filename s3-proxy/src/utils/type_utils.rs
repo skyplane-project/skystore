@@ -1,5 +1,12 @@
 use s3s::dto::*;
 
+// copy_source struct
+pub struct CopySourceInfo {
+    pub bucket: String,
+    pub key: String,
+    pub version_id: Option<String>,
+}
+
 #[allow(dead_code)]
 pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> CreateBucketInput {
     let mut builder = CreateBucketInput::builder();
@@ -190,10 +197,8 @@ pub fn new_upload_part_copy_request(
     key: String,
     upload_id: String,
     part_number: i32,
-    copy_source_bucket: String,
-    copy_source_key: String,
+    copy_source: CopySourceInfo,
     copy_source_range: Option<String>, // e.g. "bytes=0-100"
-    version_id: Option<String>,
 ) -> UploadPartCopyInput {
     let mut builder = UploadPartCopyInput::builder();
     builder.set_bucket(bucket);
@@ -201,9 +206,9 @@ pub fn new_upload_part_copy_request(
     builder.set_upload_id(upload_id);
     builder.set_part_number(part_number);
     builder.set_copy_source(CopySource::Bucket {
-        bucket: copy_source_bucket.into(),
-        key: copy_source_key.into(),
-        version_id: version_id.map(|v| v.into()),
+        bucket: copy_source.bucket.into(),
+        key: copy_source.key.into(),
+        version_id: copy_source.version_id.map(|v| v.into()),
     });
     builder.set_copy_source_range(copy_source_range);
     builder.build().unwrap()

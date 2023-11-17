@@ -125,6 +125,7 @@ class DeleteBucketResponse(CreateBucketResponse):
 class DeleteBucketIsCompleted(BaseModel):
     id: int
 
+
 class PutBucketVersioningRequest(BaseModel):
     bucket: str
     versioning: bool

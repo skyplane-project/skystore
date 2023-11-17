@@ -1,17 +1,47 @@
 import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
-import uuid 
 import subprocess as sp
+import threading
+
 
 @pytest.fixture
 def client():
     with TestClient(app) as client:
         yield client
 
+
+def concurrent_upload(client, bucket, key, region, idx):
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": bucket,
+            "key": key,
+            "client_from_region": region,
+            "is_multipart": False,
+            "policy": "push",
+            # "version_id": version_id,
+        },
+    )
+    resp.raise_for_status()
+
+    for i, physical_object in enumerate(resp.json()["locators"]):
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": f"1{idx}{i}",
+                "last_modified": "2020-01-01T00:00:00",
+                # "version_id": version_id,
+            },
+        ).raise_for_status()
+
+
 # NOTE: Do not change the position of this test, it should be the first test
 def test_remove_db(client):
     sp.run("rm skystore.db", shell=True)
+
 
 def test_delete_objects(client):
     """Test that the `delete_object` endpoint functions correctly."""
@@ -45,86 +75,26 @@ def test_delete_objects(client):
             "versioning": True,
         },
     )
-    #resp.raise_for_status()
+    # resp.raise_for_status()
 
-    # start uploading many objects with the same key
-    resp1 = client.post(
-        "/start_upload",
-        json={
-            "bucket": "my-delete-object-version-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-west-1",
-            "is_multipart": False,
-            "policy": "push",
-        },
-    )
-    resp1.raise_for_status()
+    # start new threads to perform concurrent uploads
+    threads = []
+    for i in range(3):
+        t = threading.Thread(
+            target=concurrent_upload,
+            args=(
+                client,
+                "my-delete-object-version-bucket",
+                "my-key",
+                "aws:us-west-1",
+                i,
+            ),
+        )
+        threads.append(t)
+        t.start()
 
-    #print("resp.json() = ", resp1.json())
-
-    # second object
-    resp2 = client.post(
-        "/start_upload",
-        json={
-            "bucket": "my-delete-object-version-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-west-1",
-            "is_multipart": False,
-            "policy": "push",
-        },
-    )
-    resp2.raise_for_status()
-
-    # third object
-    resp3 = client.post(
-        "/start_upload",
-        json={
-            "bucket": "my-delete-object-version-bucket",
-            "key": "my-key",
-            "client_from_region": "aws:us-west-1",
-            "is_multipart": False,
-            "policy": "push",
-        },
-    )
-    resp3.raise_for_status()
-
-    #print("resp.json() = ", resp2.json())
-
-    for i, physical_object in enumerate(resp1.json()["locators"]):
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": physical_object["id"],
-                "size": 100,
-                "etag": "{}".format(uuid.uuid4()),
-                "last_modified": f"2020-01-01T00:00:0{i}",
-                "version_id": f"version-{i}",   # physical version id
-            },
-        ).raise_for_status()
-
-    for i, physical_object in enumerate(resp2.json()["locators"]):
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": physical_object["id"],
-                "size": 100,
-                "etag": "{}".format(uuid.uuid4()),
-                "last_modified": f"2020-01-01T00:00:0{i + 1}",
-                "version_id": f"version-{i + 10}",  # make sure version id is different
-            },
-        ).raise_for_status()
-
-    for i, physical_object in enumerate(resp3.json()["locators"]):
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": physical_object["id"],
-                "size": 100,
-                "etag": "{}".format(uuid.uuid4()),
-                "last_modified": f"2020-01-01T00:00:0{i + 1}",
-                "version_id": f"version-{i + 20}",  # make sure version id is different
-            },
-        ).raise_for_status()
+    for t in threads:
+        t.join()
 
     resp = client.post(
         "/list_objects_versioning",
@@ -132,9 +102,8 @@ def test_delete_objects(client):
             "bucket": "my-delete-object-version-bucket",
         },
     )
-    print("resp.json() = ", resp.json())
+
     assert len(resp.json()) == 3
-    # print("resp.json() = ", resp.json())
 
     # delete object with specific logical version set
     # should only delete the object with logical version 1
@@ -142,9 +111,14 @@ def test_delete_objects(client):
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-version-bucket",
-            "object_identifiers": {"my-key": list({"1"})},   # type 'set' is not json serializable, use List instead
+            "object_identifiers": {
+                "my-key": list({"1"})
+            },  # type 'set' is not json serializable, use List instead
         },
     )
+
+    # assert the return op type to be "delete"
+    assert resp1.json()["op_type"] == {"my-key": "delete"}
 
     for key, physical_objects in resp1.json()["locators"].items():
         assert key == "my-key"
@@ -152,7 +126,10 @@ def test_delete_objects(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["delete"],
+                },
             )
             resp1.raise_for_status()
 
@@ -161,7 +138,7 @@ def test_delete_objects(client):
         json={
             "bucket": "my-delete-object-version-bucket",
         },
-    )  
+    )
 
     assert len(resp.json()) == 2
 
@@ -171,11 +148,14 @@ def test_delete_objects(client):
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-version-bucket",
-            "object_identifiers": {"my-key": list()},   # type set is not json serializable
+            "object_identifiers": {
+                "my-key": list()
+            },  # type set is not json serializable
         },
     )
 
-    # print("resp.json() = ", resp2.json())
+    # assert the return op type to be "add"
+    assert resp2.json()["op_type"] == {"my-key": "add"}
 
     for key, physical_objects in resp2.json()["locators"].items():
         assert key == "my-key"
@@ -183,30 +163,37 @@ def test_delete_objects(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["add"],
+                },
             )
             resp2.raise_for_status()
-
 
     resp = client.post(
         "/list_objects_versioning",
         json={
             "bucket": "my-delete-object-version-bucket",
         },
-    ) 
+    )
 
-    assert len(resp.json()) == 3    # should still have 3 logical objects version, since we insert a delete marker now
+    assert (
+        len(resp.json()) == 3
+    )  # should still have 3 logical objects version, since we insert a delete marker now
 
-    # print("resp.json() = ", resp2.json())
-
-    # try delete the delete marker
+    # # try delete the delete marker
     resp3 = client.post(
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-version-bucket",
-            "object_identifiers": {"my-key": list({"4"})},   # type set is not json serializable
+            "object_identifiers": {
+                "my-key": list({"4"})
+            },  # type set is not json serializable, use list instead
         },
     )
+
+    # assert the return op type to be "delete"
+    assert resp3.json()["op_type"] == {"my-key": "delete"}
 
     for key, physical_objects in resp3.json()["locators"].items():
         assert key == "my-key"
@@ -214,7 +201,10 @@ def test_delete_objects(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["delete"],
+                },
             )
             resp3.raise_for_status()
 
@@ -225,16 +215,23 @@ def test_delete_objects(client):
         },
     )
 
-    assert len(resp.json()) == 2    # should have 2 logical objects version, since we delete the delete marker now
+    assert (
+        len(resp.json()) == 2
+    )  # should have 2 logical objects version, since we delete the delete marker now
 
     # delete all the objects
     resp4 = client.post(
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-version-bucket",
-            "object_identifiers": {"my-key": list({"2", "3"})},   # type set is not json serializable
+            "object_identifiers": {
+                "my-key": list({"2", "3"})
+            },  # type set is not json serializable
         },
     )
+
+    # assert the return op type to be "delete"
+    assert resp4.json()["op_type"] == {"my-key": "delete"}
 
     for key, physical_objects in resp4.json()["locators"].items():
         assert key == "my-key"
@@ -242,7 +239,10 @@ def test_delete_objects(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["delete"],
+                },
             )
             resp4.raise_for_status()
 
@@ -256,57 +256,6 @@ def test_delete_objects(client):
     # test that all objects with the same key are deleted
     assert resp.json() == []
 
-
-# def test_put_bucket_versioning(client):
-#     resp = client.post(
-#         "/register_buckets",
-#         json={
-#             "bucket": "test-version-bucket-register",
-#             "config": {
-#                 "physical_locations": [
-#                     {
-#                         "name": "aws:us-west-1",
-#                         "cloud": "aws",
-#                         "region": "us-west-1",
-#                         "bucket": "my-version-bucket-1",
-#                         "prefix": "my-prefix-1/",
-#                         "is_primary": True,
-#                         "need_warmup": False,
-#                     },
-#                     {
-#                         "name": "aws:us-east-2",
-#                         "cloud": "aws",
-#                         "region": "us-east-2",
-#                         "bucket": "my-version-bucket-2",
-#                         "prefix": "my-prefix-2/",
-#                         "is_primary": False,
-#                         "need_warmup": False,
-#                     },
-#                     {
-#                         "name": "gcp:us-west1",
-#                         "cloud": "gcp",
-#                         "region": "us-west1",
-#                         "bucket": "my-version-bucket-3",
-#                         "prefix": "my-prefix-3/",
-#                         "is_primary": False,
-#                         "need_warmup": True,
-#                     },
-#                 ]
-#             },
-#         },
-#     )
-#     resp.raise_for_status()
-
-#     # put bucket versioning test
-#     resp = client.post(
-#         "/put_bucket_versioning",
-#         json={
-#             "bucket": "test-version-bucket-register",
-#             "versioning": True,
-#         },
-#     )
-
-#     print("resp.json() = ", resp.json())
 
 def test_get_objects(client):
     """Test that the `get_object` endpoint returns the correct object."""
@@ -378,10 +327,7 @@ def test_get_objects(client):
     )
     resp.raise_for_status()
 
-    print("resp.json() = ", resp.json())
-
     for i, physical_object in enumerate(resp.json()["locators"]):
-        print("physical_object = ", physical_object)
         client.patch(
             "/complete_upload",
             json={
@@ -406,16 +352,24 @@ def test_get_objects(client):
     resp_data = resp.json()
 
     assert resp_data["etag"] == "124"
-    assert resp_data["version"] == 2    # should be the newest version
-    assert resp_data["version_id"] == "version-11" or resp_data["version_id"] == "version-10"  
+    assert resp_data["version"] == 2  # should be the newest version
+    assert (
+        resp_data["version_id"] == "version-11"
+        or resp_data["version_id"] == "version-10"
+    )
 
     # this should fetch the newest version of the object
-    assert resp_data["tag"] == "aws:us-west-1" and resp_data["region"] == "us-west-1" \
-            and resp_data["etag"] == "124" \
-            and resp_data["last_modified"] == "2020-01-01T00:00:00" \
-            and resp_data["size"] == 100 and resp_data["key"] == "my-key" \
-            and resp_data["bucket"] == "skystore-us-west-1" and resp_data["cloud"] == "aws" \
-            and resp_data["multipart_upload_id"] == None 
+    assert (
+        resp_data["tag"] == "aws:us-west-1"
+        and resp_data["region"] == "us-west-1"
+        and resp_data["etag"] == "124"
+        and resp_data["last_modified"] == "2020-01-01T00:00:00"
+        and resp_data["size"] == 100
+        and resp_data["key"] == "my-key"
+        and resp_data["bucket"] == "skystore-us-west-1"
+        and resp_data["cloud"] == "aws"
+        and resp_data["multipart_upload_id"] is None
+    )
 
     # 404
     assert (
@@ -450,9 +404,12 @@ def test_get_objects(client):
             "client_from_region": "aws:eu-west-1",
         },
     ).json()["region"]
-    assert location in {"us-west-1", "us-west1"}    # use push policy, depend on which one is the first primary write region
+    assert location in {
+        "us-west-1",
+        "us-west1",
+    }  # use push policy, depend on which one is the first primary write region
 
-    # Read a specific version
+    # Get a specific version
     location = client.post(
         "/locate_object",
         json={
@@ -544,7 +501,7 @@ def test_get_object_write_local_and_pull(client):
         "etag": "123",
         "last_modified": "2020-01-01T00:00:00",
         "multipart_upload_id": None,
-        "version": 3,   # NOTE: If you run this test separately, this version number will be different
+        "version": 3,  # NOTE: If you run this test separately, this version number will be different
     }
 
     # Try copy_on_read policy, first write to the primary region
@@ -605,7 +562,6 @@ def test_get_object_write_local_and_pull(client):
             "bucket": "my-get-version-bucket-write_local",
         },
     )
-    #print("resp.json() = ", resp.json())
     assert len(resp.json()) == 2
 
 
@@ -613,7 +569,10 @@ def test_warmup(client):
     # init region in aws:us-west-1 and aws:us-east-2
     resp = client.post(
         "/start_create_bucket",
-        json={"bucket": "my-warmup-version-bucket", "client_from_region": "aws:us-east-2"},
+        json={
+            "bucket": "my-warmup-version-bucket",
+            "client_from_region": "aws:us-east-2",
+        },
     )
     resp.raise_for_status()
 
@@ -667,7 +626,7 @@ def test_warmup(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00.000Z",
-                #"version_id": "version-1"
+                # "version_id": "version-1"
             },
         ).raise_for_status()
 
@@ -679,7 +638,7 @@ def test_warmup(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00.000Z",
-                #"version_id": "version-1"
+                # "version_id": "version-1"
             },
         ).raise_for_status()
 
@@ -691,11 +650,11 @@ def test_warmup(client):
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "warmup_regions": ["aws:us-west-1"],
-            "version_id": 5,    #NOTE: If you run this test separately, this version number will be different
+            "version_id": 5,  # NOTE: If you run this test separately, this version number will be different
         },
     )
     resp.raise_for_status()
-    #print("resp.json() = ", resp.json())
+
     for i, locator in enumerate(resp.json()["dst_locators"]):
         client.patch(
             "/complete_upload",
@@ -715,7 +674,7 @@ def test_warmup(client):
             "bucket": "my-warmup-version-bucket",
             "key": "my-key-warmup",
             "client_from_region": "aws:us-west-1",
-            "version_id": 5,    # should be able to locate this version from warmup region
+            "version_id": 5,  # should be able to locate this version from warmup region
         },
     )
     assert resp.json()["region"] == "us-west-1"
@@ -727,7 +686,7 @@ def test_warmup(client):
         "/list_objects_versioning",
         json={
             "bucket": "my-warmup-version-bucket",
-        }
+        },
     )
 
     assert len(resp.json()) == 2
@@ -736,7 +695,10 @@ def test_warmup(client):
 def test_write_back(client):
     resp = client.post(
         "/start_create_bucket",
-        json={"bucket": "my-writeback-version-bucket", "client_from_region": "aws:us-east-2"},
+        json={
+            "bucket": "my-writeback-version-bucket",
+            "client_from_region": "aws:us-east-2",
+        },
     )
     resp.raise_for_status()
 
@@ -800,7 +762,7 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "copy_on_read",   # since we enable versioning, we should make sure we use copy_on_read policy now
+            "policy": "copy_on_read",  # since we enable versioning, we should make sure we use copy_on_read policy now
         },
     )
     resp.raise_for_status()
@@ -825,6 +787,7 @@ def test_write_back(client):
         },
     )
     assert resp.json()["region"] == "us-west-1"
+
 
 # when we have multiple versions of the same object, we should be able to locate the newest logical version
 def test_list_objects(client):
@@ -923,7 +886,7 @@ def test_list_objects(client):
             "size": 100,
             "etag": "124",  # should not be 123
             "last_modified": "2020-01-01T00:00:00",
-            'version_id': None,
+            "version_id": None,
         }
     ]
 
@@ -1150,7 +1113,7 @@ async def test_metadata_clean_up(client):
     )
     resp.raise_for_status()
 
-    # 3rd version    
+    # 3rd version
     resp = client.post(
         "/start_upload",
         json={
@@ -1177,9 +1140,10 @@ async def test_metadata_clean_up(client):
     for obj in resp.json():
         assert obj["status"] == "ready"
 
+
 def test_disable_bucket_versioning(client):
     """without bucket versioning, we should only have one logical object version
-        and reject multiple upload requests
+    and reject multiple upload requests
     """
     resp = client.post(
         "/start_create_bucket",
@@ -1200,7 +1164,7 @@ def test_disable_bucket_versioning(client):
             },
         )
         resp.raise_for_status()
-    
+
     # 1st upload
     resp = client.post(
         "/start_upload",
@@ -1210,7 +1174,7 @@ def test_disable_bucket_versioning(client):
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
             "policy": "push",
-        }
+        },
     )
     resp.raise_for_status()
 
@@ -1222,7 +1186,7 @@ def test_disable_bucket_versioning(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00",
-            }
+            },
         ).raise_for_status()
 
     # 2nd upload
@@ -1234,7 +1198,7 @@ def test_disable_bucket_versioning(client):
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
             "policy": "push",
-        }
+        },
     )
     # resp.raise_for_status()
 

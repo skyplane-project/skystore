@@ -16,6 +16,12 @@ pub struct Configuration {
     pub physical_locations: Option<Vec<crate::models::PhysicalLocation>>,
 }
 
+impl Default for Configuration {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Configuration {
     pub fn new() -> Configuration {
         Configuration {

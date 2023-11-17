@@ -131,20 +131,10 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             _ => {
                 return Err(s3s::S3Error::with_message(
                     s3s::S3ErrorCode::InternalError,
-                    format!("Failed to create bucket"),
+                    "Failed to create bucket".to_string(),
                 ))
             }
         };
-
-        // let mut bucket = self.client.get_bucket(
-        //     &GetBucketRequest {
-        //         bucket: bucket_name.clone(),
-        //         ..Default::default()
-        //     })
-        //     .await
-        //     .unwrap();
-
-        // bucket.versioning = Some(Versioning{enabled: versioning});
 
         let _res = self
             .client
@@ -170,12 +160,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
-        let version_id;
-        if let Some(id) = req.version_id {
-            version_id = Some(id.parse::<i64>().unwrap());
-        } else {
-            version_id = None;
-        }
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         let res = self
             .client
@@ -207,12 +192,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
-        let version_id;
-        if let Some(id) = req.version_id {
-            version_id = Some(id.parse::<i64>().unwrap());
-        } else {
-            version_id = None;
-        }
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         let metadata = self
             .client
@@ -287,12 +267,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
-        let version_id;
-        if let Some(id) = req.version_id {
-            version_id = Some(id.parse::<i64>().unwrap());
-        } else {
-            version_id = None;
-        }
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         self.client
             .delete_object(&DeleteObjectRequest {

@@ -174,39 +174,6 @@ impl ObjectStoreClient for AzureObjectStoreClient {
     ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
         println!("put_bucket_versioning: {:?}", req);
         println!("Azure currently does not support bucket level versioning");
-        // since Azure does not support container level version control natively,
-        // but support blob version control.
-        // this op will enable version control for all the objects in the current container
-        // let req = req.input;
-        // let container_name = req.bucket;
-        // let container_client = self.container_client(&container_name);
-        // let blobs = container_client
-        //     .list_blobs()
-        //     .into_stream()
-        //     .next()
-        //     .await
-        //     .expect("list blobs next() should return value")
-        //     .expect("list blobs should succeed");
-        // let blob_list = blobs.blobs.blobs().collect::<Vec<_>>();
-        // if blob_list.len() > 0 {
-        // for blob in blob_list {
-        // let blob_client = self.blob_client(&container_name, &blob.name);
-        // let cur_properties = blob_client.get_properties().await.unwrap();
-        // let properties = blob_client.set_properties().await.unwrap();
-        // properties.
-        // let resp = blob_client
-        // .set_properties()
-        // .set_blob_versioning(BlobVersioning::Enabled)
-        // .await;
-        // match resp {
-        //     Ok(_) => (),
-        //     Err(err) => Err(s3s::S3Error::with_message(
-        //         s3s::S3ErrorCode::InternalError,
-        //         format!("Request failed: {err}"),
-        //     )),
-        // }
-        // }
-        // }
         return Ok(S3Response::new(PutBucketVersioningOutput::default()));
     }
 

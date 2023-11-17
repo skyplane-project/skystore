@@ -378,8 +378,10 @@ async def head_bucket(request: HeadBucketRequest, db: Session = Depends(get_sess
         content="Bucket exists",
     )
 
+
 @router.post("/put_bucket_versioning")
-async def put_bucket_versioning(request: PutBucketVersioningRequest, db: Session = Depends(get_session)
+async def put_bucket_versioning(
+    request: PutBucketVersioningRequest, db: Session = Depends(get_session)
 ) -> List[LocateBucketResponse]:
     stmt = select(DBLogicalBucket).where(
         DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
@@ -388,7 +390,7 @@ async def put_bucket_versioning(request: PutBucketVersioningRequest, db: Session
 
     if bucket is None:
         return Response(status_code=404, content="Not Found")
-    
+
     logger.debug(f"put_bucket_versioning: {request} -> {bucket}")
 
     bucket.version_enabled = request.versioning
@@ -414,7 +416,8 @@ async def put_bucket_versioning(request: PutBucketVersioningRequest, db: Session
 
 
 @router.post("/check_version_setting")
-async def check_version_setting(request: HeadBucketRequest, db: Session = Depends(get_session)
+async def check_version_setting(
+    request: HeadBucketRequest, db: Session = Depends(get_session)
 ) -> bool:
     stmt = select(DBLogicalBucket).where(
         DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
@@ -423,13 +426,13 @@ async def check_version_setting(request: HeadBucketRequest, db: Session = Depend
 
     if bucket is None:
         return Response(status_code=404, content="Not Found")
-    
+
     logger.debug(f"check_version_setting: {request} -> {bucket}")
 
     # both suspended and enabled versioning setting should be able to upload objects multiple times
     if bucket.version_enabled is None:
         return False
-    return True 
+    return True
 
 
 @router.post(

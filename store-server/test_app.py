@@ -3,14 +3,17 @@ from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
 import subprocess as sp
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as client:
         yield client
 
+
 # NOTE: Do not change the position of this test, it should be the first test
 def test_remove_db(client):
     sp.run("rm skystore.db", shell=True)
+
 
 def test_delete_object(client):
     """Test that the `delete_object` endpoint functions correctly."""
@@ -82,7 +85,7 @@ def test_delete_object(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={"ids": [physical_object["id"]], "op_type": ["delete"]},
             )
             resp.raise_for_status()
 

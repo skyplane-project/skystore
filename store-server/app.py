@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from sqlalchemy import select, update, and_
+from sqlalchemy import select, update
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute

@@ -25,10 +25,12 @@ class Policy(str, Enum):
     write_local = "write_local"
     push = "push"
 
+
 class Version(str, Enum):
     enable = "Enabled"
     disable = "Suspended"
     NULL = "NULL"
+
 
 @app.command()
 def init(
