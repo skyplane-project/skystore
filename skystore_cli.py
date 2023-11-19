@@ -26,6 +26,12 @@ class Policy(str, Enum):
     push = "push"
 
 
+class Version(str, Enum):
+    enable = "Enabled"
+    disable = "Suspended"
+    NULL = "NULL"
+
+
 @app.command()
 def init(
     config_file: str = typer.Option(
@@ -42,6 +48,9 @@ def init(
     ),
     policy: Policy = typer.Option(
         Policy.write_local, "--policy", help="Policy to use for data placement"
+    ),
+    enable_version: str = typer.Option(
+        Version.NULL, "--version", help="Whether to enable the version or not"
     ),
 ):
     with open(config_file, "r") as f:
@@ -65,6 +74,7 @@ def init(
         "LOCAL_SERVER": str(start_server).lower(),
         "POLICY": policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
+        "VERSION_ENABLE": str(enable_version).lower(),
     }
     env = {k: v for k, v in env.items() if v is not None}
 

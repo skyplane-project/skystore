@@ -9,20 +9,17 @@
  */
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct HeadObjectRequest {
-    #[serde(rename = "bucket")]
-    pub bucket: String,
-    #[serde(rename = "key")]
-    pub key: String,
+pub struct DeleteMarker {
+    #[serde(rename = "delete_marker")]
+    pub delete_marker: bool,
     #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<i32>,
+    pub version_id: Option<String>,
 }
 
-impl HeadObjectRequest {
-    pub fn new(bucket: String, key: String) -> HeadObjectRequest {
-        HeadObjectRequest {
-            bucket,
-            key,
+impl DeleteMarker {
+    pub fn new(delete_marker: bool) -> DeleteMarker {
+        DeleteMarker {
+            delete_marker,
             version_id: None,
         }
     }

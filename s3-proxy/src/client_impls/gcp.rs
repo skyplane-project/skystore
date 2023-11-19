@@ -7,6 +7,9 @@ use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::insert::{
     BucketCreationConfig, InsertBucketParam, InsertBucketRequest,
 };
+use google_cloud_storage::http::buckets::patch::BucketPatchConfig;
+use google_cloud_storage::http::buckets::patch::PatchBucketRequest;
+use google_cloud_storage::http::buckets::Versioning;
 use google_cloud_storage::http::objects::compose::{ComposeObjectRequest, ComposingTargets};
 use google_cloud_storage::http::objects::copy::CopyObjectRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
@@ -116,6 +119,40 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         Ok(S3Response::new(HeadBucketOutput {}))
     }
 
+    async fn put_bucket_versioning(
+        &self,
+        req: S3Request<PutBucketVersioningInput>,
+    ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
+        let req = req.input;
+        let bucket_name = req.bucket;
+        let versioning = match req.versioning_configuration.status.unwrap().as_str() {
+            "Enabled" => true,
+            "Suspended" => false,
+            _ => {
+                return Err(s3s::S3Error::with_message(
+                    s3s::S3ErrorCode::InternalError,
+                    "Failed to create bucket".to_string(),
+                ))
+            }
+        };
+
+        let _res = self
+            .client
+            .patch_bucket(&PatchBucketRequest {
+                bucket: bucket_name,
+                metadata: Some(BucketPatchConfig {
+                    versioning: Some(Versioning {
+                        enabled: versioning,
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .await;
+
+        Ok(S3Response::new(PutBucketVersioningOutput {}))
+    }
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,
@@ -123,21 +160,27 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         let res = self
             .client
             .get_object(&GetObjectRequest {
                 bucket,
                 object,
+                generation: version_id,
                 ..Default::default()
             })
             .await
             .unwrap();
 
+        // retrieve the version id from the generation
+        let vid = res.generation.to_string();
+
         Ok(S3Response::new(HeadObjectOutput {
             e_tag: Some(res.etag),
             content_length: res.size,
             last_modified: res.updated.map(Timestamp::from),
+            version_id: Some(vid),
             ..Default::default()
         }))
     }
@@ -149,12 +192,14 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         let metadata = self
             .client
             .get_object(&GetObjectRequest {
                 bucket: bucket.clone(),
                 object: object.clone(),
+                generation: version_id,
                 ..Default::default()
             })
             .await
@@ -170,6 +215,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 &GetObjectRequest {
                     bucket,
                     object,
+                    generation: version_id,
                     ..Default::default()
                 },
                 &range,
@@ -181,6 +227,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
             body: Some(StreamingBlob::wrap(res)),
             content_length: metadata.size,
             last_modified: metadata.updated.map(Timestamp::from),
+            version_id: Some(metadata.generation.to_string()),
             ..Default::default()
         }))
     }
@@ -208,6 +255,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         Ok(S3Response::new(PutObjectOutput {
             e_tag: Some(res.etag),
+            version_id: Some(res.generation.to_string()),
             ..Default::default()
         }))
     }
@@ -219,11 +267,13 @@ impl ObjectStoreClient for GCPObjectStoreClient {
         let req = req.input;
         let bucket = req.bucket;
         let object = req.key;
+        let version_id = req.version_id.map(|id| id.parse::<i64>().unwrap());
 
         self.client
             .delete_object(&DeleteObjectRequest {
                 bucket,
                 object,
+                generation: version_id,
                 ..Default::default()
             })
             .await
@@ -231,7 +281,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         Ok(S3Response::new(DeleteObjectOutput {
             delete_marker: false, // TODO: add versioning support
-            version_id: None,
+            version_id: Some(version_id.unwrap().to_string()),
             ..Default::default()
         }))
     }
@@ -270,6 +320,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 e_tag: Some(res.etag),
                 ..Default::default()
             }),
+            version_id: Some(res.generation.to_string()),
             ..Default::default()
         }))
     }
@@ -534,6 +585,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
 
         Ok(S3Response::new(CompleteMultipartUploadOutput {
             e_tag: Some(res.etag),
+            version_id: Some(res.generation.to_string()),
             ..Default::default()
         }))
     }

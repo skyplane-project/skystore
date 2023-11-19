@@ -63,6 +63,8 @@ async fn main() {
 
     let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
 
+    let version_enable: String = env::var("VERSION_ENABLE").expect("VERSION_ENABLE must be set");
+
     let proxy = SkyProxy::new(
         init_regions,
         client_from_region,
@@ -70,6 +72,7 @@ async fn main() {
         local_server,
         policy,
         skystore_bucket_prefix,
+        version_enable,
     )
     .await;
 
@@ -127,6 +130,7 @@ async fn main() {
                         let head_object_input = new_head_object_request(
                             warmup_req.bucket.clone(),
                             warmup_req.key.clone(),
+                            None, // version_id
                         );
 
                         let mut new_req = S3Request::new(head_object_input);

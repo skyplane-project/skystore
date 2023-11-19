@@ -16,6 +16,8 @@ pub struct LocateObjectRequest {
     pub key: String,
     #[serde(rename = "client_from_region")]
     pub client_from_region: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<i32>,
 }
 
 impl LocateObjectRequest {
@@ -24,6 +26,7 @@ impl LocateObjectRequest {
             bucket,
             key,
             client_from_region,
+            version_id: None,
         }
     }
 }

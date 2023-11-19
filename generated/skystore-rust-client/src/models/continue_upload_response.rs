@@ -22,6 +22,10 @@ pub struct ContinueUploadResponse {
     pub region: String,
     #[serde(rename = "key")]
     pub key: String,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
+    #[serde(rename = "version", skip_serializing_if = "Option::is_none")]
+    pub version: Option<i32>,
     #[serde(rename = "size", skip_serializing_if = "Option::is_none")]
     pub size: Option<u64>,
     #[serde(rename = "last_modified", skip_serializing_if = "Option::is_none")]
@@ -55,6 +59,8 @@ impl ContinueUploadResponse {
             bucket,
             region,
             key,
+            version_id: None,
+            version: None,
             size: None,
             last_modified: None,
             etag: None,

@@ -16,7 +16,7 @@ pub struct HttpValidationError {
 
 impl Default for HttpValidationError {
     fn default() -> Self {
-        HttpValidationError::new()
+        Self::new()
     }
 }
 

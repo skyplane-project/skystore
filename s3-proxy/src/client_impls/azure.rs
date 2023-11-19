@@ -113,7 +113,7 @@ impl SeekableStream for SeekableBlobWrapper {
 
 impl AzureObjectStoreClient {
     #[allow(dead_code)]
-    pub async fn new() -> Self {
+    pub async fn new(/* version_enable: bool */) -> Self {
         let account = std::env::var("STORAGE_ACCOUNT").expect("missing STORAGE_ACCOUNT");
         let access_key = std::env::var("STORAGE_ACCESS_KEY").expect("missing STORAGE_ACCOUNT_KEY");
         let storage_credentials = StorageCredentials::access_key(account.clone(), access_key);
@@ -162,6 +162,13 @@ impl ObjectStoreClient for AzureObjectStoreClient {
                 format!("Request failed: {err}"),
             )),
         }
+    }
+
+    async fn put_bucket_versioning(
+        &self,
+        _: S3Request<PutBucketVersioningInput>,
+    ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
+        panic!("Azure currently does not support bucket level versioning");
     }
 
     async fn delete_bucket(

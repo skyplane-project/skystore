@@ -18,6 +18,7 @@ from typing import Dict, List, Literal, Optional
 class DBLogicalObject(Base):
     __tablename__ = "logical_objects"
 
+    # NOTE: This id also servers as the version of the logical object, may change to other alternatives name
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     bucket = Column(String, ForeignKey("logical_buckets.bucket"))
@@ -30,6 +31,13 @@ class DBLogicalObject(Base):
     etag = Column(String)
     status = Column(Enum(Status))
 
+    # indicate whether it is a one that being uploaded after version suspended
+    # https://docs.aws.amazon.com/AmazonS3/latest/userguide/AddingObjectstoVersionSuspendedBuckets.html
+    version_suspended = Column(Boolean, nullable=False, default=False)
+
+    # whether the objects is a delete marker
+    delete_marker = Column(Boolean, nullable=False, default=False)
+
     # NOTE: we are only supporting one upload for now. This can be changed when we are supporting versioning.
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
@@ -40,7 +48,8 @@ class DBLogicalObject(Base):
 
     # Add relationship to physical object
     physical_object_locators = relationship(
-        "DBPhysicalObjectLocator", back_populates="logical_object"
+        "DBPhysicalObjectLocator",
+        back_populates="logical_object",
     )
 
 
@@ -71,6 +80,8 @@ class DBPhysicalObjectLocator(Base):
     status = Column(Enum(Status))
     is_primary = Column(Boolean, nullable=False, default=False)
 
+    version_id = Column(String)  # mimic the type and name of the field in S3
+
     multipart_upload_id = Column(String)
     multipart_upload_parts = relationship(
         "DBPhysicalMultipartUploadPart",
@@ -82,8 +93,11 @@ class DBPhysicalObjectLocator(Base):
     logical_object_id = Column(
         Integer, ForeignKey("logical_objects.id"), nullable=False
     )
+
     logical_object = relationship(
-        "DBLogicalObject", back_populates="physical_object_locators"
+        "DBLogicalObject",
+        back_populates="physical_object_locators",
+        foreign_keys=[logical_object_id],
     )
 
 
@@ -91,6 +105,7 @@ class LocateObjectRequest(BaseModel):
     bucket: str
     key: str
     client_from_region: str
+    version_id: Optional[int] = None
 
 
 class LocateObjectResponse(BaseModel):
@@ -101,7 +116,8 @@ class LocateObjectResponse(BaseModel):
     bucket: str
     region: str
     key: str
-
+    version_id: Optional[str] = None  # must be the physical object version id
+    version: Optional[int] = None  # must be the logical object version
     size: Optional[NonNegativeInt] = Field(None, minimum=0, format="int64")
     last_modified: Optional[datetime] = None
     etag: Optional[str] = None
@@ -149,7 +165,7 @@ class StartUploadRequest(LocateObjectRequest):
     copy_src_key: Optional[str] = None
 
     # Policy
-    policy: Optional[str] = "pull"
+    policy: Optional[str] = "push"
 
 
 class StartUploadResponse(BaseModel):
@@ -175,7 +191,7 @@ class PatchUploadIsCompleted(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
-
+    version_id: Optional[str] = None
     policy: Optional[str] = "push"
 
 
@@ -227,8 +243,9 @@ class ObjectResponse(BaseModel):
     bucket: str
     key: str
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
-    etag: str
-    last_modified: datetime
+    etag: Optional[str] = None
+    last_modified: Optional[datetime] = None
+    version_id: Optional[int] = None  # logical object version
 
 
 class ObjectStatus(BaseModel):
@@ -238,6 +255,7 @@ class ObjectStatus(BaseModel):
 class HeadObjectRequest(BaseModel):
     bucket: str
     key: str
+    version_id: Optional[int] = None
 
 
 class HeadObjectResponse(BaseModel):
@@ -246,6 +264,7 @@ class HeadObjectResponse(BaseModel):
     size: NonNegativeInt = Field(..., minimum=0, format="int64")
     etag: str
     last_modified: datetime
+    version_id: Optional[int] = None
 
 
 class MultipartResponse(BaseModel):
@@ -275,14 +294,24 @@ class HealthcheckResponse(BaseModel):
 
 class DeleteObjectsRequest(BaseModel):
     bucket: str
-    keys: List[str]
+    object_identifiers: Dict[str, set[int]]
     multipart_upload_ids: Optional[List[str]] = None
+
+
+class DeleteMarker(BaseModel):
+    delete_marker: bool
+    version_id: Optional[str] = None
 
 
 class DeleteObjectsResponse(BaseModel):
     locators: Dict[str, List[LocateObjectResponse]]
+    delete_markers: Dict[
+        str, DeleteMarker
+    ]  # (key, (is_delete_marker, delete_marker_version_id))
+    op_type: Dict[str, str]  # (key, op_type={'replace', 'delete', 'add'}])
 
 
 class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
+    op_type: List[str]  # {'replace', 'delete', 'add'}

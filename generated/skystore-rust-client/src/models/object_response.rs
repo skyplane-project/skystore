@@ -16,26 +16,23 @@ pub struct ObjectResponse {
     pub key: String,
     #[serde(rename = "size")]
     pub size: u64,
-    #[serde(rename = "etag")]
-    pub etag: String,
-    #[serde(rename = "last_modified")]
-    pub last_modified: String,
+    #[serde(rename = "etag", skip_serializing_if = "Option::is_none")]
+    pub etag: Option<String>,
+    #[serde(rename = "last_modified", skip_serializing_if = "Option::is_none")]
+    pub last_modified: Option<String>,
+    #[serde(rename = "version_id", skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<i32>,
 }
 
 impl ObjectResponse {
-    pub fn new(
-        bucket: String,
-        key: String,
-        size: u64,
-        etag: String,
-        last_modified: String,
-    ) -> ObjectResponse {
+    pub fn new(bucket: String, key: String, size: u64) -> ObjectResponse {
         ObjectResponse {
             bucket,
             key,
             size,
-            etag,
-            last_modified,
+            etag: None,
+            last_modified: None,
+            version_id: None,
         }
     }
 }

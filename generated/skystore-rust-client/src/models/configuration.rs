@@ -18,7 +18,7 @@ pub struct Configuration {
 
 impl Default for Configuration {
     fn default() -> Self {
-        Configuration::new()
+        Self::new()
     }
 }
 

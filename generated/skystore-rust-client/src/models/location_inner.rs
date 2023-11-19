@@ -13,7 +13,7 @@ pub struct LocationInner {}
 
 impl Default for LocationInner {
     fn default() -> Self {
-        LocationInner::new()
+        Self::new()
     }
 }
 

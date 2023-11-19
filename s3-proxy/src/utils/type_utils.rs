@@ -1,5 +1,12 @@
 use s3s::dto::*;
 
+// copy_source struct
+pub struct CopySourceInfo {
+    pub bucket: String,
+    pub key: String,
+    pub version_id: Option<String>,
+}
+
 #[allow(dead_code)]
 pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> CreateBucketInput {
     let mut builder = CreateBucketInput::builder();
@@ -9,6 +16,16 @@ pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> Crea
             location_constraint: Some(BucketLocationConstraint::from(r)),
         }));
     }
+    builder.build().unwrap()
+}
+
+pub fn new_put_bucket_versioning_request(
+    bucket: String,
+    versioning_configuration: VersioningConfiguration,
+) -> PutBucketVersioningInput {
+    let mut builder = PutBucketVersioningInput::builder();
+    builder.set_bucket(bucket);
+    builder.set_versioning_configuration(versioning_configuration);
     builder.build().unwrap()
 }
 
@@ -55,10 +72,15 @@ pub fn new_get_object_request(bucket: String, key: String) -> GetObjectInput {
     builder.build().unwrap()
 }
 
-pub fn new_delete_object_request(bucket: String, key: String) -> DeleteObjectInput {
+pub fn new_delete_object_request(
+    bucket: String,
+    key: String,
+    version_id: Option<String>,
+) -> DeleteObjectInput {
     let mut builder = DeleteObjectInput::builder();
     builder.set_bucket(bucket);
     builder.set_key(key);
+    builder.set_version_id(version_id);
     builder.build().unwrap()
 }
 
@@ -74,6 +96,7 @@ pub fn new_copy_object_request(
     src_key: String,
     dst_bucket: String,
     dst_key: String,
+    version_id: Option<String>,
 ) -> CopyObjectInput {
     let mut builder = CopyObjectInput::builder();
     builder.set_bucket(dst_bucket);
@@ -81,15 +104,20 @@ pub fn new_copy_object_request(
     builder.set_copy_source(CopySource::Bucket {
         bucket: src_bucket.into(),
         key: src_key.into(),
-        version_id: None,
+        version_id: version_id.map(|v| v.into()),
     });
     builder.build().unwrap()
 }
 
-pub fn new_head_object_request(bucket: String, key: String) -> HeadObjectInput {
+pub fn new_head_object_request(
+    bucket: String,
+    key: String,
+    version_id: Option<String>,
+) -> HeadObjectInput {
     let mut builder = HeadObjectInput::builder();
     builder.set_bucket(bucket);
     builder.set_key(key);
+    builder.set_version_id(version_id);
     builder.build().unwrap()
 }
 
@@ -169,8 +197,7 @@ pub fn new_upload_part_copy_request(
     key: String,
     upload_id: String,
     part_number: i32,
-    copy_source_bucket: String,
-    copy_source_key: String,
+    copy_source: CopySourceInfo,
     copy_source_range: Option<String>, // e.g. "bytes=0-100"
 ) -> UploadPartCopyInput {
     let mut builder = UploadPartCopyInput::builder();
@@ -179,9 +206,9 @@ pub fn new_upload_part_copy_request(
     builder.set_upload_id(upload_id);
     builder.set_part_number(part_number);
     builder.set_copy_source(CopySource::Bucket {
-        bucket: copy_source_bucket.into(),
-        key: copy_source_key.into(),
-        version_id: None,
+        bucket: copy_source.bucket.into(),
+        key: copy_source.key.into(),
+        version_id: copy_source.version_id.map(|v| v.into()),
     });
     builder.set_copy_source_range(copy_source_range);
     builder.build().unwrap()

@@ -26,6 +26,7 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**append_part**](docs/DefaultApi.md#append_part) | **PATCH** /append_part | Append Part
+*DefaultApi* | [**check_version_setting**](docs/DefaultApi.md#check_version_setting) | **POST** /check_version_setting | Check Version Setting
 *DefaultApi* | [**complete_create_bucket**](docs/DefaultApi.md#complete_create_bucket) | **PATCH** /complete_create_bucket | Complete Create Bucket
 *DefaultApi* | [**complete_delete_bucket**](docs/DefaultApi.md#complete_delete_bucket) | **PATCH** /complete_delete_bucket | Complete Delete Bucket
 *DefaultApi* | [**complete_delete_objects**](docs/DefaultApi.md#complete_delete_objects) | **PATCH** /complete_delete_objects | Complete Delete Objects
@@ -37,11 +38,13 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**list_buckets**](docs/DefaultApi.md#list_buckets) | **POST** /list_buckets | List Buckets
 *DefaultApi* | [**list_multipart_uploads**](docs/DefaultApi.md#list_multipart_uploads) | **POST** /list_multipart_uploads | List Multipart Uploads
 *DefaultApi* | [**list_objects**](docs/DefaultApi.md#list_objects) | **POST** /list_objects | List Objects
+*DefaultApi* | [**list_objects_versioning**](docs/DefaultApi.md#list_objects_versioning) | **POST** /list_objects_versioning | List Objects Versioning
 *DefaultApi* | [**list_parts**](docs/DefaultApi.md#list_parts) | **POST** /list_parts | List Parts
 *DefaultApi* | [**locate_bucket**](docs/DefaultApi.md#locate_bucket) | **POST** /locate_bucket | Locate Bucket
 *DefaultApi* | [**locate_bucket_status**](docs/DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 *DefaultApi* | [**locate_object_status**](docs/DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
+*DefaultApi* | [**put_bucket_versioning**](docs/DefaultApi.md#put_bucket_versioning) | **POST** /put_bucket_versioning | Put Bucket Versioning
 *DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 *DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
@@ -65,6 +68,7 @@ Class | Method | HTTP request | Description
  - [DeleteBucketIsCompleted](docs/DeleteBucketIsCompleted.md)
  - [DeleteBucketRequest](docs/DeleteBucketRequest.md)
  - [DeleteBucketResponse](docs/DeleteBucketResponse.md)
+ - [DeleteMarker](docs/DeleteMarker.md)
  - [DeleteObjectsIsCompleted](docs/DeleteObjectsIsCompleted.md)
  - [DeleteObjectsRequest](docs/DeleteObjectsRequest.md)
  - [DeleteObjectsResponse](docs/DeleteObjectsResponse.md)
@@ -88,6 +92,7 @@ Class | Method | HTTP request | Description
  - [PatchUploadMultipartUploadId](docs/PatchUploadMultipartUploadId.md)
  - [PatchUploadMultipartUploadPart](docs/PatchUploadMultipartUploadPart.md)
  - [PhysicalLocation](docs/PhysicalLocation.md)
+ - [PutBucketVersioningRequest](docs/PutBucketVersioningRequest.md)
  - [RegisterBucketRequest](docs/RegisterBucketRequest.md)
  - [StartUploadRequest](docs/StartUploadRequest.md)
  - [StartUploadResponse](docs/StartUploadResponse.md)

@@ -1,12 +1,18 @@
 import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
+import subprocess as sp
 
 
 @pytest.fixture
 def client():
     with TestClient(app) as client:
         yield client
+
+
+# NOTE: Do not change the position of this test, it should be the first test
+def test_remove_db(client):
+    sp.run("rm skystore.db", shell=True)
 
 
 def test_delete_object(client):
@@ -69,7 +75,7 @@ def test_delete_object(client):
         "/start_delete_objects",
         json={
             "bucket": "my-delete-object-bucket",
-            "keys": ["my-key"],
+            "object_identifiers": {"my-key": list()},
         },
     )
 
@@ -79,7 +85,7 @@ def test_delete_object(client):
         for physical_object in physical_objects:
             resp = client.patch(
                 "/complete_delete_objects",
-                json={"ids": [physical_object["id"]]},
+                json={"ids": [physical_object["id"]], "op_type": ["delete"]},
             )
             resp.raise_for_status()
 
@@ -384,6 +390,8 @@ def test_get_object(client):
     resp.raise_for_status()
     resp_data = resp.json()
     resp_data.pop("id")
+    resp_data.pop("version")
+    resp_data.pop("version_id")
     assert resp_data == {
         "tag": "aws:us-west-1",
         "bucket": "skystore-us-west-1",  # Bucket is prefixed with "skystore-"
@@ -491,6 +499,8 @@ def test_get_object_pull_logic(client):
     resp.raise_for_status()
     resp_data = resp.json()
     resp_data.pop("id")
+    resp_data.pop("version")
+    resp_data.pop("version_id")
     assert resp_data == {
         "tag": "aws:us-east-1",
         "bucket": "skystore-us-east-1",
@@ -636,7 +646,7 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
+            "policy": "copy_on_read",
         },
     )
     resp.raise_for_status()
@@ -728,6 +738,7 @@ def test_list_objects(client):
             "size": 100,
             "etag": "123",
             "last_modified": "2020-01-01T00:00:00",
+            "version_id": None,
         }
     ]
 
@@ -921,4 +932,5 @@ async def test_metadata_clean_up(client):
         },
     )
     # rm_lock_on_timeout should have reset all locks. So search should return 'ready'
-    assert resp.json()["status"] == "ready"
+    for locator in resp.json():
+        assert locator["status"] == "ready"

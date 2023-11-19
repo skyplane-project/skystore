@@ -13,6 +13,7 @@ from operations.schemas.bucket_schemas import (
     LocateBucketResponse,
     HeadBucketRequest,
     BucketStatus,
+    PutBucketVersioningRequest,
 )
 from datetime import datetime
 from sqlalchemy.orm import joinedload
@@ -376,6 +377,62 @@ async def head_bucket(request: HeadBucketRequest, db: Session = Depends(get_sess
         status_code=200,
         content="Bucket exists",
     )
+
+
+@router.post("/put_bucket_versioning")
+async def put_bucket_versioning(
+    request: PutBucketVersioningRequest, db: Session = Depends(get_session)
+) -> List[LocateBucketResponse]:
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+
+    logger.debug(f"put_bucket_versioning: {request} -> {bucket}")
+
+    bucket.version_enabled = request.versioning
+
+    # besides changing the logical bucket versioning setting, we should be able to let the
+    # proxy side change the corresponding physical bucket versioning setting
+    locators_lst = []
+    await db.refresh(bucket, ["physical_bucket_locators"])
+    for physical_bucket_locator in bucket.physical_bucket_locators:
+        locators_lst.append(
+            LocateBucketResponse(
+                id=physical_bucket_locator.id,
+                tag=physical_bucket_locator.location_tag,
+                cloud=physical_bucket_locator.cloud,
+                bucket=physical_bucket_locator.bucket,
+                region=physical_bucket_locator.region,
+            )
+        )
+
+    await db.commit()
+
+    return locators_lst
+
+
+@router.post("/check_version_setting")
+async def check_version_setting(
+    request: HeadBucketRequest, db: Session = Depends(get_session)
+) -> bool:
+    stmt = select(DBLogicalBucket).where(
+        DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
+    )
+    bucket = await db.scalar(stmt)
+
+    if bucket is None:
+        return Response(status_code=404, content="Not Found")
+
+    logger.debug(f"check_version_setting: {request} -> {bucket}")
+
+    # both suspended and enabled versioning setting should be able to upload objects multiple times
+    if bucket.version_enabled is None:
+        return False
+    return True
 
 
 @router.post(

@@ -61,6 +61,13 @@ impl ObjectStoreClient for S3ObjectStoreClient {
         return self.s3_proxy.delete_bucket(req).await;
     }
 
+    async fn put_bucket_versioning(
+        &self,
+        req: S3Request<PutBucketVersioningInput>,
+    ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
+        return self.s3_proxy.put_bucket_versioning(req).await;
+    }
+
     async fn head_object(
         &self,
         req: S3Request<HeadObjectInput>,
