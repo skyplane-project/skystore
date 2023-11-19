@@ -97,12 +97,9 @@ impl SkyProxy {
                 let (provider, region) = (split[0], split[1]);
 
                 let client: Box<dyn ObjectStoreClient> = match provider {
-                    "azure" => Box::new(
-                        crate::client_impls::azure::AzureObjectStoreClient::new(
-                            /* version_enable.clone(), */
-                        )
-                        .await,
-                    ),
+                    "azure" => {
+                        Box::new(crate::client_impls::azure::AzureObjectStoreClient::new().await)
+                    }
                     "gcp" => Box::new(crate::client_impls::gcp::GCPObjectStoreClient::new().await),
                     "aws" => Box::new(
                         crate::client_impls::s3::S3ObjectStoreClient::new(format!(
@@ -359,7 +356,7 @@ impl S3 for SkyProxy {
                     .await
                     .unwrap();
 
-                // change bucket versioning setting
+                // change bucket versioning setting from NULL to Enabled/Suspended
                 if version_enable != *"NULL" {
                     client
                         .put_bucket_versioning(S3Request::new(new_put_bucket_versioning_request(

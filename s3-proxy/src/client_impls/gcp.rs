@@ -143,7 +143,7 @@ impl ObjectStoreClient for GCPObjectStoreClient {
                 metadata: Some(BucketPatchConfig {
                     versioning: Some(Versioning {
                         enabled: versioning,
-                    }), // versioning needs to be set to true
+                    }),
                     ..Default::default()
                 }),
                 ..Default::default()

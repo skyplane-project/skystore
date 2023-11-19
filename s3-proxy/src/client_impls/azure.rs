@@ -19,7 +19,6 @@ use s3s::{S3Request, S3Result};
 
 pub struct AzureObjectStoreClient {
     client: BlobServiceClient,
-    // version_enable: bool,
 }
 
 #[derive(Debug)]
@@ -127,10 +126,7 @@ impl AzureObjectStoreClient {
         // act as healthcheck
         client.list_containers().into_stream().next().await;
 
-        Self {
-            client,
-            // version_enable,
-        }
+        Self { client }
     }
 
     fn blob_client(&self, container_name: &String, blob_name: &String) -> BlobClient {
@@ -170,11 +166,9 @@ impl ObjectStoreClient for AzureObjectStoreClient {
 
     async fn put_bucket_versioning(
         &self,
-        req: S3Request<PutBucketVersioningInput>,
+        _: S3Request<PutBucketVersioningInput>,
     ) -> S3Result<S3Response<PutBucketVersioningOutput>> {
-        println!("put_bucket_versioning: {:?}", req);
-        println!("Azure currently does not support bucket level versioning");
-        return Ok(S3Response::new(PutBucketVersioningOutput::default()));
+        panic!("Azure currently does not support bucket level versioning");
     }
 
     async fn delete_bucket(
