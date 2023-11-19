@@ -1342,3 +1342,98 @@ def test_disable_bucket_versioning(client):
 
     # check result of 2nd upload, shoule be error
     assert resp.status_code == 409
+
+
+def test_copy_objects(client):
+    """Test that the `copy_object` endpoint works correctly."""
+
+    # create a bucket
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-copy-version-bucket",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    # enable bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-copy-version-bucket",
+            "versioning": True,
+        },
+    )
+
+    # upload an object
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-copy-version-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+        },
+    )
+
+    # patch
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "123",
+                "last_modified": "2020-01-01T00:00:00",
+            },
+        ).raise_for_status()
+
+    # copy the object
+    resp = client.post(
+        "/start_upload",
+        json={
+            "bucket": "my-copy-version-bucket",
+            "key": "my-key",
+            "client_from_region": "aws:us-west-1",
+            "is_multipart": False,
+            "policy": "push",
+            "src_bucket": "my-copy-version-bucket",
+            "src_key": "my-key",
+        },
+    )
+    resp.raise_for_status()
+
+    # patch
+    for physical_object in resp.json()["locators"]:
+        client.patch(
+            "/complete_upload",
+            json={
+                "id": physical_object["id"],
+                "size": 100,
+                "etag": "124",
+                "last_modified": "2020-01-01T00:00:00",
+            },
+        ).raise_for_status()
+
+    # should have two logical object versions
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-copy-version-bucket",
+        },
+    )
+    assert len(resp.json()) == 2
+    

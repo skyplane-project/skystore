@@ -385,11 +385,11 @@ async def complete_delete_objects(
             logger.error(f"Invalid op_type: {op_type}")
             return Response(status_code=400, content="Invalid op_type")
 
-        try:
-            await db.commit()
-        except Exception as e:
-            logger.error(f"Error occurred while committing changes: {e}")
-            return Response(status_code=500, content="Error committing changes")
+    try:
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Error occurred while committing changes: {e}")
+        return Response(status_code=500, content="Error committing changes")
 
 
 @router.post(
