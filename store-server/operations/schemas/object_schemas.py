@@ -31,7 +31,7 @@ class DBLogicalObject(Base):
     etag = Column(String)
     status = Column(Enum(Status))
 
-    # indicat whether it is a one that being uploaded after version suspended
+    # indicate whether it is a one that being uploaded after version suspended
     # https://docs.aws.amazon.com/AmazonS3/latest/userguide/AddingObjectstoVersionSuspendedBuckets.html
     version_suspended = Column(Boolean, nullable=False, default=False)
 

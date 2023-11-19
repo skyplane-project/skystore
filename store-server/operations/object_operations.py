@@ -33,14 +33,13 @@ from operations.schemas.bucket_schemas import DBLogicalBucket
 from sqlalchemy.orm import selectinload, Session
 from itertools import zip_longest
 from sqlalchemy.sql import select
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy import func
 from operations.utils.conf import Status
 from fastapi import APIRouter, Response, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
-import asyncio
 
 
 router = APIRouter()
@@ -50,6 +49,8 @@ router = APIRouter()
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
+    await db.execute(text("BEGIN IMMEDIATE;"))
+
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -629,7 +630,8 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
-    # this can be None.
+    await db.execute(text("BEGIN IMMEDIATE;"))
+
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -691,33 +693,9 @@ async def start_upload(
             content="Object of version {} Not Found".format(request.version_id),
         )
 
-    # First, we should not JUST include `Status == ready` in the stmt, because when the version is NULL,
-    # and concurrent start_uploads op come in, this might lead us cannot detect existing objects with
-    # status pending, and try to create multiple logical objects.
-    # But with the object status pending, when facing with concurrent start_uploads, the
-    # `physical_object_locators` of this logical object might not yet be updated/inserted,
-    # which makes program cannot know any info about the existing pending object, and make
-    # wrong decision about `object_already_exists`, `primart_exists`, etc.
-    # A solution would be here: ignore the status condition when fetching from the table, and
-    # check whether the `physical_object_locators` is empty or not. If it's empty, the current
-    # request will wait and retry for a upper bound of times.
-
-    MAX = 500
-
-    while existing_object and len(existing_object.physical_object_locators) == 0:
-        logger.info("The last object info is still being processed. Retry.")
-        await asyncio.sleep(0.01)
-        await db.refresh(existing_object, ["physical_object_locators"])
-        MAX -= 1
-        if MAX == 0:
-            return Response(
-                status_code=500,
-                content="Object is still being processed, please retry.",
-            )
-
     # Parse results for the object_already_exists check
     primary_exists = False
-    existing_tags = set()
+    existing_tags = ()
     if existing_object is not None:
         object_already_exists = any(
             locator.location_tag == request.client_from_region
@@ -728,9 +706,10 @@ async def start_upload(
         if object_already_exists and version_enabled is None:
             logger.error("This exact object already exists")
             return Response(status_code=409, content="Conflict, object already exists")
-        existing_tags = set(
-            locator.location_tag for locator in existing_object.physical_object_locators
-        )
+        existing_tags = {
+            locator.location_tag: locator.id
+            for locator in existing_object.physical_object_locators
+        }
         primary_exists = any(
             locator.is_primary for locator in existing_object.physical_object_locators
         )
@@ -797,6 +776,7 @@ async def start_upload(
             etag=None,
             status=Status.pending,
             multipart_upload_id=uuid.uuid4().hex if request.is_multipart else None,
+            version_suspended=True if version_enabled is False else False,
         )
         db.add(logical_object)
     # If the object already exists, we need to check the version_enabled field:
@@ -924,6 +904,7 @@ async def start_upload(
         )
     locators = []
     existing_locators = []
+
     for region_tag in upload_to_region_tags:
         # If the version_enabled is NULL, we should skip the existing tags, only create new physical object locators for the newly upload regions
         # If the version_enabled is True, we should create new physical object locators for the newly created logical object no matter what regions we are trying to upload
@@ -975,6 +956,7 @@ async def start_upload(
         else:
             existing_locators.append(
                 DBPhysicalObjectLocator(
+                    id=existing_tags[region_tag],
                     logical_object=logical_object,  # link the physical object with the logical object
                     location_tag=region_tag,
                     cloud=physical_bucket_locator.cloud,

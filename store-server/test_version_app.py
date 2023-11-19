@@ -257,6 +257,144 @@ def test_delete_objects(client):
     assert resp.json() == []
 
 
+def test_suspended_versioning(client):
+    """Test suspended versioning uploading & deleting"""
+    resp = client.post(
+        "/start_create_bucket",
+        json={
+            "bucket": "my-suspended-version-bucket",
+            "client_from_region": "aws:us-west-1",
+        },
+    )
+    resp.raise_for_status()
+
+    for physical_bucket in resp.json()["locators"]:
+        resp = client.patch(
+            "/complete_create_bucket",
+            json={
+                "id": physical_bucket["id"],
+                "creation_date": "2020-01-01T00:00:00",
+            },
+        )
+        resp.raise_for_status()
+
+    # suspend bucket versioning
+    resp = client.post(
+        "/put_bucket_versioning",
+        json={
+            "bucket": "my-suspended-version-bucket",
+            "versioning": False,
+        },
+    )
+
+    # start new threads to perform concurrent uploads
+    threads = []
+    for i in range(3):
+        t = threading.Thread(
+            target=concurrent_upload,
+            args=(
+                client,
+                "my-suspended-version-bucket",
+                "my-key",
+                "aws:us-west-1",
+                i,
+            ),
+        )
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    # should only have one logical object version
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-suspended-version-bucket",
+        },
+    )
+    resp.raise_for_status()
+
+    assert len(resp.json()) == 1
+
+    # delete object without specific logical version set
+    resp = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-suspended-version-bucket",
+            "object_identifiers": {
+                "my-key": list()
+            },  # type set is not json serializable
+        },
+    )
+    resp.raise_for_status()
+
+    # assert the return op type to be "replace"
+    assert resp.json()["op_type"] == {"my-key": "replace"}
+
+    for key, physical_objects in resp.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["replace"],
+                },
+            )
+            resp.raise_for_status()
+
+    # should still have one logical object version
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-suspended-version-bucket",
+        },
+    )
+    resp.raise_for_status()
+
+    assert len(resp.json()) == 1
+
+    # delete object with specific logical version set
+    resp = client.post(
+        "/start_delete_objects",
+        json={
+            "bucket": "my-suspended-version-bucket",
+            "object_identifiers": {
+                "my-key": list({"1"})
+            },  # type set is not json serializable
+        },
+    )
+    resp.raise_for_status()
+
+    # assert the return op type to be "delete"
+    assert resp.json()["op_type"] == {"my-key": "delete"}
+
+    for key, physical_objects in resp.json()["locators"].items():
+        assert key == "my-key"
+
+        for physical_object in physical_objects:
+            resp = client.patch(
+                "/complete_delete_objects",
+                json={
+                    "ids": [physical_object["id"]],
+                    "op_type": ["delete"],
+                },
+            )
+            resp.raise_for_status()
+
+    # should be no logical object version
+    resp = client.post(
+        "/list_objects_versioning",
+        json={
+            "bucket": "my-suspended-version-bucket",
+        },
+    )
+
+    assert len(resp.json()) == 0
+
+
 def test_get_objects(client):
     """Test that the `get_object` endpoint returns the correct object."""
 
