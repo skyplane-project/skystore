@@ -976,6 +976,13 @@ async def start_upload(
 
     logger.debug(f"start_upload: {request} -> {locators}")
 
+    # # calculate the size of the logical object and the added physical object locators
+    # import sys 
+    # logical_size = sys.getsizeof(logical_object)
+    # physical_sizes = [sys.getsizeof(locator) for locator in locators]
+
+    # print(f"logical_size: {logical_size}, physical_sizes: {physical_sizes}")
+
     return StartUploadResponse(
         multipart_upload_id=logical_object.multipart_upload_id,
         locators=[

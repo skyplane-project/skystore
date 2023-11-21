@@ -11,7 +11,7 @@ use core::panic;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
-use skystore_rust_client::models;
+use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -546,21 +546,8 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<HeadObjectOutput>> {
         let vid = req.input.version_id.map(|id| id.parse::<i32>().unwrap());
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if vid.is_some() && !version_enabled {
-            return Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Version is not enabled.",
-            ));
-        }
+        // since we will detect whether we have enabled versioning the the server side,
+        // we don't need to check versioning status here
 
         // Directly call the control plane instead of going through the object store
         let head_resp = apis::head_object(
@@ -724,22 +711,6 @@ impl S3 for SkyProxy {
             .clone()
             .map(|id| id.parse::<i32>().unwrap());
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if vid.is_some() && !version_enabled {
-            return Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Version is not enabled.",
-            ));
-        }
-
         let locator = self.locate_object(bucket.clone(), key.clone(), vid).await?;
 
         match locator {
@@ -783,7 +754,8 @@ impl S3 for SkyProxy {
                                 },
                             )
                             .await;
-
+                            
+                            // When version setting is NULL:
                             // In case of multi-concurrent GET request with copy_on_read policy,
                             // only upload if start_upload returns successful, this indicates that the object is not in the local object store
                             // status neither pending nor ready
@@ -1031,6 +1003,22 @@ impl S3 for SkyProxy {
             // .map(|obj| obj.key.clone())
             .collect();
 
+        let version_enabled = apis::check_version_setting(
+            &self.dir_conf,
+            models::HeadBucketRequest {
+                bucket: req.input.bucket.clone(),
+            },
+        )
+        .await
+        .unwrap();
+
+        if !version_enabled && req.input.delete.objects.iter().any(|obj| obj.version_id.is_some()) {
+            return Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::NoSuchKey,
+                "Version is not enabled.",
+            ));
+        }
+
         // transform the object identifiers vcector to HashMap
         let mut id_map: HashMap<String, Vec<i32>> = HashMap::new();
         for obj in &req.input.delete.objects {
@@ -1118,6 +1106,9 @@ impl S3 for SkyProxy {
                         )),
                         Err(_) => Err((
                             key_clone.clone(),
+                            locator.id,
+                            version, // logical version
+                            op_type_key,
                             format!("Failed to delete object with key: {}", key_clone),
                         )),
                     }
@@ -1128,7 +1119,7 @@ impl S3 for SkyProxy {
         // Collect results and complete delete objects
         let mut key_to_results: HashMap<
             String,
-            Vec<Result<(i32, Option<String>, String), String>>,
+            Vec<Result<(i32, Option<String>, String), (i32, Option<String>, String, String)>>,
         > = HashMap::new();
         while let Some(result) = tasks.join_next().await {
             match result {
@@ -1140,8 +1131,13 @@ impl S3 for SkyProxy {
                             op_type,
                         )));
                     }
-                    Err((key, err)) => {
-                        key_to_results.entry(key).or_default().push(Err(err));
+                    Err((key, id, version, op_type, err)) => {
+                        key_to_results.entry(key).or_default().push(Err((
+                            id,
+                            version.map(|id| id.to_string()),
+                            op_type,
+                            err
+                        )));
                     }
                 },
                 // TODO: how to handle this?
@@ -1162,6 +1158,13 @@ impl S3 for SkyProxy {
 
             // complete delete objects
             let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
+            // we might need to deal with fails ids
+            let fails_ids: Vec<_> = fails.clone().into_iter().filter_map(Result::err).collect();
+            let err_msg = fails_ids
+                .iter()
+                .map(|fail| fail.3.clone())
+                .collect::<Vec<String>>()
+                .join(",");
             let mut ids = Vec::new();
             let mut versions = Vec::new();
             let mut op_types = Vec::new();
@@ -1183,27 +1186,83 @@ impl S3 for SkyProxy {
                 .unwrap();
             }
 
-            if fails.is_empty() {
-                // one key might have several versions being deleted
-                // the versions vector should store logical versions
-                for version in &versions {
+            if !version_enabled {
+                if fails.is_empty() {
+                    // if version is not enabled, the version vector must be empty
                     deleted_objects.push(DeletedObject {
                         key: Some(key.clone()),
-                        delete_marker: delete_markers_map[&key].delete_marker, // TODO: add versioning support
-                        delete_marker_version_id: delete_markers_map[&key]
-                            .version_id
-                            .clone()
-                            .map(|id| id.to_string()), // logical version
-                        version_id: version.clone(),
+                        delete_marker: false,
+                        ..Default::default()
                     });
+                } else {
+                    errors.push(Error {
+                        key: Some(key),
+                        code: Some("InternalError".to_string()),
+                        message: Some(err_msg),
+                        ..Default::default()
+                    });                    
                 }
             } else {
-                errors.push(Error {
-                    key: Some(key),
-                    code: Some("InternalError".to_string()),
-                    message: Some(fails.into_iter().map(Result::unwrap_err).collect()),
-                    ..Default::default()
-                });
+                // if we failed to delete the logical object, and this object is not a delete marker,
+                // we need to add it to the errors vector
+                if !fails.is_empty() && !delete_markers_map[&key].delete_marker { 
+                    errors.push(Error {
+                        key: Some(key),
+                        code: Some("InternalError".to_string()),
+                        message: Some(err_msg),
+                        ..Default::default()
+                    });
+                } else {
+                    // now the version vector can be empty or not
+                    // first dealing with the success vector
+                    if versions.is_empty() {
+                        deleted_objects.push(DeletedObject {
+                            key: Some(key.clone()),
+                            delete_marker: true,
+                            delete_marker_version_id: delete_markers_map[&key]
+                                .version_id
+                                .clone()
+                                .map(|id| id.to_string()), // logical version
+                            version_id: None,
+                        });                           
+                    } else {
+                        for version in &versions {
+                            deleted_objects.push(DeletedObject {
+                                key: Some(key.clone()),
+                                delete_marker: true,
+                                delete_marker_version_id: delete_markers_map[&key]
+                                    .version_id
+                                    .clone()
+                                    .map(|id| id.to_string()), // logical version
+                                version_id: version.clone(),
+                            });
+                        }                            
+                    }
+
+                    let mut fails_ids_vec = Vec::new();
+                    let mut fails_version_vec = Vec::new();
+                    let mut fails_op_type_vec = Vec::new();
+
+                    // deal with fails vector, fails_ids vector might be empty
+                    // println!("fails_ids: {:?}", fails_ids);
+                    for (id, version, op_type, _) in &fails_ids {
+                        fails_ids_vec.push(*id);
+                        fails_version_vec.push(version.clone());
+                        fails_op_type_vec.push(op_type.clone());
+                    }
+                    if !fails_ids_vec.is_empty() {
+                        apis::complete_delete_objects(
+                            &self.dir_conf,
+                            models::DeleteObjectsIsCompleted {
+                                ids: fails_ids_vec,
+                                multipart_upload_ids: None,
+                                op_type: fails_op_type_vec,
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    }
+                }            
             }
         }
 
