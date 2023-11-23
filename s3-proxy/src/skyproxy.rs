@@ -243,10 +243,6 @@ impl SkyProxy {
         key: String,
         version_id: Option<i32>,
     ) -> Result<Option<models::LocateObjectResponse>, s3s::S3Error> {
-
-        // calculate the time used to locate the object
-        let start = SystemTime::now();
-
         let locate_resp = apis::locate_object(
             &self.dir_conf,
             models::LocateObjectRequest {
@@ -257,14 +253,6 @@ impl SkyProxy {
             },
         )
         .await;
-
-        let end = SystemTime::now();
-        let duration = end.duration_since(start).unwrap();
-        println!(
-            "locate object: {} ms",
-            duration.as_secs() * 1000 + duration.subsec_millis() as u64
-        );
-
 
         match locate_resp {
             Ok(locator) => Ok(Some(locator)),
@@ -898,9 +886,6 @@ impl S3 for SkyProxy {
             }
         }
 
-        // calculate the time used to upload the object
-        let start = SystemTime::now();
-
         let start_upload_resp = apis::start_upload(
             &self.dir_conf,
             models::StartUploadRequest {
@@ -916,13 +901,6 @@ impl S3 for SkyProxy {
         )
         .await
         .unwrap();
-
-        let end = SystemTime::now();
-        let duration = end.duration_since(start).unwrap();
-        println!(
-            "start upload: {} ms",
-            duration.as_secs() * 1000 + duration.subsec_millis() as u64
-        );
 
         let mut tasks = tokio::task::JoinSet::new();
         let locators = start_upload_resp.clone().locators;
@@ -1059,9 +1037,6 @@ impl S3 for SkyProxy {
             }
         }
 
-        // calculate the timer used to delete the objects
-        let start = SystemTime::now();
-
         let delete_objects_resp = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
@@ -1097,13 +1072,6 @@ impl S3 for SkyProxy {
                 }));
             }
         };
-
-        let end = SystemTime::now();
-        let duration = end.duration_since(start).unwrap();
-        println!(
-            "start delete objects: {} ms",
-            duration.as_secs() * 1000 + duration.subsec_millis() as u64
-        );
 
         let delete_markers_map = delete_objects_resp.delete_markers;
         let op_type_map = delete_objects_resp.op_type;
