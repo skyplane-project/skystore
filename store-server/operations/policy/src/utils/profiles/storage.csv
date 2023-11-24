@@ -1,0 +1,1368 @@
+Vendor,Region,Name,Group,Tier,StartingRange,EndingRange,Unit,PricePerUnit
+aws,ca-central-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-east-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-northeast-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-northeast-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,me-south-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-south-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-northeast-3,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-east-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-west-3,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-west-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-west-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,eu-west-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,eu-west-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,eu-west-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,eu-west-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,eu-west-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-south-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,af-south-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-gov-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.016
+aws,eu-central-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,us-west-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-gov-east-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-west-2,s3,get request,General Purpose,0.0,inf,,4.2e-07
+aws,ap-northeast-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-northeast-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-northeast-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-northeast-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-west-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,me-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-northeast-3,s3,put request,General Purpose,0.0,inf,,4.7e-06
+aws,eu-central-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.02695
+aws,eu-central-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.02585
+aws,eu-central-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.02475
+aws,sa-east-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-east-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,af-south-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-south-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-south-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-south-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,ap-southeast-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,eu-west-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,eu-west-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,eu-west-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,ap-south-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-west-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01048
+aws,me-south-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-west-3,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.024
+aws,eu-west-3,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.023
+aws,eu-west-3,s3,storage,General Purpose,512000.0,inf,GB-Month,0.022
+aws,eu-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0131
+aws,eu-west-3,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-west-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-southeast-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ca-central-1,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,eu-west-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-south-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,us-gov-east-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-south-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-southeast-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0115
+aws,us-west-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,us-gov-east-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-southeast-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-southeast-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-southeast-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-east-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,us-east-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,us-east-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,us-east-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,us-east-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,us-east-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-south-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,af-south-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-south-2,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-south-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,us-gov-west-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,eu-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,ap-northeast-3,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-central-2,s3,put request,General Purpose,0.0,inf,,5.4e-06
+aws,me-south-1,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,ap-southeast-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,me-south-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-central-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-gov-west-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-west-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-gov-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.02
+aws,us-east-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,us-west-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-north-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-southeast-3,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,ap-southeast-3,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,ap-southeast-3,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,ap-southeast-3,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,ap-southeast-3,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,ap-southeast-3,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-north-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-northeast-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0251
+aws,ap-northeast-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0246
+aws,ap-northeast-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0242
+aws,ap-northeast-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0238
+aws,ap-northeast-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0234
+aws,ap-northeast-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.023
+aws,eu-west-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,me-south-1,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,ca-central-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,sa-east-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-southeast-4,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,ap-southeast-3,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-south-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-south-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,eu-south-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,eu-south-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,eu-south-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,eu-south-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,eu-south-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,ap-northeast-2,s3,get request,General Purpose,0.0,inf,,3.5e-07
+aws,ap-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-northeast-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-south-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-northeast-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,ca-central-1,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,eu-central-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01188
+aws,eu-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0135
+aws,ap-east-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-west-1,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,ap-northeast-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-northeast-1,s3,get request,General Purpose,0.0,inf,,3.7e-07
+aws,ca-central-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ca-central-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ca-central-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,me-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,eu-west-3,s3,get request,General Purpose,0.0,inf,,4.2e-07
+aws,af-south-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-southeast-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-south-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-west-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-southeast-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-southeast-3,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-southeast-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,me-central-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,me-central-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,me-central-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,eu-west-3,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0252
+aws,eu-west-3,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0248
+aws,eu-west-3,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0244
+aws,eu-west-3,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0239
+aws,eu-west-3,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0235
+aws,eu-west-3,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0231
+aws,eu-central-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-south-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.024
+aws,eu-south-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.023
+aws,eu-south-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.022
+aws,eu-north-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,us-east-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,me-central-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-southeast-4,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,sa-east-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-southeast-4,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,sa-east-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0326
+aws,sa-east-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.032
+aws,sa-east-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0315
+aws,sa-east-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0309
+aws,sa-east-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0304
+aws,sa-east-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0299
+aws,sa-east-1,s3,get request,General Purpose,0.0,inf,,5.6e-07
+aws,ap-east-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-east-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-east-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-east-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,eu-south-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-west-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-southeast-4,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-northeast-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-northeast-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-northeast-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-west-1,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,eu-central-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01485
+aws,us-gov-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.016
+aws,eu-west-2,s3,put request,General Purpose,0.0,inf,,5.3e-06
+aws,ap-northeast-2,s3,put request,General Purpose,0.0,inf,,4.5e-06
+aws,us-west-2,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,eu-west-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01048
+aws,ap-south-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,sa-east-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-west-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0131
+aws,us-east-2,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,us-gov-west-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,me-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01104
+aws,me-central-1,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,ap-northeast-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-central-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-west-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.024
+aws,eu-west-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.023
+aws,eu-west-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.022
+aws,us-west-2,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-east-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,us-east-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-southeast-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-west-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ca-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,sa-east-1,s3,put request,General Purpose,0.0,inf,,7e-06
+aws,us-west-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,us-west-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,us-west-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,us-west-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,us-west-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,us-west-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-north-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,ap-northeast-3,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,ap-northeast-3,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0259
+aws,ap-northeast-3,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,ap-northeast-3,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.025
+aws,ap-northeast-3,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,ap-northeast-3,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,eu-west-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-southeast-4,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-south-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-northeast-3,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-central-1,s3,put request,General Purpose,0.0,inf,,5.4e-06
+aws,ap-south-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0108
+aws,ca-central-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-south-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,af-south-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-southeast-3,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-southeast-3,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-southeast-3,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-east-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,us-east-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-south-1,s3,put request,General Purpose,0.0,inf,,5.3e-06
+aws,eu-south-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-southeast-4,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-southeast-4,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-southeast-4,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-gov-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.02
+aws,us-west-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,eu-central-2,s3,get request,General Purpose,0.0,inf,,4.3e-07
+aws,ap-northeast-3,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-northeast-3,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-northeast-3,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,ap-south-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,ap-south-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,ap-south-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,ap-south-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,ap-south-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,ap-south-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-south-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,ap-southeast-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,ap-southeast-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,ap-southeast-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,ap-southeast-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,ap-southeast-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,ap-southeast-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,us-east-2,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,eu-north-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-northeast-3,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-southeast-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,us-east-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-east-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,ap-south-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-north-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-gov-east-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0312
+aws,us-gov-east-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0306
+aws,us-gov-east-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0301
+aws,us-gov-east-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0296
+aws,us-gov-east-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0291
+aws,us-gov-east-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0285
+aws,us-gov-east-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-west-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-northeast-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-southeast-3,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,me-central-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-south-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,eu-south-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,eu-south-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,eu-north-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,eu-north-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,eu-north-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,eu-north-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,eu-north-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,eu-north-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,eu-north-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-south-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-south-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,af-south-1,s3,put request,General Purpose,0.0,inf,,6e-06
+aws,ap-southeast-4,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-west-3,s3,put request,General Purpose,0.0,inf,,5.3e-06
+aws,eu-west-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0252
+aws,eu-west-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0248
+aws,eu-west-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0244
+aws,eu-west-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0239
+aws,eu-west-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0235
+aws,eu-west-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0231
+aws,ap-northeast-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,sa-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0221
+aws,sa-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0177
+aws,eu-central-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-gov-west-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-south-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-southeast-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,me-south-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,eu-west-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-northeast-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,us-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0144
+aws,ca-central-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,ca-central-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.026
+aws,ca-central-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,ca-central-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0251
+aws,ca-central-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,ca-central-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,ap-southeast-3,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,ap-southeast-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-southeast-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-southeast-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-southeast-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,us-gov-east-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,us-east-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,us-east-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,us-east-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,us-east-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,us-east-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,us-east-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,me-south-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-south-2,s3,put request,General Purpose,0.0,inf,,5.3e-06
+aws,ca-central-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,af-south-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.0274
+aws,af-south-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.0262
+aws,af-south-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.025
+aws,eu-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0105
+aws,us-west-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-east-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-northeast-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,af-south-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-east-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-central-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-central-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-east-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,me-central-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,me-central-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.026
+aws,me-central-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,me-central-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0251
+aws,me-central-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,me-central-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,eu-central-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.0245
+aws,eu-central-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.0235
+aws,eu-central-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.0225
+aws,ap-northeast-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-west-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,us-west-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0259
+aws,us-west-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,us-west-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.025
+aws,us-west-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,us-west-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,us-west-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-northeast-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-gov-east-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ca-central-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ca-central-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,us-west-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,sa-east-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-east-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-west-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,us-east-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-central-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-south-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-southeast-4,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,ap-southeast-4,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0259
+aws,ap-southeast-4,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,ap-southeast-4,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.025
+aws,ap-southeast-4,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,ap-southeast-4,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,ap-southeast-3,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,eu-south-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-gov-east-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,af-south-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-northeast-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,ap-northeast-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0259
+aws,ap-northeast-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,ap-northeast-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.025
+aws,ap-northeast-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,ap-northeast-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,eu-central-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,us-gov-east-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.039
+aws,us-gov-east-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.037
+aws,us-gov-east-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.0355
+aws,ap-southeast-3,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,me-south-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,me-south-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.026
+aws,me-south-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,me-south-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0251
+aws,me-south-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,me-south-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,ap-northeast-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,us-gov-west-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0312
+aws,us-gov-west-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0306
+aws,us-gov-west-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0301
+aws,us-gov-west-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0296
+aws,us-gov-west-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0291
+aws,us-gov-west-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0285
+aws,ap-southeast-3,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-gov-west-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-south-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-south-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,eu-south-1,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-southeast-3,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,eu-north-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-southeast-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,us-gov-west-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,me-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01104
+aws,af-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0149
+aws,me-central-1,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,ap-northeast-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-south-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-southeast-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-east-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,ap-east-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,ap-east-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,ap-east-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,ap-east-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,ap-east-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,ap-south-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-south-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-west-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-west-3,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,us-west-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,eu-west-3,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-northeast-3,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-central-1,s3,get request,General Purpose,0.0,inf,,4.3e-07
+aws,ca-central-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01104
+aws,us-west-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.026
+aws,us-west-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.025
+aws,us-west-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.024
+aws,eu-central-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-west-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-east-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-southeast-2,s3,put request,General Purpose,0.0,inf,,5.5e-06
+aws,sa-east-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-west-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,eu-north-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-southeast-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,me-south-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,me-south-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,me-south-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,eu-west-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,af-south-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0119
+aws,ap-south-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-southeast-4,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,eu-central-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-northeast-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-east-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,us-gov-east-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-south-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.025
+aws,ap-south-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.024
+aws,ap-south-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.023
+aws,ap-east-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-south-2,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,us-west-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0125
+aws,ap-northeast-2,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,ap-southeast-4,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-southeast-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0264
+aws,ap-southeast-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0259
+aws,ap-southeast-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0255
+aws,ap-southeast-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.025
+aws,ap-southeast-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0246
+aws,ap-southeast-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0242
+aws,us-gov-west-1,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,us-east-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,ap-southeast-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,ap-southeast-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0138
+aws,ap-southeast-4,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,eu-north-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,eu-north-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,eu-north-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,us-east-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-south-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,ap-south-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,ap-south-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,ap-south-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,ap-south-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,ap-south-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,us-east-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,us-east-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,us-east-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,ap-southeast-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.011
+aws,ap-south-2,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-northeast-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,us-gov-west-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.039
+aws,us-gov-west-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.037
+aws,us-gov-west-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.0355
+aws,eu-west-3,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-south-2,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,me-south-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-northeast-1,s3,put request,General Purpose,0.0,inf,,4.7e-06
+aws,eu-west-3,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,ap-southeast-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,ap-northeast-3,s3,get request,Infrequent Access,0.0,inf,,1e-06
+aws,me-central-1,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-southeast-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-west-2,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-west-2,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,us-gov-west-1,s3,put request,General Purpose,0.0,inf,,5e-06
+aws,eu-north-1,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.01
+aws,us-east-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,us-east-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,us-east-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,me-central-1,s3,get transfer,Non-Critical Data,0.0,inf,,0.01
+aws,ap-northeast-3,s3,get request,General Purpose,0.0,inf,,3.7e-07
+aws,us-west-2,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.023
+aws,us-west-2,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.022
+aws,us-west-2,s3,storage,General Purpose,512000.0,inf,GB-Month,0.021
+aws,eu-west-3,s3,storage,Infrequent Access,0.0,inf,GB-Month,0.0131
+aws,us-east-2,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,me-central-1,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,eu-central-2,s3,get request,Non-Critical Data,0.0,inf,,1e-06
+aws,ap-southeast-4,s3,get transfer,Infrequent Access,0.0,inf,,0.01
+aws,me-central-1,s3,put request,Non-Critical Data,0.0,inf,,1e-05
+aws,eu-west-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,af-south-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,af-south-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,af-south-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,af-south-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,af-south-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,af-south-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,ap-southeast-2,s3,get request,General Purpose,0.0,inf,,4.4e-07
+aws,eu-central-1,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.026
+aws,eu-central-1,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0255
+aws,eu-central-1,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0251
+aws,eu-central-1,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0247
+aws,eu-central-1,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0242
+aws,eu-central-1,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.0238
+aws,sa-east-1,s3,storage,General Purpose,0.0,51200.0,GB-Month,0.0405
+aws,sa-east-1,s3,storage,General Purpose,51200.0,512000.0,GB-Month,0.039
+aws,sa-east-1,s3,storage,General Purpose,512000.0,inf,GB-Month,0.037
+aws,eu-south-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.024
+aws,eu-south-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.0236
+aws,eu-south-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.0232
+aws,eu-south-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.0228
+aws,eu-south-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.0224
+aws,eu-south-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.022
+aws,us-east-1,s3,get request,General Purpose,0.0,inf,,4e-07
+aws,ap-southeast-2,s3,put request,Infrequent Access,0.0,inf,,1e-05
+aws,eu-central-2,s3,storage,Non-Critical Data,0.0,1024.0,GB-Month,0.0286
+aws,eu-central-2,s3,storage,Non-Critical Data,1024.0,51200.0,GB-Month,0.02805
+aws,eu-central-2,s3,storage,Non-Critical Data,51200.0,512000.0,GB-Month,0.02761
+aws,eu-central-2,s3,storage,Non-Critical Data,512000.0,1024000.0,GB-Month,0.02717
+aws,eu-central-2,s3,storage,Non-Critical Data,1024000.0,5120000.0,GB-Month,0.02662
+aws,eu-central-2,s3,storage,Non-Critical Data,5120000.0,inf,GB-Month,0.02618
+azure,eastus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,centralindia,Block Blob v2,put request,Premium,0.0,inf,requests,3.19e-06
+azure,qatarcentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01104
+azure,westus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,northcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0152
+azure,swedencentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,switzerlandwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.003575
+azure,westus2,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,southeastasia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,brazilsouth,Block Blob v2,put request,Premium,0.0,inf,requests,4.55e-06
+azure,germanynorth,Block Blob v2,put request,Premium,0.0,inf,requests,3.0300000000000002e-06
+azure,southafricanorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westus3,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
+azure,jioindiacentral,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,centralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,centralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,centralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,brazilsouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,usgovvirginia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,brazilsoutheast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
+azure,swedencentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,westcentralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,francecentral,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,southafricanorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00335
+azure,qatarcentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.41e-07
+azure,usgovvirginia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,northcentralus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,ukwest,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,southcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,attatlanta1,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,westus2,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,swedencentral,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,centralindia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.21
+azure,francesouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.6900000000000002e-06
+azure,norwaywest,Block Blob v2,get request,Premium,0.0,inf,requests,3.3800000000000004e-07
+azure,eastasia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,eastus2,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,ukwest,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
+azure,attdallas1,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,northeurope,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,eastus2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,eastus2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,eastus2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,usgovtexas,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westindia,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,westeurope,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0196
+azure,westeurope,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018816
+azure,westeurope,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018032
+azure,japanwest,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,jioindiawest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,eastus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,westus3,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,westindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,southeastasia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,westcentralus,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,uaecentral,Block Blob,put request,Premium,0.0,inf,requests,3.2500000000000002e-06
+azure,koreacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.203
+azure,southafricawest,Block Blob,get request,Premium,0.0,inf,requests,2.66e-07
+azure,attatlanta1,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,eastus,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,jioindiawest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,usgovarizona,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,ukwest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0105
+azure,germanynorth,Block Blob,put request,Premium,0.0,inf,requests,2.96e-06
+azure,westeurope,Blob Storage,put request,Hot,0.0,inf,requests,5.4e-06
+azure,qatarcentral,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,southafricanorth,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiacentral2,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,westus3,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,francesouth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.022963
+azure,francesouth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.023961
+azure,francesouth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02496
+azure,southcentralus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiaeast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,australiacentral2,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,australiasoutheast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.015
+azure,japaneast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,canadaeast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,centralindia,Block Blob,put request,Premium,0.0,inf,requests,2.4500000000000003e-06
+azure,canadacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westus3,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
+azure,southeastasia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,uaecentral,Blob Storage,get request,Hot,0.0,inf,requests,5.590000000000001e-07
+azure,usgovtexas,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,eastus,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
+azure,centralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,brazilsouth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,switzerlandnorth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,japanwest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.233
+azure,germanywestcentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,jioindiawest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,westus3,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,usgovvirginia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,switzerlandwest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.292
+azure,koreasouth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,koreasouth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,koreasouth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,southafricanorth,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,japanwest,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,southafricanorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0219
+azure,southafricanorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.021
+azure,southafricanorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0202
+azure,jioindiacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,switzerlandwest,Block Blob v2,get request,Premium,0.0,inf,requests,3.549e-07
+azure,attatlanta1,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,eastus2,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
+azure,eastasia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,centralus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,switzerlandnorth,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
+azure,uksouth,Blob Storage,put request,Hot,0.0,inf,requests,5.899999999999999e-06
+azure,usgovtexas,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,northcentralus,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,westus3,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,qatarcentral,Block Blob,put request,Premium,0.0,inf,requests,2.5e-06
+azure,southeastasia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,westus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westcentralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,westcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,westcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,canadaeast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,norwayeast,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
+azure,centralus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,japanwest,Block Blob v2,get request,Premium,0.0,inf,requests,2.82e-07
+azure,westindia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,westindia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,westindia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,francesouth,Blob Storage,get request,Cool,0.0,inf,requests,1.43e-06
+azure,eastus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0208
+azure,eastus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019136
+azure,eastus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019968
+azure,germanywestcentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,australiasoutheast,Block Blob v2,put request,Premium,0.0,inf,requests,3.3e-06
+azure,jioindiacentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019136
+azure,westus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019968
+azure,westus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0208
+azure,australiaeast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,southcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,australiaeast,Block Blob,get request,Premium,0.0,inf,requests,2.03e-07
+azure,westeurope,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,japanwest,Block Blob v2,put request,Premium,0.0,inf,requests,3.52e-06
+azure,usgovarizona,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,northeurope,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,westindia,Block Blob,put request,Premium,0.0,inf,requests,2.6300000000000002e-06
+azure,japanwest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,japaneast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,ukwest,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
+azure,qatarcentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.003
+azure,jioindiacentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,norwayeast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0216
+azure,norwayeast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0207
+azure,norwayeast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0198
+azure,germanywestcentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0188
+azure,germanywestcentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018
+azure,germanywestcentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0196
+azure,francecentral,Blob Storage,get request,Hot,0.0,inf,requests,4.7e-07
+azure,centralindia,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,australiasoutheast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,australiasoutheast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,australiasoutheast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,germanynorth,Blob Storage,get request,Hot,0.0,inf,requests,5.590000000000001e-07
+azure,southcentralus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,koreasouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,koreasouth,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,eastus2,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,koreasouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.0700000000000003e-06
+azure,usgovvirginia,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,canadacentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,australiaeast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,australiaeast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,australiaeast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,eastus,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,jioindiawest,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,southeastasia,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
+azure,southafricawest,Block Blob v2,get request,Premium,0.0,inf,requests,2.4199999999999997e-07
+azure,attdallas1,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,centralindia,Block Blob,get request,Premium,0.0,inf,requests,1.9599999999999998e-07
+azure,japanwest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,japanwest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,japanwest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,switzerlandwest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
+azure,brazilsoutheast,Block Blob,get request,Premium,0.0,inf,requests,3.64e-07
+azure,koreacentral,Block Blob,put request,Premium,0.0,inf,requests,2.36e-06
+azure,southindia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,usgovvirginia,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,norwayeast,Blob Storage,get request,Hot,0.0,inf,requests,4.7299999999999996e-07
+azure,germanywestcentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,australiasoutheast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westeurope,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,switzerlandnorth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,swedencentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,westus3,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,westus3,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,westus3,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,australiacentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,japaneast,Block Blob v2,get request,Premium,0.0,inf,requests,2.64e-07
+azure,francesouth,Block Blob,put request,Premium,0.0,inf,requests,2.8400000000000003e-06
+azure,westeurope,Blob Storage,get request,Hot,0.0,inf,requests,4.3e-07
+azure,eastus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,ukwest,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,westus2,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,germanywestcentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
+azure,australiaeast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,germanynorth,Blob Storage,put request,Hot,0.0,inf,requests,7.02e-06
+azure,attatlanta1,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
+azure,eastasia,Block Blob,put request,Premium,0.0,inf,requests,2.71e-06
+azure,southafricanorth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.219
+azure,usgovarizona,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,eastasia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,westcentralus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,swedencentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,swedencentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,swedencentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,norwaywest,Block Blob,put request,Premium,0.0,inf,requests,3.2599999999999997e-06
+azure,norwaywest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
+azure,japaneast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,koreasouth,Block Blob,get request,Premium,0.0,inf,requests,1.8899999999999999e-07
+azure,eastus,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
+azure,koreacentral,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,francesouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00364
+azure,koreasouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0144
+azure,attdallas1,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,uaenorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019464
+azure,uaenorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.020275
+azure,uaenorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018653
+azure,eastus2,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,francesouth,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,centralindia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,jioindiacentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,canadaeast,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,australiasoutheast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westindia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0152
+azure,australiacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,australiasoutheast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,canadaeast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,westindia,Block Blob v2,put request,Premium,0.0,inf,requests,3.4200000000000003e-06
+azure,francecentral,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
+azure,brazilsouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0177
+azure,southeastasia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,northeurope,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,attatlanta1,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,southafricawest,Blob Storage,get request,Hot,0.0,inf,requests,5e-07
+azure,northeurope,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,australiacentral2,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,eastus2,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
+azure,westus2,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
+azure,westus2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,westeurope,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
+azure,germanywestcentral,Block Blob,get request,Premium,0.0,inf,requests,1.82e-07
+azure,norwaywest,Blob Storage,get request,Cool,0.0,inf,requests,1.43e-06
+azure,canadacentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,usgovtexas,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,francesouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
+azure,uksouth,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,germanynorth,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,canadaeast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,southcentralus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,koreasouth,Block Blob v2,get request,Premium,0.0,inf,requests,2.46e-07
+azure,westindia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westus3,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,switzerlandwest,Block Blob v2,put request,Premium,0.0,inf,requests,4.446e-06
+azure,usgovtexas,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,centralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,jioindiacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,westcentralus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,eastasia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.233
+azure,japanwest,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,southafricawest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,francecentral,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,swedencentral,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,australiacentral2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.272
+azure,eastus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,southafricawest,Block Blob v2,put request,Premium,0.0,inf,requests,3.0300000000000002e-06
+azure,westeurope,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,germanywestcentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,canadaeast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,australiacentral2,Block Blob v2,get request,Premium,0.0,inf,requests,3.3e-07
+azure,southafricawest,Blob Storage,get request,Cool,0.0,inf,requests,1.25e-06
+azure,westcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,usgovvirginia,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,francecentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,switzerlandnorth,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
+azure,brazilsoutheast,Blob Storage,get request,Hot,0.0,inf,requests,7.28e-07
+azure,centralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,germanywestcentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,japaneast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,swedencentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
+azure,koreacentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,canadacentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiacentral,Block Blob,get request,Premium,0.0,inf,requests,2.54e-07
+azure,westus2,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,germanynorth,Blob Storage,get request,Cool,0.0,inf,requests,1.2999999999999998e-06
+azure,westindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,australiacentral2,Block Blob,put request,Premium,0.0,inf,requests,3.1699999999999997e-06
+azure,australiacentral2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,australiacentral2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,australiacentral2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,usgovtexas,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,australiacentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,uaecentral,Block Blob,get request,Premium,0.0,inf,requests,2.6e-07
+azure,southindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,eastus,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,westus,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,norwaywest,Blob Storage,put request,Hot,0.0,inf,requests,7.72e-06
+azure,northcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,uksouth,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
+azure,southeastasia,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
+azure,brazilsouth,Blob Storage,put request,Hot,0.0,inf,requests,7.000000000000001e-06
+azure,southindia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,francesouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01365
+azure,australiacentral2,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,centralindia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,centralindia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,centralindia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,eastus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0152
+azure,francecentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
+azure,westus2,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,northeurope,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,usgovarizona,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,southafricawest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.285
+azure,westus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,usgovtexas,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,westcentralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,brazilsouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.3
+azure,uksouth,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,qatarcentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.198
+azure,westus3,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,swedensouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.848e-06
+azure,uksouth,Blob Storage,get request,Hot,0.0,inf,requests,4.7e-07
+azure,norwayeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.6e-07
+azure,koreacentral,Block Blob,get request,Premium,0.0,inf,requests,1.8899999999999999e-07
+azure,canadacentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,canadacentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,canadacentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,brazilsouth,Block Blob,get request,Premium,0.0,inf,requests,2.8e-07
+azure,koreacentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,ukwest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,centralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,switzerlandwest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.292
+azure,australiacentral,Block Blob v2,get request,Premium,0.0,inf,requests,3.3e-07
+azure,southafricanorth,Block Blob,get request,Premium,0.0,inf,requests,2.0400000000000003e-07
+azure,northcentralus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,brazilsoutheast,Block Blob v2,put request,Premium,0.0,inf,requests,5.9069999999999995e-06
+azure,southafricanorth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0119
+azure,swedensouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.013
+azure,southeastasia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,eastasia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,qatarcentral,Block Blob v2,put request,Premium,0.0,inf,requests,3e-06
+azure,usgovarizona,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,attdallas1,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,westcentralus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,usgovtexas,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,norwayeast,Block Blob,put request,Premium,0.0,inf,requests,2.51e-06
+azure,southindia,Block Blob,put request,Premium,0.0,inf,requests,2.6300000000000002e-06
+azure,Global,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0
+azure,australiasoutheast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,norwayeast,Block Blob v2,put request,Premium,0.0,inf,requests,3.2599999999999997e-06
+azure,japaneast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,japaneast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,japaneast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,southafricawest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0125
+azure,swedensouth,Blob Storage,put request,Hot,0.0,inf,requests,6.5000000000000004e-06
+azure,southafricanorth,Blob Storage,put request,Hot,0.0,inf,requests,6e-06
+azure,usgovtexas,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,australiacentral2,Block Blob,get request,Premium,0.0,inf,requests,2.54e-07
+azure,japaneast,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,switzerlandwest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0143
+azure,southafricanorth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.219
+azure,australiasoutheast,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,uksouth,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
+azure,attatlanta1,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,australiaeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.64e-07
+azure,qatarcentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,southindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,francesouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.244
+azure,switzerlandwest,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,francecentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
+azure,francecentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.017664
+azure,francecentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0192
+azure,francecentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018432
+azure,koreacentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,usgovtexas,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westus3,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,japaneast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,swedensouth,Blob Storage,get request,Hot,0.0,inf,requests,5.2e-07
+azure,qatarcentral,Block Blob,get request,Premium,0.0,inf,requests,2e-07
+azure,eastasia,Block Blob v2,put request,Premium,0.0,inf,requests,3.52e-06
+azure,uaecentral,Block Blob v2,get request,Premium,0.0,inf,requests,3.0599999999999996e-07
+azure,attdallas1,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,canadacentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,usgovvirginia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,uaenorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.41e-07
+azure,norwaywest,Block Blob v2,put request,Premium,0.0,inf,requests,4.24e-06
+azure,australiacentral,Block Blob v2,put request,Premium,0.0,inf,requests,4.12e-06
+azure,westus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,attdallas1,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,japaneast,Block Blob v2,put request,Premium,0.0,inf,requests,3.3e-06
+azure,southcentralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,switzerlandnorth,Blob Storage,put request,Hot,0.0,inf,requests,5.94e-06
+azure,australiacentral2,Block Blob v2,put request,Premium,0.0,inf,requests,4.12e-06
+azure,uksouth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.017664
+azure,uksouth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018432
+azure,uksouth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0192
+azure,australiacentral,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,ukwest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,uaenorth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.214
+azure,southeastasia,Block Blob,get request,Premium,0.0,inf,requests,1.82e-07
+azure,westus3,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,uaecentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.013
+azure,centralindia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,norwayeast,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
+azure,japaneast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
+azure,ukwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
+azure,southcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,westus,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
+azure,francecentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,australiacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,francesouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.244
+azure,switzerlandnorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
+azure,eastasia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,attdallas1,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,koreasouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,swedensouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
+azure,australiasoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,2.64e-07
+azure,eastus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westindia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,francesouth,Block Blob,get request,Premium,0.0,inf,requests,2.28e-07
+azure,brazilsouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.3
+azure,australiaeast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,attatlanta1,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,canadaeast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,canadaeast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,canadaeast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,francesouth,Block Blob v2,get request,Premium,0.0,inf,requests,2.96e-07
+azure,switzerlandwest,Block Blob,put request,Premium,0.0,inf,requests,3.41e-06
+azure,uaenorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.012
+azure,westeurope,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
+azure,centralindia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westus3,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,brazilsouth,Block Blob v2,get request,Premium,0.0,inf,requests,3.64e-07
+azure,canadacentral,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,centralus,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,koreacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,northcentralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,australiaeast,Block Blob v2,put request,Premium,0.0,inf,requests,3.3e-06
+azure,brazilsoutheast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.04069
+azure,brazilsoutheast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.03899
+azure,brazilsoutheast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.04238
+azure,australiaeast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,centralus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,attatlanta1,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,koreacentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.203
+azure,westeurope,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,norwayeast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.215
+azure,centralindia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,westus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0115
+azure,japanwest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.233
+azure,westindia,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,northcentralus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,westus,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,jioindiacentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,usgovarizona,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,switzerlandnorth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,westeurope,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,southcentralus,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,koreasouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.203
+azure,germanywestcentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,francecentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0105
+azure,eastasia,Block Blob,get request,Premium,0.0,inf,requests,2.17e-07
+azure,norwaywest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00358
+azure,japanwest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,japaneast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westus,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,uaecentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
+azure,northeurope,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,northcentralus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,francesouth,Blob Storage,get request,Hot,0.0,inf,requests,6.11e-07
+azure,southafricanorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.66e-07
+azure,japanwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,germanynorth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,swedensouth,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,uaenorth,Block Blob,put request,Premium,0.0,inf,requests,2.5e-06
+azure,southindia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,usgovarizona,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,switzerlandnorth,Block Blob v2,put request,Premium,0.0,inf,requests,3.4200000000000003e-06
+azure,canadaeast,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,usgovvirginia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,japanwest,Block Blob,get request,Premium,0.0,inf,requests,2.17e-07
+azure,southcentralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,usgovarizona,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0296
+azure,usgovarizona,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.02856
+azure,usgovarizona,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.02753
+azure,germanywestcentral,Blob Storage,get request,Hot,0.0,inf,requests,4.3e-07
+azure,northcentralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,koreacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,attdallas1,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,eastasia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,swedencentral,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,canadaeast,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,australiacentral2,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,germanywestcentral,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
+azure,qatarcentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,usgovarizona,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,northeurope,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,norwayeast,Blob Storage,put request,Hot,0.0,inf,requests,5.94e-06
+azure,francecentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,swedencentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,northeurope,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,uaecentral,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,australiaeast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,attatlanta1,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,uaecentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.279
+azure,germanynorth,Block Blob,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,germanywestcentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westus3,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,northeurope,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,northcentralus,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,swedensouth,Blob Storage,get request,Cool,0.0,inf,requests,1.2999999999999998e-06
+azure,brazilsouth,Blob Storage,get request,Hot,0.0,inf,requests,5.6e-07
+azure,westus2,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,uaenorth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.198
+azure,southindia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.021896
+azure,southindia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0238
+azure,southindia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.022848
+azure,southindia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.015
+azure,jioindiacentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,jioindiacentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,jioindiacentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,japaneast,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,switzerlandnorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02156
+azure,switzerlandnorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.020734
+azure,switzerlandnorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019817
+azure,norwaywest,Block Blob,get request,Premium,0.0,inf,requests,2.6e-07
+azure,germanynorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.4199999999999997e-07
+azure,attdallas1,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,qatarcentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,qatarcentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,qatarcentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,westeurope,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,koreasouth,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,switzerlandnorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00275
+azure,norwaywest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0269
+azure,norwaywest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0258
+azure,norwaywest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.028
+azure,uaenorth,Block Blob v2,put request,Premium,0.0,inf,requests,3e-06
+azure,australiasoutheast,Block Blob,get request,Premium,0.0,inf,requests,2.03e-07
+azure,brazilsouth,Block Blob,put request,Premium,0.0,inf,requests,3.5000000000000004e-06
+azure,usgovvirginia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,jioindiawest,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,northeurope,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,attdallas1,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,ukwest,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,brazilsoutheast,Blob Storage,get request,Cool,0.0,inf,requests,1.2999999999999998e-06
+azure,brazilsouth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0326
+azure,brazilsouth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.03032
+azure,brazilsouth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.03146
+azure,ukwest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.017664
+azure,ukwest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0192
+azure,ukwest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018432
+azure,usgovvirginia,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,westindia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,koreacentral,Block Blob v2,put request,Premium,0.0,inf,requests,3.0700000000000003e-06
+azure,brazilsoutheast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.02704
+azure,uaecentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.024608
+azure,uaecentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.023442
+azure,uaecentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02548
+azure,ukwest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
+azure,australiaeast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,canadacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,canadacentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,canadacentral,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,Global,Blob Storage,put request,Hot,0.0,inf,requests,0.0
+azure,attdallas1,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,southcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,southcentralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,southcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,brazilsoutheast,Block Blob,put request,Premium,0.0,inf,requests,4.55e-06
+azure,brazilsoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,4.7149999999999995e-07
+azure,attatlanta1,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,southindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,southafricanorth,Block Blob,put request,Premium,0.0,inf,requests,2.555e-06
+azure,swedensouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.2535
+azure,ukwest,Blob Storage,get request,Hot,0.0,inf,requests,4.7e-07
+azure,uksouth,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
+azure,swedencentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,southafricawest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0042
+azure,usgovvirginia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,australiasoutheast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
+azure,centralindia,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,brazilsoutheast,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,uaecentral,Blob Storage,put request,Hot,0.0,inf,requests,7.02e-06
+azure,canadaeast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,norwaywest,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,eastus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,westus2,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,uksouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
+azure,norwayeast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
+azure,norwaywest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.279
+azure,eastus2,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,southafricawest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0263
+azure,southafricawest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0252
+azure,southafricawest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0274
+azure,koreacentral,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,koreasouth,Block Blob,put request,Premium,0.0,inf,requests,2.36e-06
+azure,uaenorth,Blob Storage,get request,Hot,0.0,inf,requests,4.8e-07
+azure,westus2,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,uaecentral,Block Blob v2,put request,Premium,0.0,inf,requests,3.82e-06
+azure,jioindiawest,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,australiasoutheast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,jioindiawest,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,usgovarizona,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,eastus2,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,uksouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
+azure,centralindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,ukwest,Blob Storage,put request,Hot,0.0,inf,requests,5.899999999999999e-06
+azure,germanynorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
+azure,southcentralus,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,centralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,northeurope,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.02112
+azure,northeurope,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.022
+azure,northeurope,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.02024
+azure,usgovvirginia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0296
+azure,usgovvirginia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.028416
+azure,usgovvirginia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.027232
+azure,southafricawest,Block Blob,put request,Premium,0.0,inf,requests,3.32e-06
+azure,uaecentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.252
+azure,southafricawest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0149
+azure,eastus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,westus,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
+azure,brazilsoutheast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
+azure,norwayeast,Block Blob,get request,Premium,0.0,inf,requests,2e-07
+azure,australiacentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,australiacentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,australiacentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,canadaeast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,westeurope,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
+azure,westeurope,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,uaenorth,Blob Storage,get request,Cool,0.0,inf,requests,1.2e-06
+azure,southcentralus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westus,Block Blob,get request,Premium,0.0,inf,requests,1.82e-07
+azure,brazilsouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,uaecentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
+azure,usgovvirginia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,ukwest,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,eastus2,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
+azure,eastus2,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,norwaywest,Blob Storage,get request,Hot,0.0,inf,requests,6.15e-07
+azure,uaenorth,Blob Storage,put request,Cool,0.0,inf,requests,1.2e-05
+azure,australiasoutheast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiacentral2,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.015
+azure,centralus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,centralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,usgovtexas,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiaeast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,swedencentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,southafricawest,Blob Storage,put request,Hot,0.0,inf,requests,7.499999999999999e-06
+azure,francecentral,Blob Storage,put request,Hot,0.0,inf,requests,5.899999999999999e-06
+azure,attdallas1,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,southindia,Block Blob v2,put request,Premium,0.0,inf,requests,3.4200000000000003e-06
+azure,eastus2,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,brazilsoutheast,Blob Storage,put request,Hot,0.0,inf,requests,9.1e-06
+azure,northeurope,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,westus2,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,uaecentral,Blob Storage,get request,Cool,0.0,inf,requests,1.2999999999999998e-06
+azure,koreacentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,koreacentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,koreacentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,eastus2,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,southindia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,swedensouth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.022963
+azure,swedensouth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.022006
+azure,swedensouth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02392
+azure,australiacentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,australiasoutheast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,southeastasia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,southindia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,germanynorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0234
+azure,germanynorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0255
+azure,germanynorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0245
+azure,southeastasia,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
+azure,southafricanorth,Block Blob v2,put request,Premium,0.0,inf,requests,3.329e-06
+azure,westeurope,Block Blob,get request,Premium,0.0,inf,requests,1.82e-07
+azure,eastasia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.02208
+azure,eastasia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.024
+azure,eastasia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.02304
+azure,usgovarizona,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,germanynorth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.013
+azure,southindia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,brazilsouth,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,francecentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,koreasouth,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,australiacentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.015
+azure,northcentralus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,usgovtexas,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.016
+azure,usgovtexas,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,usgovvirginia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.016
+azure,australiacentral2,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,southafricanorth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,usgovtexas,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0296
+azure,usgovtexas,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.02856
+azure,usgovtexas,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.02753
+azure,koreasouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.203
+azure,southafricawest,Blob Storage,put request,Cool,0.0,inf,requests,1.25e-05
+azure,swedencentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,westus2,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,australiacentral,Block Blob,put request,Premium,0.0,inf,requests,3.1699999999999997e-06
+azure,northeurope,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,swedencentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,westindia,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,norwaywest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.279
+azure,switzerlandnorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,uksouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,switzerlandwest,Blob Storage,get request,Cool,0.0,inf,requests,1.43e-06
+azure,uaenorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.003
+azure,westcentralus,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,westcentralus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,westus2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
+azure,westus2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,westus2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
+azure,attatlanta1,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
+azure,eastasia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,centralus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,brazilsoutheast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.389
+azure,westus2,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
+azure,centralindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.21
+azure,uksouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
+azure,centralindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.55e-07
+azure,germanywestcentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,eastus2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,japanwest,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,germanynorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
+azure,southeastasia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,switzerlandnorth,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,canadacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,northcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,usgovarizona,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,japanwest,Block Blob,put request,Premium,0.0,inf,requests,2.71e-06
+azure,usgovarizona,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.016
+azure,attatlanta1,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
+azure,attatlanta1,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
+azure,eastus2,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,switzerlandwest,Blob Storage,put request,Hot,0.0,inf,requests,7.7183e-06
+azure,eastasia,Block Blob v2,get request,Premium,0.0,inf,requests,2.82e-07
+azure,usgovarizona,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,norwayeast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00275
+azure,qatarcentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,canadacentral,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
+azure,westus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,southeastasia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,westcentralus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,canadaeast,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,westus3,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,francecentral,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
+azure,japaneast,Block Blob,get request,Premium,0.0,inf,requests,2.03e-07
+azure,koreacentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.46e-07
+azure,uaenorth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.012
+azure,uaenorth,Blob Storage,put request,Hot,0.0,inf,requests,6e-06
+azure,jioindiawest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,jioindiawest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,jioindiawest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,canadaeast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,swedensouth,Block Blob v2,get request,Premium,0.0,inf,requests,3.081e-07
+azure,switzerlandnorth,Block Blob,put request,Premium,0.0,inf,requests,2.625e-06
+azure,australiacentral2,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
+azure,westindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,francesouth,Blob Storage,put request,Hot,0.0,inf,requests,7.670000000000001e-06
+azure,northcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019136
+azure,northcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019968
+azure,northcentralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0208
+azure,germanynorth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.254
+azure,attdallas1,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
+azure,qatarcentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.214
+azure,australiacentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
+azure,swedencentral,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
+azure,australiaeast,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
+azure,uksouth,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
+azure,norwayeast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.215
+azure,qatarcentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
+azure,southcentralus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,germanywestcentral,Blob Storage,put request,Hot,0.0,inf,requests,5.4e-06
+azure,northeurope,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,switzerlandwest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.028074
+azure,switzerlandwest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.026973
+azure,switzerlandwest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.025779
+azure,norwaywest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0143
+azure,norwayeast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
+azure,centralus,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,westindia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.225
+azure,switzerlandwest,Blob Storage,get request,Hot,0.0,inf,requests,6.151e-07
+azure,eastasia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.233
+azure,canadaeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,southcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,brazilsoutheast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.39
+azure,northcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
+azure,southindia,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,australiaeast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
+azure,koreasouth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
+azure,westcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,uaenorth,Block Blob,get request,Premium,0.0,inf,requests,2e-07
+azure,australiacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.272
+azure,uksouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0105
+azure,japaneast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
+azure,canadacentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
+azure,attatlanta1,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
+azure,southeastasia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
+azure,southeastasia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
+azure,southeastasia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
+azure,switzerlandwest,Block Blob,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,switzerlandnorth,Blob Storage,get request,Hot,0.0,inf,requests,4.7299999999999996e-07
+azure,canadacentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
+azure,Global,Blob Storage,get request,Hot,0.0,inf,requests,0.0
+azure,attdallas1,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
+azure,swedensouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
+azure,westcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
+azure,westcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06

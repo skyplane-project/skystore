@@ -311,7 +311,9 @@ def issue_requests(trace_file_path: str):
                     cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
 
                 print(f"Executing command: {cmd}")
+                print("start time: ", datetime.now())
                 stdout, stderr = server.run_command(cmd)
+                print("end time: ", datetime.now())
                 print(f"stdout: {stdout}")
                 print(f"stderr: {stderr}")
             else:
