@@ -24,13 +24,15 @@ class GetPolicy(str, Enum):
     cheapest = "cheapest"
     direct = "direct"
 
+
 class PutPolicy(str, Enum):
     copy_on_read = "copy_on_read"
-    #read = "read"
+    # read = "read"
     write_local = "write_local"
     push = "push"
     replicate_all = "replicate_all"
     single_region = "single_region"
+
 
 class Version(str, Enum):
     enable = "Enabled"

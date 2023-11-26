@@ -41,7 +41,7 @@ from fastapi import APIRouter, Response, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
-from .policy.placement_policy import (
+from operations.policy.placement_policy import (
     put_policy,
     SingleRegionWrite,
     ReplicateAll,
@@ -491,8 +491,6 @@ async def locate_object(
         )
     locators = (await db.scalars(stmt)).first()
 
-    # self.transfer_policy.get(req)
-
     # https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
     if locators is None or (locators.delete_marker and not request.version_id):
         return Response(status_code=404, content="Object Not Found")
@@ -723,9 +721,7 @@ async def start_upload(
     if (
         request.version_id
         and not existing_object
-        and (
-            request.copy_src_bucket is None or put_policy.get_policy() == "copy_on_read"
-        )
+        and (request.copy_src_bucket is None or put_policy.name() == "copy_on_read")
     ):
         return Response(
             status_code=404,
@@ -829,7 +825,7 @@ async def start_upload(
     #   - Otherwise, check version_suspended field, - if False, create new logical object and set the field to be False
     #   - if True, use existing object (overwrite the existing object)
 
-    elif put_policy.get_policy() == "copy_on_read":
+    elif put_policy.name() == "copy_on_read":
         logical_object = existing_object
     else:
         if version_enabled is None:
@@ -878,7 +874,7 @@ async def start_upload(
 
     # when enabling versioning, primary exist does not equal to the pull-on-read case
     # make sure we use copy-on-read policy
-    if primary_exists and put_policy.get_policy() == "copy_on_read":
+    if primary_exists and put_policy.name() == "copy_on_read":
         # Assume that physical bucket locators for this region already exists and we don't need to create them
         # For pull-on-read
         upload_to_region_tags = put_policy.place(request)
@@ -898,7 +894,7 @@ async def start_upload(
         ), "should not be the same region"
     else:
         # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-        if put_policy.get_policy() == "push":
+        if put_policy.name() == "push":
             # Except this case, always set the first-write region of the OBJECT to be primary
             upload_to_region_tags = put_policy.place(request, physical_bucket_locators)
             primary_write_region = [
@@ -1068,9 +1064,9 @@ async def complete_upload(
 
     # TODO: might need to change the if conditions for different policies
     if (
-        (put_policy.get_policy() == "push" and physical_locator.is_primary)
-        or put_policy.get_policy() == "write_local"
-        or put_policy.get_policy() == "copy_on_read"
+        (put_policy.name() == "push" and physical_locator.is_primary)
+        or put_policy.name() == "write_local"
+        or put_policy.name() == "copy_on_read"
     ):
         # NOTE: might not need to update the logical object for consecutive reads for copy_on_read
         # await db.refresh(physical_locator, ["logical_object"])

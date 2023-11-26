@@ -13,7 +13,7 @@ class PlacementPolicy:
     def place(self, req: StartUploadRequest) -> List[str]:
         pass
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         pass
 
 
@@ -28,13 +28,16 @@ class SingleRegionWrite(PlacementPolicy):
         pass
 
     def place(self, req: StartUploadRequest) -> List[str]:
-        if req.op == "write":
-            return [self.config.storage_region]
-        else:
-            return []
+        """
+        Args:
+            req: StartUploadRequest
+        Returns:
+            List[str]: single region to write to
+        """
+        return [self.config.storage_region]
 
-    def get_policy(self) -> str:
-        return "single-region-write"
+    def name(self) -> str:
+        return "single_region"
 
 
 class ReplicateAll(PlacementPolicy):
@@ -43,13 +46,16 @@ class ReplicateAll(PlacementPolicy):
     """
 
     def place(self, req: StartUploadRequest) -> List[str]:
-        if req.op == "write":
-            return list(self.total_graph.nodes())
-        else:
-            return []
+        """
+        Args:
+            req: StartUploadRequest
+        Returns:
+            List[str]: all available regions in the current nodes graph
+        """
+        return list(self.stat_graph.nodes())
 
     def get_policy(self) -> str:
-        return "replicate-all"
+        return "replicate_all"
 
 
 class PushonWrite(PlacementPolicy):
@@ -62,16 +68,22 @@ class PushonWrite(PlacementPolicy):
         req: StartUploadRequest,
         physical_bucket_locators: List[DBPhysicalBucketLocator],
     ) -> List[str]:
+        """
+        Args:
+            req: StartUploadRequest
+            physical_bucket_locators: List[DBPhysicalBucketLocator]
+        Returns:
+            List[str]: the regions to push to, including the primary region and the regions that need warmup
+        """
+
         upload_to_region_tags = [
             locator.location_tag
             for locator in physical_bucket_locators
             if locator.is_primary or locator.need_warmup
         ]
-        # check the type of physical_bucket_locators
-        # print("type of locators: ", type(physical_bucket_locators))
         return upload_to_region_tags
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         return "push"
 
 
@@ -81,9 +93,16 @@ class PullOnRead(PlacementPolicy):
     """
 
     def place(self, req: StartUploadRequest) -> List[str]:
+        """
+        Args:
+            req: StartUploadRequest
+        Returns:
+            List[str]: the region client is from
+        """
+
         return [req.client_from_region]
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         return "copy_on_read"
 
 
@@ -93,12 +112,15 @@ class LocalWrite(PlacementPolicy):
     """
 
     def place(self, req: StartUploadRequest) -> List[str]:
-        if req.op == "write":
-            return [req.client_from_region]
-        else:
-            return []
+        """
+        Args:
+            req: StartUploadRequest
+        Returns:
+            List[str]: the local region client is from
+        """
+        return [req.client_from_region]
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         return "write_local"
 
 
