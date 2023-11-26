@@ -52,6 +52,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**start_delete_objects**](docs/DefaultApi.md#start_delete_objects) | **POST** /start_delete_objects | Start Delete Objects
 *DefaultApi* | [**start_upload**](docs/DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 *DefaultApi* | [**start_warmup**](docs/DefaultApi.md#start_warmup) | **POST** /start_warmup | Start Warmup
+*DefaultApi* | [**update_policy**](docs/DefaultApi.md#update_policy) | **POST** /update_policy | Update Policy
 
 
 ## Documentation For Models
@@ -94,6 +95,7 @@ Class | Method | HTTP request | Description
  - [PhysicalLocation](docs/PhysicalLocation.md)
  - [PutBucketVersioningRequest](docs/PutBucketVersioningRequest.md)
  - [RegisterBucketRequest](docs/RegisterBucketRequest.md)
+ - [SetPolicyRequest](docs/SetPolicyRequest.md)
  - [StartUploadRequest](docs/StartUploadRequest.md)
  - [StartUploadResponse](docs/StartUploadResponse.md)
  - [StartWarmupRequest](docs/StartWarmupRequest.md)

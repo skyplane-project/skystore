@@ -28,6 +28,7 @@ from operations.schemas.object_schemas import (
     LogicalPartResponse,
     MultipartResponse,
     DeleteMarker,
+    SetPolicyRequest,
 )
 from operations.schemas.bucket_schemas import DBLogicalBucket
 from sqlalchemy.orm import selectinload, Session
@@ -40,11 +41,61 @@ from fastapi import APIRouter, Response, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
+from .policy.placement_policy import (
+    put_policy,
+    SingleRegionWrite,
+    ReplicateAll,
+    PushonWrite,
+    PullOnRead,
+    LocalWrite,
+)
+from .policy.transfer_policy import (
+    get_policy,
+    DirectTransfer,
+    CheapestTransfer,
+    ClosestTransfer,
+)
 
 
 router = APIRouter()
 
 
+@router.post("/update_policy")
+async def update_policy(
+    request: SetPolicyRequest, db: Session = Depends(get_session)
+) -> None:
+    global get_policy, put_policy
+    put_policy_type = request.put_policy
+    get_policy_type = request.get_policy
+
+    if put_policy_type is None and get_policy_type is None:
+        raise ValueError("Invalid policy type")
+
+    if put_policy_type is not None:
+        if put_policy_type == "write_local":
+            put_policy = LocalWrite()
+        elif put_policy_type == "single_region":
+            put_policy = SingleRegionWrite()
+        elif put_policy_type == "copy_on_read":
+            put_policy = PullOnRead()
+        elif put_policy_type == "replicate_all":
+            put_policy = ReplicateAll()
+        elif put_policy_type == "push":
+            put_policy = PushonWrite()
+        else:
+            raise ValueError("Invalid placement policy type")
+    if get_policy_type is not None:
+        if get_policy_type == "direct":
+            get_policy = DirectTransfer()
+        elif get_policy_type == "cheapest":
+            get_policy = CheapestTransfer()
+        elif get_policy_type == "closest":
+            get_policy = ClosestTransfer()
+        else:
+            raise ValueError("Invalid transfer policy type")
+
+
+# TODO: when creating new logical object, we need to consider different put policy
 @router.post("/start_delete_objects")
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
@@ -440,6 +491,8 @@ async def locate_object(
         )
     locators = (await db.scalars(stmt)).first()
 
+    # self.transfer_policy.get(req)
+
     # https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
     if locators is None or (locators.delete_marker and not request.version_id):
         return Response(status_code=404, content="Object Not Found")
@@ -448,31 +501,15 @@ async def locate_object(
     if locators and locators.delete_marker and request.version_id:
         return Response(status_code=405, content="Not allowed to get a delete marker")
 
-    chosen_locator = None
-    reason = ""
-
     # if request.get_primary:
     #     chosen_locator = next(locator for locator in locators if locator.is_primary)
     #     reason = "exact match (primary)"
     # else:
     await db.refresh(locators, ["physical_object_locators"])
-    for physical_locator in locators.physical_object_locators:
-        if physical_locator.location_tag == request.client_from_region:
-            chosen_locator = physical_locator
-            reason = "exact match"
-            break
-
-    if chosen_locator is None:
-        # find the primary locator
-        for physical_locator in locators.physical_object_locators:
-            # always read the lastest version
-            if physical_locator.is_primary:
-                chosen_locator = physical_locator
-                reason = "primary"
-                break
+    chosen_locator = get_policy.get(request, locators.physical_object_locators)
 
     logger.debug(
-        f"locate_object: chosen locator with strategy {reason} out of {len(locators.physical_object_locators)}, {request} -> {chosen_locator}"
+        f"locate_object: chosen locator out of {len(locators.physical_object_locators)}, {request} -> {chosen_locator}"
     )
 
     await db.refresh(chosen_locator, ["logical_object"])
@@ -686,7 +723,9 @@ async def start_upload(
     if (
         request.version_id
         and not existing_object
-        and (request.copy_src_bucket is None or request.policy == "copy_on_read")
+        and (
+            request.copy_src_bucket is None or put_policy.get_policy() == "copy_on_read"
+        )
     ):
         return Response(
             status_code=404,
@@ -779,14 +818,18 @@ async def start_upload(
             version_suspended=True if version_enabled is False else False,
         )
         db.add(logical_object)
+
     # If the object already exists, we need to check the version_enabled field:
     # version_enabled is NULL, use existing object
-    # version_enabled is enabled, - if performing copy-on-read, use existing object
-    #                             - Otherwise, create new logical object
-    # version_enabled is suspended, - if performing copy-on-read, use existing object
-    #                               - Otherwise, check version_suspended field, - if False, create new logical object and set the field to be False
-    #                                                                           - if True, use existing object (overwrite the existing object)
-    elif request.policy == "copy_on_read":
+    # version_enabled is enabled,
+    #   - if performing copy-on-read, use existing object
+    #   - Otherwise, create new logical object
+    # version_enabled is suspended,
+    #   - if performing copy-on-read, use existing object
+    #   - Otherwise, check version_suspended field, - if False, create new logical object and set the field to be False
+    #   - if True, use existing object (overwrite the existing object)
+
+    elif put_policy.get_policy() == "copy_on_read":
         logical_object = existing_object
     else:
         if version_enabled is None:
@@ -835,10 +878,10 @@ async def start_upload(
 
     # when enabling versioning, primary exist does not equal to the pull-on-read case
     # make sure we use copy-on-read policy
-    if primary_exists and request.policy == "copy_on_read":
+    if primary_exists and put_policy.get_policy() == "copy_on_read":
         # Assume that physical bucket locators for this region already exists and we don't need to create them
         # For pull-on-read
-        upload_to_region_tags = [request.client_from_region]
+        upload_to_region_tags = put_policy.place(request)
         primary_write_region = [
             locator.location_tag
             for locator in existing_object.physical_object_locators
@@ -855,13 +898,9 @@ async def start_upload(
         ), "should not be the same region"
     else:
         # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-        if request.policy == "push":
+        if put_policy.get_policy() == "push":
             # Except this case, always set the first-write region of the OBJECT to be primary
-            upload_to_region_tags = [
-                locator.location_tag
-                for locator in physical_bucket_locators
-                if locator.is_primary or locator.need_warmup
-            ]
+            upload_to_region_tags = put_policy.place(request, physical_bucket_locators)
             primary_write_region = [
                 locator.location_tag
                 for locator in physical_bucket_locators
@@ -977,7 +1016,7 @@ async def start_upload(
     logger.debug(f"start_upload: {request} -> {locators}")
 
     # # calculate the size of the logical object and the added physical object locators
-    # import sys 
+    # import sys
     # logical_size = sys.getsizeof(logical_object)
     # physical_sizes = [sys.getsizeof(locator) for locator in locators]
 
@@ -1029,9 +1068,9 @@ async def complete_upload(
 
     # TODO: might need to change the if conditions for different policies
     if (
-        (request.policy == "push" and physical_locator.is_primary)
-        or request.policy == "write_local"
-        or request.policy == "copy_on_read"
+        (put_policy.get_policy() == "push" and physical_locator.is_primary)
+        or put_policy.get_policy() == "write_local"
+        or put_policy.get_policy() == "copy_on_read"
     ):
         # NOTE: might not need to update the logical object for consecutive reads for copy_on_read
         # await db.refresh(physical_locator, ["logical_object"])

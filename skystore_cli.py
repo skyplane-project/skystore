@@ -19,12 +19,18 @@ DEFAULT_STORE_SERVER_PATH = os.path.join(
 )
 
 
-class Policy(str, Enum):
+class GetPolicy(str, Enum):
+    cloest = "cloest"
+    cheapest = "cheapest"
+    direct = "direct"
+
+class PutPolicy(str, Enum):
     copy_on_read = "copy_on_read"
-    read = "read"
+    #read = "read"
     write_local = "write_local"
     push = "push"
-
+    replicate_all = "replicate_all"
+    single_region = "single_region"
 
 class Version(str, Enum):
     enable = "Enabled"
@@ -46,11 +52,14 @@ def init(
     sky_s3_binary_path: str = typer.Option(
         DEFAULT_SKY_S3_PATH, "--sky-s3-path", help="Path to the sky-s3 binary"
     ),
-    policy: Policy = typer.Option(
-        Policy.write_local, "--policy", help="Policy to use for data placement"
+    get_policy: GetPolicy = typer.Option(
+        GetPolicy.cheapest, "--get_policy", help="Policy to use for data transfer"
+    ),
+    put_policy: PutPolicy = typer.Option(
+        PutPolicy.write_local, "--put_policy", help="Policy to use for data placement"
     ),
     enable_version: Version = typer.Option(
-        Version.NULL, "--version", help="Whether to enable the version or not"
+        Version.enable, "--version", help="Whether to enable the version or not"
     ),
 ):
     with open(config_file, "r") as f:
@@ -72,7 +81,8 @@ def init(
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "LOCAL": str(local_test).lower(),
         "LOCAL_SERVER": str(start_server).lower(),
-        "POLICY": config["policy"] if "policy" in config else policy,
+        "GET_POLICY": config["get_policy"] if "get_policy" in config else get_policy,
+        "PUT_POLICY": config["put_policy"] if "put_policy" in config else put_policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
         "VERSION_ENABLE": enable_version,
     }

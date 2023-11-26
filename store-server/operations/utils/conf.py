@@ -53,7 +53,7 @@ TEST_CONFIGURATION = Configuration(
             need_warmup=True,
         ),
         PhysicalLocation(
-            name="gcp:us-west1",
+            name="gcp:us-west1-a",
             cloud="gcp",
             region="us-west1",
             bucket="my-sky-bucket-3",
@@ -65,7 +65,7 @@ TEST_CONFIGURATION = Configuration(
 DEFAULT_INIT_REGIONS = [
     "aws:us-west-1",
     "aws:us-east-1",
-    "gcp:us-west1",
+    "gcp:us-west1-a",
     "aws:eu-central-1",
     "aws:eu-south-1",
     "aws:eu-north-1",

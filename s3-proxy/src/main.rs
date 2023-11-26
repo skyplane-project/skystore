@@ -61,7 +61,9 @@ async fn main() {
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
 
-    let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
+    let get_policy: String = env::var("GET_POLICY").expect("POLICY for data transfer must be set");
+
+    let put_policy: String = env::var("PUT_POLICY").expect("POLICY for data placement must be set");
 
     let version_enable: String = env::var("VERSION_ENABLE").expect("VERSION_ENABLE must be set");
 
@@ -70,7 +72,7 @@ async fn main() {
         client_from_region,
         local_run,
         local_server,
-        policy,
+        (get_policy, put_policy),
         skystore_bucket_prefix,
         version_enable,
     )

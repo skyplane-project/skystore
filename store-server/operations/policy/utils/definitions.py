@@ -1,8 +1,9 @@
+from typing import Tuple
+
 KB = 1024
 MB = 1024 * 1024
 GB = 1024 * 1024 * 1024
 
-from typing import Tuple
 
 # provider bandwidth limits (egress, ingress)
 aws_instance_throughput_limit: Tuple[float, float] = (5, 10)

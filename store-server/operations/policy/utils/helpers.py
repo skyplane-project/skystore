@@ -1,10 +1,14 @@
 import yaml
 import pandas as pd
 import networkx as nx
-from src.model.config import Config
+from ..model.config import Config
 import os
 import ast
-from src.utils.definitions import aws_instance_throughput_limit, gcp_instance_throughput_limit, azure_instance_throughput_limit
+from ..utils.definitions import (
+    aws_instance_throughput_limit,
+    gcp_instance_throughput_limit,
+    azure_instance_throughput_limit,
+)
 
 
 def refine_string(s):
@@ -25,7 +29,9 @@ def load_config(config_path: str) -> Config:
 
 def get_full_path(relative_path: str):
     # Move up to the SkyStore-Simulation directory from helpers.py
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    base_path = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
     full_path = os.path.join(base_path, relative_path)
     return full_path
 
@@ -34,7 +40,13 @@ def load_profile(file_name: str):
     return pd.read_csv(f"src/profiles/{file_name}")
 
 
-def make_nx_graph(cost_path=None, throughput_path=None, latency_path=None, storage_cost_path=None, num_vms=1):
+def make_nx_graph(
+    cost_path=None,
+    throughput_path=None,
+    latency_path=None,
+    storage_cost_path=None,
+    num_vms=1,
+):
     """
     Default graph with capacity constraints and cost info
     nodes: regions, edges: links
@@ -66,7 +78,12 @@ def make_nx_graph(cost_path=None, throughput_path=None, latency_path=None, stora
 
     G = nx.DiGraph()
     for _, row in throughput.iterrows():
-        G.add_edge(row["src_region"], row["dst_region"], cost=None, throughput=num_vms * row["throughput_sent"] / 1e9)
+        G.add_edge(
+            row["src_region"],
+            row["dst_region"],
+            cost=None,
+            throughput=num_vms * row["throughput_sent"] / 1e9,
+        )
 
     for _, row in latency.iterrows():
         row = row[0]
@@ -95,7 +112,9 @@ def make_nx_graph(cost_path=None, throughput_path=None, latency_path=None, stora
         region = row["Vendor"] + ":" + row["Region"]
 
         if region in G:
-            if row["Group"] == "storage" and (row["Tier"] == "General Purpose" or row["Tier"] == "Hot"):
+            if row["Group"] == "storage" and (
+                row["Tier"] == "General Purpose" or row["Tier"] == "Hot"
+            ):
                 G.nodes[region]["priceStorage"] = row["PricePerUnit"]
         else:
             no_storage_cost.add(region)
@@ -118,7 +137,9 @@ def make_nx_graph(cost_path=None, throughput_path=None, latency_path=None, stora
                 if node.startswith("gcp")
                 else azure_instance_throughput_limit[1]
             )
-            G.add_edge(node, node, cost=0, throughput=num_vms * ingress_limit, latency=40)
+            G.add_edge(
+                node, node, cost=0, throughput=num_vms * ingress_limit, latency=40
+            )
 
     aws_nodes = [node for node in G.nodes if node.startswith("aws")]
 

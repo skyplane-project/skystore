@@ -41,6 +41,7 @@ docs/PatchUploadMultipartUploadPart.md
 docs/PhysicalLocation.md
 docs/PutBucketVersioningRequest.md
 docs/RegisterBucketRequest.md
+docs/SetPolicyRequest.md
 docs/StartUploadRequest.md
 docs/StartUploadResponse.md
 docs/StartWarmupRequest.md
@@ -91,6 +92,7 @@ src/models/patch_upload_multipart_upload_part.rs
 src/models/physical_location.rs
 src/models/put_bucket_versioning_request.rs
 src/models/register_bucket_request.rs
+src/models/set_policy_request.rs
 src/models/start_upload_request.rs
 src/models/start_upload_response.rs
 src/models/start_warmup_request.rs

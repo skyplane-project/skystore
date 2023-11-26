@@ -165,7 +165,7 @@ class StartUploadRequest(LocateObjectRequest):
     copy_src_key: Optional[str] = None
 
     # Policy
-    policy: Optional[str] = "push"
+    # policy: Optional[str] = "push"
 
 
 class StartUploadResponse(BaseModel):
@@ -192,7 +192,7 @@ class PatchUploadIsCompleted(BaseModel):
     etag: str
     last_modified: datetime
     version_id: Optional[str] = None
-    policy: Optional[str] = "push"
+    # policy: Optional[str] = "push"
 
 
 class PatchUploadMultipartUploadId(BaseModel):
@@ -315,3 +315,8 @@ class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
     op_type: List[str]  # {'replace', 'delete', 'add'}
+
+
+class SetPolicyRequest(BaseModel):
+    get_policy: Optional[str] = None
+    put_policy: Optional[str] = None

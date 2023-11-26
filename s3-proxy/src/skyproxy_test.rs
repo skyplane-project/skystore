@@ -11,7 +11,7 @@ mod tests {
         static ref REGIONS: Vec<String> = vec![
             "aws:us-west-1".to_string(),
             "aws:us-east-1".to_string(),
-            "gcp:us-west1".to_string(),
+            "gcp:us-west1-a".to_string(),
             "aws:eu-central-1".to_string(),
             "aws:us-west-1".to_string(),
             "aws:eu-north-1".to_string(),
@@ -31,7 +31,7 @@ mod tests {
             CLIENT_FROM_REGION.clone(),
             true,
             true,
-            "push".to_string(),
+            ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "NULL".to_string(),
         )
@@ -44,7 +44,7 @@ mod tests {
             CLIENT_FROM_REGION.clone(),
             true,
             true,
-            "push".to_string(),
+            ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "Enabled".to_string(),
         )

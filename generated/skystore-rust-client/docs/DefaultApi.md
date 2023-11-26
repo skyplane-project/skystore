@@ -31,6 +31,7 @@ Method | HTTP request | Description
 [**start_delete_objects**](DefaultApi.md#start_delete_objects) | **POST** /start_delete_objects | Start Delete Objects
 [**start_upload**](DefaultApi.md#start_upload) | **POST** /start_upload | Start Upload
 [**start_warmup**](DefaultApi.md#start_warmup) | **POST** /start_warmup | Start Warmup
+[**update_policy**](DefaultApi.md#update_policy) | **POST** /update_policy | Update Policy
 
 
 
@@ -781,6 +782,34 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
 [**crate::models::StartWarmupResponse**](StartWarmupResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## update_policy
+
+> serde_json::Value update_policy(set_policy_request)
+Update Policy
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**set_policy_request** | [**SetPolicyRequest**](SetPolicyRequest.md) |  | [required] |
+
+### Return type
+
+[**serde_json::Value**](serde_json::Value.md)
 
 ### Authorization
 

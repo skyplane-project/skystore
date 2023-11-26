@@ -1,5 +1,4 @@
-from pydantic import BaseModel, validator
-from typing import List, Dict
+from pydantic import BaseModel
 
 
 class LatencySLO(BaseModel):

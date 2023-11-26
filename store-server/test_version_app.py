@@ -19,7 +19,6 @@ def concurrent_upload(client, bucket, key, region, idx):
             "key": key,
             "client_from_region": region,
             "is_multipart": False,
-            "policy": "push",
             # "version_id": version_id,
         },
     )
@@ -51,7 +50,7 @@ def test_delete_objects(client):
         json={
             "bucket": "my-delete-object-version-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
+            "warmup_regions": ["gcp:us-west1-a"],
         },
     )
     resp.raise_for_status()
@@ -76,6 +75,17 @@ def test_delete_objects(client):
         },
     )
     # resp.raise_for_status()
+
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-delete-object-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
 
     # start new threads to perform concurrent uploads
     threads = []
@@ -287,6 +297,17 @@ def test_suspended_versioning(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-suspended-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
+
     # start new threads to perform concurrent uploads
     threads = []
     for i in range(3):
@@ -403,7 +424,7 @@ def test_get_objects(client):
         json={
             "bucket": "my-get-version-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
+            "warmup_regions": ["gcp:us-west1-a"],
         },
     )
     resp.raise_for_status()
@@ -428,6 +449,16 @@ def test_get_objects(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-get-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+
     resp = client.post(
         "/start_upload",
         json={
@@ -435,7 +466,6 @@ def test_get_objects(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -460,7 +490,6 @@ def test_get_objects(client):
             "key": "my-key",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -528,10 +557,10 @@ def test_get_objects(client):
         json={
             "bucket": "my-get-version-bucket",
             "key": "my-key",
-            "client_from_region": "gcp:us-west1",
+            "client_from_region": "gcp:us-west1-a",
         },
     ).json()["region"]
-    assert location == "us-west1"
+    assert location == "us-west1-a"
 
     # Remote Read
     location = client.post(
@@ -544,7 +573,7 @@ def test_get_objects(client):
     ).json()["region"]
     assert location in {
         "us-west-1",
-        "us-west1",
+        "us-west1-a",
     }  # use push policy, depend on which one is the first primary write region
 
     # Get a specific version
@@ -553,7 +582,7 @@ def test_get_objects(client):
         json={
             "bucket": "my-get-version-bucket",
             "key": "my-key",
-            "client_from_region": "gcp:us-west1",
+            "client_from_region": "gcp:us-west1-a",
             "version_id": 1,
         },
     ).json()
@@ -588,6 +617,15 @@ def test_get_object_write_local_and_pull(client):
         json={
             "bucket": "my-get-version-bucket-write_local",
             "versioning": True,
+        },
+    )
+
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-get-version-bucket-write_local",
+            "put_policy": "write_local",
         },
     )
 
@@ -667,6 +705,16 @@ def test_get_object_write_local_and_pull(client):
             },
         ).raise_for_status()
 
+    # update policy to copy_on_read
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-get-version-bucket-write_local",
+            "put_policy": "copy_on_read",
+        },
+    )
+    resp.raise_for_status()
+
     # upload again, now pull-on-read
     resp = client.post(
         "/start_upload",
@@ -675,7 +723,6 @@ def test_get_object_write_local_and_pull(client):
             "key": "my-key-write_local",
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
-            "policy": "copy_on_read",  # copy_on_read policy
             "version_id": 4,
         },
     )
@@ -689,7 +736,6 @@ def test_get_object_write_local_and_pull(client):
                 "size": 100,
                 "etag": "123",
                 "last_modified": "2020-01-01T00:00:00",
-                "policy": "copy_on_read",  # copy_on_read policy
             },
         ).raise_for_status()
 
@@ -734,6 +780,17 @@ def test_warmup(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-warmup-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
+
     # 1st version
     resp1 = client.post(
         "/start_upload",
@@ -742,7 +799,6 @@ def test_warmup(client):
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     # 2nd version
@@ -753,7 +809,6 @@ def test_warmup(client):
             "key": "my-key-warmup",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     for locator in resp2.json()["locators"]:
@@ -860,6 +915,17 @@ def test_write_back(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-writeback-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
+
     resp = client.post(
         "/start_upload",
         json={
@@ -867,7 +933,6 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-east-2",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -892,6 +957,16 @@ def test_write_back(client):
     )
     assert resp.json()["region"] == "us-east-2"
 
+    # update policy to copy_on_read
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-writeback-version-bucket",
+            "put_policy": "copy_on_read",
+        },
+    )
+    resp.raise_for_status()
+
     # Now write it to local store
     resp = client.post(
         "/start_upload",
@@ -900,7 +975,6 @@ def test_write_back(client):
             "key": "my-key-write-back",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "copy_on_read",  # since we enable versioning, we should make sure we use copy_on_read policy now
         },
     )
     resp.raise_for_status()
@@ -958,6 +1032,17 @@ def test_list_objects(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-list-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
+
     resp = client.post(
         "/start_upload",
         json={
@@ -965,7 +1050,6 @@ def test_list_objects(client):
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -986,7 +1070,6 @@ def test_list_objects(client):
             "key": "my-key-1",
             "client_from_region": "aws:us-west-1",
             "is_multipart": False,
-            "policy": "push",
         },
     )
     for locator in resp.json()["locators"]:
@@ -1039,7 +1122,7 @@ def test_multipart_flow(client):
         json={
             "bucket": "my-multipart-version-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
+            "warmup_regions": ["gcp:us-west1-a"],
         },
     )
     resp.raise_for_status()
@@ -1064,6 +1147,17 @@ def test_multipart_flow(client):
         },
     )
 
+    # set policy
+    resp = client.post(
+        "/update_policy",
+        json={
+            "bucket": "my-multipart-version-bucket",
+            "put_policy": "push",
+            "get_policy": "cheapest",
+        },
+    )
+    resp.raise_for_status()
+
     resp = client.post(
         "/start_upload",
         json={
@@ -1071,7 +1165,6 @@ def test_multipart_flow(client):
             "key": "my-key-multipart",
             "client_from_region": "aws:us-west-1",
             "is_multipart": True,
-            "policy": "push",
         },
     )
     resp.raise_for_status()
@@ -1200,7 +1293,7 @@ async def test_metadata_clean_up(client):
         json={
             "bucket": "temp-object-version-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
+            "warmup_regions": ["gcp:us-west1-a"],
         },
     )
     resp.raise_for_status()
@@ -1288,7 +1381,7 @@ def test_disable_bucket_versioning(client):
         json={
             "bucket": "my-version-bucket",
             "client_from_region": "aws:us-west-1",
-            "warmup_regions": ["gcp:us-west1"],
+            "warmup_regions": ["gcp:us-west1-a"],
         },
     )
     resp.raise_for_status()
@@ -1436,4 +1529,3 @@ def test_copy_objects(client):
         },
     )
     assert len(resp.json()) == 2
-    

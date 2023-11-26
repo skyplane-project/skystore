@@ -21,7 +21,8 @@ pub struct SkyProxy {
     pub store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
     pub dir_conf: Configuration,
     pub client_from_region: String,
-    pub policy: String,
+    pub get_policy: String,
+    pub put_policy: String,
     pub skystore_bucket_prefix: String,
     pub version_enable: String,
 }
@@ -32,7 +33,7 @@ impl SkyProxy {
         client_from_region: String,
         local: bool,
         local_server: bool,
-        policy: String,
+        policy: (String, String),
         skystore_bucket_prefix: String,
         version_enable: String,
     ) -> Self {
@@ -197,11 +198,23 @@ impl SkyProxy {
             .await
             .expect("directory service not healthy");
 
+        // set policy
+        apis::update_policy(
+            &dir_conf,
+            models::SetPolicyRequest {
+                get_policy: Some(policy.0.clone()),
+                put_policy: Some(policy.1.clone()),
+            },
+        )
+        .await
+        .expect("update policy failed");
+
         Self {
             store_clients,
             dir_conf,
             client_from_region,
-            policy,
+            get_policy: policy.0,
+            put_policy: policy.1,
             skystore_bucket_prefix,
             version_enable,
         }
@@ -215,7 +228,8 @@ impl Clone for SkyProxy {
             dir_conf: self.dir_conf.clone(),
             client_from_region: self.client_from_region.clone(),
             skystore_bucket_prefix: self.skystore_bucket_prefix.clone(),
-            policy: self.policy.clone(),
+            get_policy: self.get_policy.clone(),
+            put_policy: self.put_policy.clone(),
             version_enable: self.version_enable.clone(),
         }
     }
@@ -231,7 +245,8 @@ impl std::fmt::Debug for SkyProxy {
             .field("store_clients", &client_keys)
             .field("dir_conf", &self.dir_conf)
             .field("client_from_region", &self.client_from_region)
-            .field("policy", &self.policy)
+            .field("policy", &self.get_policy)
+            .field("policy", &self.put_policy)
             .finish()
     }
 }
@@ -606,7 +621,6 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy = self.policy.clone();
 
                 let src_bucket = src_locator.bucket.clone();
                 let src_key = src_locator.key.clone();
@@ -644,7 +658,6 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
-                            policy: Some(policy),
                             version_id: head_output.output.version_id, // physical version
                         },
                     )
@@ -733,7 +746,6 @@ impl S3 for SkyProxy {
                         let dir_conf_clone = self.dir_conf.clone();
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
-                        let policy = self.policy.clone();
 
                         let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
@@ -750,11 +762,10 @@ impl S3 for SkyProxy {
                                     is_multipart: false,
                                     copy_src_bucket: None,
                                     copy_src_key: None,
-                                    policy: Some(policy.clone()),
                                 },
                             )
                             .await;
-                            
+
                             // When version setting is NULL:
                             // In case of multi-concurrent GET request with copy_on_read policy,
                             // only upload if start_upload returns successful, this indicates that the object is not in the local object store
@@ -800,7 +811,6 @@ impl S3 for SkyProxy {
                                             last_modified: timestamp_to_string(
                                                 head_resp.output.last_modified.unwrap(),
                                             ),
-                                            policy: Some(policy.clone()),
                                             version_id: head_resp.output.version_id, // physical version
                                         },
                                     )
@@ -896,7 +906,6 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: None,
                 copy_src_key: None,
-                policy: Some(self.policy.clone()),
             },
         )
         .await
@@ -916,7 +925,6 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy_clone = self.policy.clone();
                 let req = S3Request::new(clone_put_object_request(
                     &request_template,
                     Some(input_blob),
@@ -966,7 +974,6 @@ impl S3 for SkyProxy {
                             size: size_to_set as u64,
                             etag: e_tag.clone(),
                             last_modified,
-                            policy: Some(policy_clone),
                             version_id: put_resp.output.version_id, // physical version
                         },
                     )
@@ -1012,7 +1019,14 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        if !version_enabled && req.input.delete.objects.iter().any(|obj| obj.version_id.is_some()) {
+        if !version_enabled
+            && req
+                .input
+                .delete
+                .objects
+                .iter()
+                .any(|obj| obj.version_id.is_some())
+        {
             return Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::NoSuchKey,
                 "Version is not enabled.",
@@ -1136,7 +1150,7 @@ impl S3 for SkyProxy {
                             id,
                             version.map(|id| id.to_string()),
                             op_type,
-                            err
+                            err,
                         )));
                     }
                 },
@@ -1200,12 +1214,12 @@ impl S3 for SkyProxy {
                         code: Some("InternalError".to_string()),
                         message: Some(err_msg),
                         ..Default::default()
-                    });                    
+                    });
                 }
             } else {
                 // if we failed to delete the logical object, and this object is not a delete marker,
                 // we need to add it to the errors vector
-                if !fails.is_empty() && !delete_markers_map[&key].delete_marker { 
+                if !fails.is_empty() && !delete_markers_map[&key].delete_marker {
                     errors.push(Error {
                         key: Some(key),
                         code: Some("InternalError".to_string()),
@@ -1224,7 +1238,7 @@ impl S3 for SkyProxy {
                                 .clone()
                                 .map(|id| id.to_string()), // logical version
                             version_id: None,
-                        });                           
+                        });
                     } else {
                         for version in &versions {
                             deleted_objects.push(DeletedObject {
@@ -1236,7 +1250,7 @@ impl S3 for SkyProxy {
                                     .map(|id| id.to_string()), // logical version
                                 version_id: version.clone(),
                             });
-                        }                            
+                        }
                     }
 
                     let mut fails_ids_vec = Vec::new();
@@ -1262,7 +1276,7 @@ impl S3 for SkyProxy {
                         .await
                         .unwrap();
                     }
-                }            
+                }
             }
         }
 
@@ -1417,7 +1431,6 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: Some(src_bucket.to_string()),
                 copy_src_key: Some(src_key.to_string()),
-                policy: Some(self.policy.clone()),
             },
         )
         .await
@@ -1436,7 +1449,6 @@ impl S3 for SkyProxy {
             .for_each(|(locator, (src_bucket, src_key))| {
                 let conf = self.dir_conf.clone();
                 let client = self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy_clone = self.policy.clone();
                 let version_clone = locator.version_id.clone(); // physical version
 
                 tasks.spawn(async move {
@@ -1471,7 +1483,6 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
-                            policy: Some(policy_clone),
                             version_id: head_output.output.version_id, // physical version
                         },
                     )
@@ -1523,7 +1534,6 @@ impl S3 for SkyProxy {
             ));
         };
 
-        let policy = self.policy.clone();
         let upload_resp = apis::start_upload(
             &self.dir_conf,
             models::StartUploadRequest {
@@ -1534,7 +1544,6 @@ impl S3 for SkyProxy {
                 is_multipart: true,
                 copy_src_bucket: None,
                 copy_src_key: None,
-                policy: Some(policy),
             },
         )
         .await
@@ -2010,7 +2019,6 @@ impl S3 for SkyProxy {
                     etag: resp.output.e_tag.unwrap(),
                     size: head_resp.output.content_length as u64,
                     last_modified: timestamp_to_string(head_resp.output.last_modified.unwrap()),
-                    policy: Some(self.policy.clone()),
                     version_id: resp.output.version_id, // physical version
                 },
             )
