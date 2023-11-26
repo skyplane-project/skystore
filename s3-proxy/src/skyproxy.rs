@@ -14,7 +14,7 @@ use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{SystemTime, Instant};
 use tracing::error;
 
 pub struct SkyProxy {
@@ -716,6 +716,9 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<GetObjectInput>,
     ) -> S3Result<S3Response<GetObjectOutput>> {
+
+        let start_time = Instant::now();
+
         let bucket = req.input.bucket.clone();
         let key = req.input.key.clone();
         let vid = req
@@ -831,9 +834,14 @@ impl S3 for SkyProxy {
                             version_id: vid.map(|id| id.to_string()), // logical version
                             ..Default::default()
                         });
+
+                        let end_time = Instant::now();
+
+                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+
                         return Ok(response);
                     } else {
-                        return self
+                        let res = self
                             .store_clients
                             .get(&self.client_from_region)
                             .unwrap()
@@ -844,9 +852,12 @@ impl S3 for SkyProxy {
                                 input
                             }))
                             .await;
+                        let end_time = Instant::now();
+                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        return res;
                     }
                 } else {
-                    return self
+                    let res = self
                         .store_clients
                         .get(&location.tag)
                         .unwrap()
@@ -857,12 +868,19 @@ impl S3 for SkyProxy {
                             input
                         }))
                         .await;
+                    let end_time = Instant::now();
+                    write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                    return res;
                 }
             }
-            None => Err(s3s::S3Error::with_message(
+            None => {
+                let end_time = Instant::now();
+                write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::NoSuchKey,
-                "Object not found",
-            )),
+                "Object not found",))
+            }
+        
         }
     }
 

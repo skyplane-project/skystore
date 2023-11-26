@@ -20,7 +20,7 @@ DEFAULT_STORE_SERVER_PATH = os.path.join(
 
 
 class GetPolicy(str, Enum):
-    cloest = "cloest"
+    closest = "closest"
     cheapest = "cheapest"
     direct = "direct"
 
