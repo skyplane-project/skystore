@@ -307,14 +307,12 @@ def issue_requests(trace_file_path: str):
                 if op == "write":
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
-                    cmd = f"aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
+                    cmd = f"time aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
-                    cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
+                    cmd = f"time aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
 
                 print(f"Executing command: {cmd}")
-                print("start time: ", datetime.now())
                 stdout, stderr = server.run_command(cmd)
-                print("end time: ", datetime.now())
                 print(f"stdout: {stdout}")
                 print(f"stderr: {stderr}")
             else:

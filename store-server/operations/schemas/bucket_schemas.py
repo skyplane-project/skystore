@@ -24,6 +24,7 @@ class DBLogicalBucket(Base):
     # NOTE: do we need status per logical bucket?
     status = Column(Enum(Status))
     creation_date = Column(DateTime)
+    version_enabled = Column(Boolean)
 
     # Add relationship to physical bucket
     physical_bucket_locators = relationship(
@@ -32,8 +33,6 @@ class DBLogicalBucket(Base):
 
     # Add relationship to logical object
     logical_objects = relationship("DBLogicalObject", back_populates="logical_bucket")
-
-    version_enabled = Column(Boolean)
 
 
 class DBPhysicalBucketLocator(Base):
@@ -98,6 +97,7 @@ class BucketResponse(BaseModel):
 class RegisterBucketRequest(BaseModel):
     bucket: str
     config: Configuration
+    versioning: bool
 
 
 class CreateBucketRequest(LocateBucketRequest):

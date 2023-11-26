@@ -59,6 +59,7 @@ async def register_buckets(
         prefix="",  # TODO: integrate prefix
         status=Status.ready,
         creation_date=datetime.utcnow(),
+        version_enabled=request.versioning,
     )
     db.add(logical_bucket)
 
