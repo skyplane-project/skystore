@@ -11,3 +11,6 @@ sqlalchemy_repr
 rich
 jq
 greenlet
+numpy
+pandas
+networkx

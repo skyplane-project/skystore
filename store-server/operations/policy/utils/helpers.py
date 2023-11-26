@@ -141,9 +141,9 @@ def make_nx_graph(
                 node, node, cost=0, throughput=num_vms * ingress_limit, latency=40
             )
 
-    aws_nodes = [node for node in G.nodes if node.startswith("aws")]
+    # aws_nodes = [node for node in G.nodes if node.startswith("aws")]
 
     # just keep aws nodes and edges
-    G = G.subgraph(aws_nodes).copy()
+    # G = G.subgraph(aws_nodes).copy()
 
     return G

@@ -156,7 +156,8 @@ def create_instance(
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
             "skystore_bucket_prefix": "skystore",
-            "policy": "write_local",
+            "put_policy": "write_local",
+            "get_policy": "cheapest",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(
@@ -187,7 +188,7 @@ def create_instance(
 
         # Set up other stuff
         url = "https://github.com/skyplane-project/skystore.git"
-        clone_cmd = f"git clone {url}; cd skystore; "
+        clone_cmd = f"git clone {url}; cd skystore; git switch experiments; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
