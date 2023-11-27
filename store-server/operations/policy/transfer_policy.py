@@ -14,6 +14,9 @@ class TransferPolicy:
     ) -> DBPhysicalObjectLocator:
         pass
 
+    def name(self) -> str:
+        return ""
+
 
 class CheapestTransfer(TransferPolicy):
     def get(
@@ -40,6 +43,9 @@ class CheapestTransfer(TransferPolicy):
                 "cost"
             ],
         )
+    
+    def name(self) -> str:
+        return "cheapest"
 
 
 class ClosestTransfer(TransferPolicy):
@@ -67,6 +73,9 @@ class ClosestTransfer(TransferPolicy):
                 "throughput"
             ],
         )
+    
+    def name(self) -> str:
+        return "closest"
 
 
 class DirectTransfer(TransferPolicy):
@@ -90,6 +99,9 @@ class DirectTransfer(TransferPolicy):
             if self.config.storage_region == locator.location_tag:
                 return locator
         pass
+
+    def name(self) -> str:
+        return "direct"
 
 
 get_policy = TransferPolicy()

@@ -68,10 +68,13 @@ async def update_policy(
     put_policy_type = request.put_policy
     get_policy_type = request.get_policy
 
+    old_put_policy_type = put_policy.name()
+    old_get_policy_type = get_policy.name()
+
     if put_policy_type is None and get_policy_type is None:
         raise ValueError("Invalid policy type")
 
-    if put_policy_type is not None:
+    if put_policy_type is not None and put_policy_type != old_put_policy_type:
         if put_policy_type == "write_local":
             put_policy = LocalWrite()
         elif put_policy_type == "single_region":
@@ -84,7 +87,7 @@ async def update_policy(
             put_policy = PushonWrite()
         else:
             raise ValueError("Invalid placement policy type")
-    if get_policy_type is not None:
+    if get_policy_type is not None and get_policy_type != old_get_policy_type:
         if get_policy_type == "direct":
             get_policy = DirectTransfer()
         elif get_policy_type == "cheapest":
@@ -455,6 +458,8 @@ async def locate_object(
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
 
+    print("locate_object: ", request)
+
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -721,7 +726,9 @@ async def start_upload(
     if (
         request.version_id
         and not existing_object
-        and (request.copy_src_bucket is None or put_policy.name() == "copy_on_read")
+        and (
+            request.copy_src_bucket is None or put_policy.name() == "copy_on_read"
+        )
     ):
         return Response(
             status_code=404,
@@ -1401,6 +1408,9 @@ async def list_objects_versioning(
 async def head_object(
     request: HeadObjectRequest, db: Session = Depends(get_session)
 ) -> HeadObjectResponse:
+    
+    print("head_object: ", request)
+
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(

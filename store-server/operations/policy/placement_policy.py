@@ -7,14 +7,13 @@ from .model.config import Config
 
 class PlacementPolicy:
     def __init__(self) -> None:
-        self.stat_graph = make_nx_graph()
         pass
 
     def place(self, req: StartUploadRequest) -> List[str]:
         pass
 
     def name(self) -> str:
-        pass
+        return ""
 
 
 class SingleRegionWrite(PlacementPolicy):
@@ -44,6 +43,10 @@ class ReplicateAll(PlacementPolicy):
     """
     Replicate all objects to all regions
     """
+    def __init__(self) -> None:
+        super().__init__()
+        self.stat_graph = make_nx_graph()
+        pass
 
     def place(self, req: StartUploadRequest) -> List[str]:
         """
