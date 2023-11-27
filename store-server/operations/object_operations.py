@@ -103,6 +103,10 @@ async def update_policy(
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
+    
+    # measure the time
+    start = datetime.now()
+    
     await db.execute(text("BEGIN IMMEDIATE;"))
 
     version_enabled = (
@@ -300,12 +304,15 @@ async def start_delete_objects(
             if replaced or add_obj:
                 break
 
+        print("version setting: ", version_enabled)
+        print("logical_obj.id: ", logical_obj.id)
+
         locator_dict[key] = locators
         delete_marker_dict[key] = DeleteMarker(
             delete_marker=logical_obj.delete_marker,
             version_id=None
             if logical_obj.version_suspended or version_enabled is None
-            else logical_obj.id,
+            else str(logical_obj.id),
         )
         if add_obj:
             op_type[key] = "add"
