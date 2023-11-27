@@ -305,7 +305,7 @@ async def start_delete_objects(
             delete_marker=logical_obj.delete_marker,
             version_id=None
             if logical_obj.version_suspended or version_enabled is None
-            else logical_obj.id,
+            else str(logical_obj.id),
         )
         if add_obj:
             op_type[key] = "add"
