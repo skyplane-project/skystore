@@ -206,6 +206,7 @@ def test_register_bucket(client):
                     },
                 ]
             },
+            "versioning": False,  
         },
     )
     resp.raise_for_status()
