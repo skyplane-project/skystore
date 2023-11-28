@@ -955,6 +955,7 @@ def test_record_metrics(client):
             "client_region": "us-east-1",
             "operation": "read",
             "latency": 1000,
+            "timestamp": "2003-06-16 00:00:00",
             "object_size": 1000,
         },
     )
@@ -969,6 +970,7 @@ def test_record_metrics(client):
             "client_region": "us-east-1",
             "operation": "write",
             "latency": 1000,
+            "timestamp": "2001-01-17 00:00:00",
             "object_size": 5000,
         },
     )
@@ -981,8 +983,9 @@ def test_record_metrics(client):
         json={
             "requested_region": "aws:us-west-2",
             "client_region": "us-east-1",
-            "operation": "invalid_operation",
+            "operation": "invalid operation",
             "latency": 1000,
+            "timestamp": "2005-11-26 00:00:00",
             "object_size": 5000,
         },
     )
@@ -1002,6 +1005,7 @@ def test_record_metrics(client):
             "client_region": "us-east-1",
             "operation": "read",
             "latency": 1000,
+            "timestamp": "2003-06-16 00:00:00",
             "object_size": 1000,
         },
         {
@@ -1009,6 +1013,7 @@ def test_record_metrics(client):
             "client_region": "us-east-1",
             "operation": "write",
             "latency": 1000,
+            "timestamp": "2001-01-17 00:00:00",
             "object_size": 5000,
         },
     ]

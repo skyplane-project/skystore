@@ -1562,6 +1562,7 @@ async def record_metrics(
         client_region=request.client_region,
         operation=request.operation,
         latency=request.latency,
+        timestamp=request.timestamp,
         object_size=request.object_size,
     )
 
@@ -1592,6 +1593,7 @@ async def list_metrics(
             requested_region=metric.requested_region,
             operation=metric.operation,
             latency=metric.latency,
+            timestamp=metric.timestamp,
             object_size=metric.object_size,
         )
         for metric in objects

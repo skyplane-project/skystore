@@ -110,6 +110,7 @@ class DBStatisticsObject(Base):
     client_region = Column(String)
     operation = Column(String)
     latency = Column(Float)
+    timestamp = Column(String)
     object_size = Column(BIGINT)
 
 
@@ -335,6 +336,7 @@ class RecordMetricsRequest(BaseModel):
     # read or write
     operation: str
     latency: float
+    timestamp: str
     object_size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
     @validator("operation")
@@ -355,6 +357,7 @@ class ListMetricsObject(BaseModel):
     requested_region: str
     operation: str
     latency: float
+    timestamp: str
     object_size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
 

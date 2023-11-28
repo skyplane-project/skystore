@@ -21,17 +21,20 @@ pub struct RecordMetricsRequest {
     pub operation: String,
     #[serde(rename = "latency")]
     pub latency: f32,
+    #[serde(rename = "timestamp")]
+    pub timestamp: String,
     #[serde(rename = "object_size")]
     pub object_size: u64,
 }
 
 impl RecordMetricsRequest {
-    pub fn new(client_region: String, requested_region: String, operation: String, latency: f32, object_size: u64) -> RecordMetricsRequest {
+    pub fn new(client_region: String, requested_region: String, operation: String, latency: f32, timestamp: String, object_size: u64) -> RecordMetricsRequest {
         RecordMetricsRequest {
             client_region,
             requested_region,
             operation,
             latency,
+            timestamp,
             object_size,
         }
     }

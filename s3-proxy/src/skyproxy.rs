@@ -14,7 +14,7 @@ use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{SystemTime, Instant};
+use std::time::{Instant, SystemTime};
 use tracing::error;
 
 pub struct SkyProxy {
@@ -853,6 +853,8 @@ impl S3 for SkyProxy {
                         });
 
                         let read_latency = start_time.elapsed().as_secs_f32();
+                        let system_time: SystemTime = Utc::now().into();
+                        let timestamp: s3s::dto::Timestamp = system_time.into();
 
                         // Call api to record latency
                         let _record_metrics_response = apis::record_metrics(
@@ -862,7 +864,8 @@ impl S3 for SkyProxy {
                                 requested_region: location.region.clone(),
                                 operation: "read".to_owned(),
                                 latency: read_latency,
-                                object_size: location.size.unwrap_or_default() as u64,
+                                timestamp: timestamp_to_string(timestamp),
+                                object_size: location.size.unwrap_or_default(),
                             },
                         )
                         .await;
@@ -882,6 +885,8 @@ impl S3 for SkyProxy {
                             .await;
 
                         let read_latency = start_time.elapsed().as_secs_f32();
+                        let system_time: SystemTime = Utc::now().into();
+                        let timestamp: s3s::dto::Timestamp = system_time.into();
 
                         // Call api to record latency
                         let _record_metrics_response = apis::record_metrics(
@@ -891,7 +896,8 @@ impl S3 for SkyProxy {
                                 requested_region: location.region.clone(),
                                 operation: "read".to_owned(),
                                 latency: read_latency,
-                                object_size: location.size.unwrap_or_default() as u64,
+                                timestamp: timestamp_to_string(timestamp),
+                                object_size: location.size.unwrap_or_default(),
                             },
                         )
                         .await;
@@ -912,6 +918,8 @@ impl S3 for SkyProxy {
                         .await;
 
                     let read_latency = start_time.elapsed().as_secs_f32();
+                    let system_time: SystemTime = Utc::now().into();
+                    let timestamp: s3s::dto::Timestamp = system_time.into();
 
                     // Call api to record latency
                     let _record_metrics_response = apis::record_metrics(
@@ -921,7 +929,8 @@ impl S3 for SkyProxy {
                             requested_region: location.region.clone(),
                             operation: "read".to_owned(),
                             latency: read_latency,
-                            object_size: location.size.unwrap_or_default() as u64,
+                            timestamp: timestamp_to_string(timestamp),
+                            object_size: location.size.unwrap_or_default(),
                         },
                     )
                     .await;
@@ -1066,6 +1075,8 @@ impl S3 for SkyProxy {
                     .unwrap();
 
                     let write_latency = start_time.elapsed().as_secs_f32();
+                    let system_time: SystemTime = Utc::now().into();
+                    let timestamp: s3s::dto::Timestamp = system_time.into();
 
                     // Call api to record latency
                     let _record_metrics_response = apis::record_metrics(
@@ -1075,6 +1086,7 @@ impl S3 for SkyProxy {
                             requested_region: locator.region,
                             operation: "write".to_owned(),
                             latency: write_latency,
+                            timestamp: timestamp_to_string(timestamp),
                             object_size: size_to_set as u64,
                         },
                     )
