@@ -764,7 +764,7 @@ impl S3 for SkyProxy {
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
 
-                        let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
+                        let (mut input_blobs, _) = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
 
                         // Spawn a background task to store the object in the local object store
@@ -952,14 +952,15 @@ impl S3 for SkyProxy {
         let mut tasks = tokio::task::JoinSet::new();
         let locators = start_upload_resp.clone().locators;
         let request_template = clone_put_object_request(&req.input, None);
-        let input_blobs = split_streaming_blob(req.input.body.unwrap(), locators.len());
+        let (input_blobs, sizes) = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
         let vid = locators[0].version.map(|id| id.to_string()); // logical version
 
         locators
             .into_iter()
             .zip(input_blobs.into_iter())
-            .for_each(|(locator, input_blob)| {
+            .zip(sizes.into_iter())
+            .for_each(|((locator, input_blob), size)| {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
@@ -973,43 +974,25 @@ impl S3 for SkyProxy {
                     input
                 });
 
-                let (content_length, bucket, key) = (
-                    req.input.content_length,
-                    locator.bucket.clone(),
-                    locator.key.clone(),
-                );
+                let content_length = req.input.content_length;
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
 
-                    // Retrieve the object metatada through HEAD request.
-                    // So we get the proper size, etag, and last_modified.
                     // No need to fetch from S3 if content length is provided, assume (size = input.content_length, last_modified=current time)
                     let (size_to_set, last_modified) = match content_length {
                         Some(length) => (length, current_timestamp_string()),
-                        None => {
-                            // Fetch from S3 when content_length is not provided
-                            let head_resp = client
-                                .head_object(S3Request::new(new_head_object_request(
-                                    bucket,
-                                    key,
-                                    put_resp.output.version_id.clone(), // physical version
-                                )))
-                                .await
-                                .unwrap();
-                            (
-                                head_resp.output.content_length,
-                                timestamp_to_string(head_resp.output.last_modified.unwrap()),
-                            )
-                        }
+                        None => (size, current_timestamp_string())
                     };
+
+                    assert!(size as u64 == size_to_set as u64);
 
                     apis::complete_upload(
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: size_to_set as u64,
+                            size: size as u64,
                             etag: e_tag.clone(),
                             last_modified,
                             version_id: put_resp.output.version_id, // physical version
@@ -1840,7 +1823,7 @@ impl S3 for SkyProxy {
             .remaining_length()
             .exact()
             .unwrap();
-        let body_clones = split_streaming_blob(req.input.body.unwrap(), resp.len());
+        let (body_clones, _) = split_streaming_blob(req.input.body.unwrap(), resp.len());
         resp.into_iter()
             .zip(body_clones.into_iter())
             .for_each(|(locator, body)| {
