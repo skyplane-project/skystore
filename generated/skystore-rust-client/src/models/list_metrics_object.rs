@@ -22,11 +22,11 @@ pub struct ListMetricsObject {
     #[serde(rename = "latency")]
     pub latency: f32,
     #[serde(rename = "object_size")]
-    pub object_size: u32,
+    pub object_size: u64,
 }
 
 impl ListMetricsObject {
-    pub fn new(client_region: String, requested_region: String, operation: String, latency: f32, object_size: u32) -> ListMetricsObject {
+    pub fn new(client_region: String, requested_region: String, operation: String, latency: f32, object_size: u64) -> ListMetricsObject {
         ListMetricsObject {
             client_region,
             requested_region,

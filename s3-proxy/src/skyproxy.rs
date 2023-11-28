@@ -862,14 +862,14 @@ impl S3 for SkyProxy {
                                 requested_region: location.region.clone(),
                                 operation: "read".to_owned(),
                                 latency: read_latency,
-                                object_size: location.size.unwrap_or_default() as u32,
+                                object_size: location.size.unwrap_or_default() as u64,
                             },
                         )
                         .await;
 
                         return Ok(response);
                     } else {
-                        return self
+                        let get_object_response = self
                             .store_clients
                             .get(&self.client_from_region)
                             .unwrap()
@@ -880,24 +880,26 @@ impl S3 for SkyProxy {
                                 input
                             }))
                             .await;
+
+                        let read_latency = start_time.elapsed().as_secs_f32();
+
+                        // Call api to record latency
+                        let _record_metrics_response = apis::record_metrics(
+                            &self.dir_conf,
+                            models::RecordMetricsRequest {
+                                client_region: self.client_from_region.clone(),
+                                requested_region: location.region.clone(),
+                                operation: "read".to_owned(),
+                                latency: read_latency,
+                                object_size: location.size.unwrap_or_default() as u64,
+                            },
+                        )
+                        .await;
+
+                        return get_object_response;
                     }
                 } else {
-                    let read_latency = start_time.elapsed().as_secs_f32();
-
-                    // Call api to record latency
-                    let _record_metrics_response = apis::record_metrics(
-                        &self.dir_conf,
-                        models::RecordMetricsRequest {
-                            client_region: self.client_from_region.clone(),
-                            requested_region: location.region.clone(),
-                            operation: "read".to_owned(),
-                            latency: read_latency,
-                            object_size: location.size.unwrap_or_default() as u32,
-                        },
-                    )
-                    .await;
-
-                    return self
+                    let get_object_response = self
                         .store_clients
                         .get(&location.tag)
                         .unwrap()
@@ -908,6 +910,23 @@ impl S3 for SkyProxy {
                             input
                         }))
                         .await;
+
+                    let read_latency = start_time.elapsed().as_secs_f32();
+
+                    // Call api to record latency
+                    let _record_metrics_response = apis::record_metrics(
+                        &self.dir_conf,
+                        models::RecordMetricsRequest {
+                            client_region: self.client_from_region.clone(),
+                            requested_region: location.region.clone(),
+                            operation: "read".to_owned(),
+                            latency: read_latency,
+                            object_size: location.size.unwrap_or_default() as u64,
+                        },
+                    )
+                    .await;
+
+                    return get_object_response;
                 }
             }
             None => Err(s3s::S3Error::with_message(
@@ -967,11 +986,15 @@ impl S3 for SkyProxy {
         .unwrap();
 
         let mut tasks = tokio::task::JoinSet::new();
+<<<<<<< HEAD
         let locators = start_upload_resp.clone().locators;
         let region = match locators.first() {
             Some(loc) => loc.region.clone(),
             None => String::new(),
         };
+=======
+        let locators = start_upload_resp.locators;
+>>>>>>> 9a9f4dc (fixed metrics to record before actual  get/put calls)
         let request_template = clone_put_object_request(&req.input, None);
         let input_blobs = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
@@ -985,6 +1008,7 @@ impl S3 for SkyProxy {
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
                 let policy_clone = self.policy.clone();
+                let client_region_clone = self.client_from_region.clone();
                 let req = S3Request::new(clone_put_object_request(
                     &request_template,
                     Some(input_blob),
@@ -1041,26 +1065,24 @@ impl S3 for SkyProxy {
                     .await
                     .unwrap();
 
+                    let write_latency = start_time.elapsed().as_secs_f32();
+
+                    // Call api to record latency
+                    let _record_metrics_response = apis::record_metrics(
+                        &conf,
+                        models::RecordMetricsRequest {
+                            client_region: client_region_clone,
+                            requested_region: locator.region,
+                            operation: "write".to_owned(),
+                            latency: write_latency,
+                            object_size: size_to_set as u64,
+                        },
+                    )
+                    .await;
+
                     e_tag
                 });
             });
-
-        let write_latency = start_time.elapsed().as_secs_f32();
-
-        // Call api to record latency (only if locator exists)
-        if !region.is_empty() {
-            let _record_metrics_response = apis::record_metrics(
-                &self.dir_conf,
-                models::RecordMetricsRequest {
-                    client_region: self.client_from_region.clone(),
-                    requested_region: region,
-                    operation: "write".to_owned(),
-                    latency: write_latency,
-                    object_size: req.input.content_length.unwrap_or_default() as u32,
-                },
-            )
-            .await;
-        }
 
         let mut e_tags = Vec::new();
         while let Some(Ok(e_tag)) = tasks.join_next().await {

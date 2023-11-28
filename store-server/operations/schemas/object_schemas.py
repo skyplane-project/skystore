@@ -335,7 +335,7 @@ class RecordMetricsRequest(BaseModel):
     # read or write
     operation: str
     latency: float
-    object_size: NonNegativeInt
+    object_size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
     @validator("operation")
     def c_match(cls, value):
@@ -355,7 +355,7 @@ class ListMetricsObject(BaseModel):
     requested_region: str
     operation: str
     latency: float
-    object_size: NonNegativeInt
+    object_size: NonNegativeInt = Field(..., minimum=0, format="int64")
 
 
 class ListMetricsResponse(BaseModel):
