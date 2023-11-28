@@ -4,6 +4,7 @@ import logging
 from rich.logging import RichHandler
 from typing import Annotated
 import os
+from sqlalchemy.pool import NullPool
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,9 +23,10 @@ engine = create_async_engine(
     future=True,
 )
 # engine = create_async_engine(
-#     "postgresql+asyncpg://ubuntu:ubuntu@localhost:5432/skystore",
+#     "postgresql+asyncpg://shaopu:monkeydog@localhost:5432/skystore",
 #     echo=LOG_SQL,
 #     future=True,
+#     poolclass=NullPool
 # )
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 

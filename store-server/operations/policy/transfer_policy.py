@@ -43,7 +43,7 @@ class CheapestTransfer(TransferPolicy):
                 "cost"
             ],
         )
-    
+
     def name(self) -> str:
         return "cheapest"
 
@@ -73,7 +73,7 @@ class ClosestTransfer(TransferPolicy):
                 "throughput"
             ],
         )
-    
+
     def name(self) -> str:
         return "closest"
 

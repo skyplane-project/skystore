@@ -43,6 +43,7 @@ class ReplicateAll(PlacementPolicy):
     """
     Replicate all objects to all regions
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.stat_graph = make_nx_graph()
