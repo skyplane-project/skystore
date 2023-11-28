@@ -1170,9 +1170,12 @@ async def continue_upload(
         .order_by(DBLogicalObject.id.desc())
         # .first()
     )
-    locators = (await db.scalars(stmt)).first().physical_object_locators
-    if len(locators) == 0:
+    locators = (await db.scalars(stmt)).first()
+    if locators is None:
         return Response(status_code=404, content="Not Found")
+    
+    locators = locators.physical_object_locators
+    
     copy_src_buckets, copy_src_keys = [], []
 
     # cope with upload_part_copy
