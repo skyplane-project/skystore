@@ -317,7 +317,7 @@ impl S3 for SkyProxy {
 
         let end_time = Instant::now();
         
-        //write_time_duration_to_file("LIST OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("LIST OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(output))
     }
@@ -692,7 +692,7 @@ impl S3 for SkyProxy {
         }
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("HEAD OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("HEAD OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(head_object_response)
     }
@@ -851,7 +851,7 @@ impl S3 for SkyProxy {
 
                         let end_time = Instant::now();
 
-                        //write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                         return Ok(response);
                     } else {
@@ -867,7 +867,7 @@ impl S3 for SkyProxy {
                             }))
                             .await;
                         let end_time = Instant::now();
-                        //write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                         return res;
                     }
                 } else {
@@ -883,13 +883,13 @@ impl S3 for SkyProxy {
                         }))
                         .await;
                     let end_time = Instant::now();
-                    //write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                    write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                     return res;
                 }
             }
             None => {
                 let end_time = Instant::now();
-                //write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                 Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::NoSuchKey,
                 "Object not found",))
@@ -925,7 +925,7 @@ impl S3 for SkyProxy {
             if let Some(locator) = locator {
 
                 let end_time = Instant::now();
-                //write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                 return Ok(S3Response::new(PutObjectOutput {
                     e_tag: locator.etag,
@@ -1011,7 +1011,7 @@ impl S3 for SkyProxy {
         }
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(PutObjectOutput {
             e_tag: e_tags.pop(),
@@ -1114,7 +1114,7 @@ impl S3 for SkyProxy {
                 });
 
                 let end_time = Instant::now();
-                //write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                 return Ok(res);
             }
@@ -1314,7 +1314,7 @@ impl S3 for SkyProxy {
         }
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(DeleteObjectsOutput {
             deleted: Some(deleted_objects),
@@ -1548,7 +1548,7 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("COPY OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("COPY OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
@@ -1632,7 +1632,7 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("CREATE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("CREATE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
@@ -1689,7 +1689,7 @@ impl S3 for SkyProxy {
         }
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("ABORT MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("ABORT MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(AbortMultipartUploadOutput::default()))
     }
@@ -1730,7 +1730,7 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("LIST MULTIPART UPLOADS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("LIST MULTIPART UPLOADS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
@@ -1772,13 +1772,13 @@ impl S3 for SkyProxy {
                     ..Default::default()
                     });
                 let end_time = Instant::now();
-                //write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                 Ok(res)
             }
             Err(err) => {
 
                 let end_time = Instant::now();
-                //write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                 error!("list_parts failed: {:?}", err);
                 Err(s3s::S3Error::with_message(
@@ -1873,7 +1873,7 @@ impl S3 for SkyProxy {
         assert!(parts.len() == 1);
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("UPLOAD PART".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("UPLOAD PART".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(UploadPartOutput {
             e_tag: Some(parts[0].etag.clone()),
@@ -2015,7 +2015,7 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("UPLOAD PART COPY".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("UPLOAD PART COPY".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
@@ -2141,7 +2141,7 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        //write_time_duration_to_file("COMPLETE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file("COMPLETE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
