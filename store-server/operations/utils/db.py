@@ -5,6 +5,7 @@ from rich.logging import RichHandler
 from typing import Annotated
 import os
 from sqlalchemy.pool import NullPool
+from sqlalchemy import event, text
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,12 +29,12 @@ engine = create_async_engine(
 #     future=True,
 #     poolclass=NullPool
 # )
+
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def get_session() -> AsyncSession:
     async with async_session() as session:
         yield session
-
 
 DBSession = Annotated[AsyncSession, Depends(get_session)]

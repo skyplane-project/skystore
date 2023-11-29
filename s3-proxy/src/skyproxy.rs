@@ -905,27 +905,16 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
 
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
-        // check bucket version setting
-        // Idempotent PUT should only perform when versioning is null/suspended
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if !version_enabled {
+        if self.version_enable == *"NULL" {
             let locator = self
                 .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
                 .await?;
             if let Some(locator) = locator {
 
-                let end_time = Instant::now();
-                write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                // let end_time = Instant::now();
+                // write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                 return Ok(S3Response::new(PutObjectOutput {
                     e_tag: locator.etag,
@@ -933,6 +922,10 @@ impl S3 for SkyProxy {
                 }));
             }
         }
+
+        // let start_time = Instant::now();
+
+        // println!("PUT OBJECT: check version setting time: {} ms", (mid_time - start_time).as_millis());
 
         let start_upload_resp = apis::start_upload(
             &self.dir_conf,
@@ -949,8 +942,12 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
+        // let end_time = Instant::now();
+
+        // println!("PUT OBJECT: start upload time (in control plane) : {} ms", (end_time - start_time).as_millis());
+
         let mut tasks = tokio::task::JoinSet::new();
-        let locators = start_upload_resp.clone().locators;
+        let locators = start_upload_resp.locators;
         let request_template = clone_put_object_request(&req.input, None);
         let (input_blobs, sizes) = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
@@ -975,24 +972,20 @@ impl S3 for SkyProxy {
                 });
 
                 let content_length = req.input.content_length;
+                let size_to_get = if content_length.is_none() {size} else {content_length.unwrap()};
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
+                    let last_modified = current_timestamp_string();
 
-                    // No need to fetch from S3 if content length is provided, assume (size = input.content_length, last_modified=current time)
-                    let (size_to_set, last_modified) = match content_length {
-                        Some(length) => (length, current_timestamp_string()),
-                        None => (size, current_timestamp_string())
-                    };
-
-                    assert!(size as u64 == size_to_set as u64);
+                    // let start_time = Instant::now();
 
                     apis::complete_upload(
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: size as u64,
+                            size: size_to_get as u64,
                             etag: e_tag.clone(),
                             last_modified,
                             version_id: put_resp.output.version_id, // physical version
@@ -1001,21 +994,30 @@ impl S3 for SkyProxy {
                     .await
                     .unwrap();
 
+                    // let end_time = Instant::now();
+
+                    // println!("PUT OBJECT: complete upload time (in control plane) : {} ms", (end_time - start_time).as_millis());
+
                     e_tag
                 });
             });
+
+        // let start_time = Instant::now();
 
         let mut e_tags = Vec::new();
         while let Some(Ok(e_tag)) = tasks.join_next().await {
             e_tags.push(e_tag);
         }
+        
+        // let end_time = Instant::now();
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // println!("PUT OBJECT: time for completing upload : {} ms", (end_time - start_time).as_millis());
+
+        // write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(PutObjectOutput {
             e_tag: e_tags.pop(),
-            version_id: vid.clone(), // logical version
+            version_id: vid, // logical version
             ..Default::default()
         }))
     }
