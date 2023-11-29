@@ -31,7 +31,7 @@ from operations.schemas.object_schemas import (
     SetPolicyRequest,
 )
 from operations.schemas.bucket_schemas import DBLogicalBucket
-from sqlalchemy.orm import selectinload, Session
+from sqlalchemy.orm import selectinload, Session, joinedload, lazyload
 from itertools import zip_longest
 from sqlalchemy.sql import select
 from sqlalchemy import or_, text, and_
@@ -218,7 +218,12 @@ async def start_delete_objects(
                     # will be the newly created ones.
                     pre_logical_obj = logical_obj
                     # insert a delete marker
-                    logical_obj = create_logical_object(logical_obj, request, version_suspended=(version_enabled is not True), delete_marker=True)
+                    logical_obj = create_logical_object(
+                        logical_obj,
+                        request,
+                        version_suspended=(version_enabled is not True),
+                        delete_marker=True,
+                    )
                     db.add(logical_obj)
                     new_physical_locators = []
                     # need to also add new physical object locators
@@ -484,8 +489,6 @@ async def locate_object(
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
 
-    print("locate_object: ", request)
-
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -496,8 +499,6 @@ async def locate_object(
 
     if version_enabled is None and request.version_id:
         return Response(status_code=400, content="Versioning is not enabled")
-
-    start = datetime.now()
 
     stmt = (
         select(DBLogicalObject)
@@ -518,10 +519,6 @@ async def locate_object(
 
     locators = (await db.scalars(stmt)).first()
 
-    end = datetime.now()
-
-    print("locate_object: query logical objects: ", end - start)
-
     # https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
     if locators is None or (locators.delete_marker and not request.version_id):
         return Response(status_code=404, content="Object Not Found")
@@ -536,13 +533,7 @@ async def locate_object(
     # else:
     await db.refresh(locators, ["physical_object_locators"])
 
-    start = datetime.now()
-
     chosen_locator = get_policy.get(request, locators.physical_object_locators)
-
-    end = datetime.now()
-
-    print("locate_object: get policy: ", end - start)
 
     logger.debug(
         f"locate_object: chosen locator out of {len(locators.physical_object_locators)}, {request} -> {chosen_locator}"
@@ -703,15 +694,17 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
+    await db.execute(text("PRAGMA journal_mode=WAL;"))
+    await db.execute(text("PRAGMA synchronous=OFF;"))
     await db.execute(text("BEGIN IMMEDIATE;"))
 
-    version_enabled = (
+    version_enabled, logical_bucket = (
         await db.execute(
-            select(DBLogicalBucket.version_enabled).where(
-                DBLogicalBucket.bucket == request.bucket
-            )
+            select(DBLogicalBucket.version_enabled, DBLogicalBucket)
+            .where(DBLogicalBucket.bucket == request.bucket)
+            .options(joinedload(DBLogicalBucket.physical_bucket_locators))
         )
-    ).all()[0][0]
+    ).unique().one_or_none()
 
     # we can still provide version_id when version_enalbed is False (corresponding to the `Suspended`)
     # status in S3
@@ -726,28 +719,24 @@ async def start_upload(
     # 2. copy: create new logical objects in dst locations
     existing_objects_stmt = (
         select(DBLogicalObject)
-        .options(selectinload(DBLogicalObject.physical_object_locators))
         .where(
-            DBLogicalObject.bucket == request.bucket,
-            DBLogicalObject.key == request.key,
-            or_(
-                DBLogicalObject.status == Status.ready,
-                DBLogicalObject.status == Status.pending,
-            ),
+            and_(
+                DBLogicalObject.bucket == request.bucket,
+                DBLogicalObject.key == request.key,
+                or_(
+                    DBLogicalObject.status == Status.ready,
+                    DBLogicalObject.status == Status.pending,
+                ),
+                DBLogicalObject.id == request.version_id
+                if request.version_id is not None
+                else True,
+            )
         )
+        .order_by(DBLogicalObject.id.desc() if request.version_id is None else None)
+        .options(joinedload(DBLogicalObject.physical_object_locators))
     )
 
-    # Add condition for version_id if present
-    if request.version_id is not None:
-        existing_objects_stmt = existing_objects_stmt.where(
-            DBLogicalObject.id == request.version_id
-        )
-    else:
-        existing_objects_stmt = existing_objects_stmt.order_by(
-            DBLogicalObject.id.desc()
-        )
-
-    existing_object = (await db.scalars(existing_objects_stmt)).first()
+    existing_object = (await db.scalars(existing_objects_stmt)).unique().first()
 
     # if we want to perform copy or pull-on-read and the source object does not exist, we should return 404
     if (
@@ -773,6 +762,7 @@ async def start_upload(
         if object_already_exists and version_enabled is None:
             logger.error("This exact object already exists")
             return Response(status_code=409, content="Conflict, object already exists")
+
         existing_tags = {
             locator.location_tag: locator.id
             for locator in existing_object.physical_object_locators
@@ -786,7 +776,6 @@ async def start_upload(
     if (request.copy_src_bucket is not None) and (request.copy_src_key is not None):
         copy_src_stmt = (
             select(DBLogicalObject)
-            .options(selectinload(DBLogicalObject.physical_object_locators))
             .where(
                 and_(
                     DBLogicalObject.bucket == request.copy_src_bucket,
@@ -798,9 +787,10 @@ async def start_upload(
                 )
             )
             .order_by(DBLogicalObject.id.desc() if request.version_id is None else None)
+            .options(joinedload(DBLogicalObject.physical_object_locators))
         )
 
-        copy_src_locator = (await db.scalars(copy_src_stmt)).first()
+        copy_src_locator = (await db.scalars(copy_src_stmt)).unique().first()
 
         # https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
         if copy_src_locator is None or (
@@ -856,13 +846,6 @@ async def start_upload(
         )
         db.add(logical_object)
 
-    logical_bucket = (
-        await db.execute(
-            select(DBLogicalBucket)
-            .options(selectinload(DBLogicalBucket.physical_bucket_locators))
-            .where(DBLogicalBucket.bucket == request.bucket)
-        )
-    ).scalar_one_or_none()
     physical_bucket_locators = logical_bucket.physical_bucket_locators
 
     primary_write_region = None
@@ -934,7 +917,7 @@ async def start_upload(
         )
     locators = []
     existing_locators = []
-
+    
     for region_tag in upload_to_region_tags:
         # If the version_enabled is NULL, we should skip the existing tags, only create new physical object locators for the newly upload regions
         # If the version_enabled is True, we should create new physical object locators for the newly created logical object no matter what regions we are trying to upload
@@ -970,32 +953,42 @@ async def start_upload(
             or (existing_object and existing_object.version_suspended is False)
         ):
             locators.append(
-                create_physical_object_locators(
-                    logical_object,
-                    request,
-                    region_tag,
-                    physical_bucket_locator,
-                    primary_write_region,
+                DBPhysicalObjectLocator(
+                    logical_object=logical_object,  # link the physical object with the logical object
+                    location_tag=region_tag,
+                    cloud=physical_bucket_locator.cloud,
+                    region=physical_bucket_locator.region,
+                    bucket=physical_bucket_locator.bucket,
+                    key=physical_bucket_locator.prefix + request.key,
+                    lock_acquired_ts=datetime.utcnow(),
+                    status=Status.pending,
+                    is_primary=(
+                        region_tag == primary_write_region
+                    ),  # NOTE: location of first write is primary
                 )
-            )
+            ) 
         else:
             existing_locators.append(
-                create_physical_object_locators(
-                    logical_object,
-                    request,
-                    region_tag,
-                    physical_bucket_locator,
-                    primary_write_region,
-                    existing_tags,
+                DBPhysicalObjectLocator(
+                    id=existing_tags[region_tag],
+                    logical_object=logical_object,  # link the physical object with the logical object
+                    location_tag=region_tag,
+                    cloud=physical_bucket_locator.cloud,
+                    region=physical_bucket_locator.region,
+                    bucket=physical_bucket_locator.bucket,
+                    key=physical_bucket_locator.prefix + request.key,
+                    lock_acquired_ts=datetime.utcnow(),
+                    status=Status.pending,
+                    is_primary=(
+                        region_tag == primary_write_region
+                    ),  # NOTE: location of first write is primary
                 )
             )
-
+            
     db.add_all(locators)
     await db.commit()
 
     logger.debug(f"start_upload: {request} -> {locators}")
-
-    combined_locators = chain(locators, existing_locators)
 
     return StartUploadResponse(
         multipart_upload_id=logical_object.multipart_upload_id,
@@ -1012,7 +1005,7 @@ async def start_upload(
                 if version_enabled is not None
                 else None,
             )
-            for locator in combined_locators
+            for locator in chain(locators, existing_locators)
         ],
         copy_src_buckets=copy_src_buckets,
         copy_src_keys=copy_src_keys,
@@ -1023,11 +1016,12 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
+    await db.execute(text("PRAGMA journal_mode=WAL;"))
+    await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
-        .options(selectinload(DBPhysicalObjectLocator.logical_object))
         .where(DBPhysicalObjectLocator.id == request.id)
+        .options(joinedload(DBPhysicalObjectLocator.logical_object))
     )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
@@ -1041,10 +1035,11 @@ async def complete_upload(
     physical_locator.version_id = request.version_id
 
     # TODO: might need to change the if conditions for different policies
+    policy_name = put_policy.name()
     if (
-        (put_policy.name() == "push" and physical_locator.is_primary)
-        or put_policy.name() == "write_local"
-        or put_policy.name() == "copy_on_read"
+        (policy_name == "push" and physical_locator.is_primary)
+        or policy_name == "write_local"
+        or policy_name == "copy_on_read"
     ):
         # NOTE: might not need to update the logical object for consecutive reads for copy_on_read
         # await db.refresh(physical_locator, ["logical_object"])
@@ -1082,6 +1077,8 @@ async def set_multipart_id(
 async def append_part(
     request: PatchUploadMultipartUploadPart, db: Session = Depends(get_session)
 ):
+    print("start time: ", datetime.now())
+
     stmt = (
         select(DBPhysicalObjectLocator)
         .join(DBLogicalObject)
@@ -1143,11 +1140,14 @@ async def append_part(
 
     await db.commit()
 
+    print("end time: ", datetime.now())
+
 
 @router.post("/continue_upload")
 async def continue_upload(
     request: ContinueUploadRequest, db: Session = Depends(get_session)
 ) -> List[ContinueUploadResponse]:
+    print("start time: ", datetime.now())
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -1173,9 +1173,9 @@ async def continue_upload(
     locators = (await db.scalars(stmt)).first()
     if locators is None:
         return Response(status_code=404, content="Not Found")
-    
+
     locators = locators.physical_object_locators
-    
+
     copy_src_buckets, copy_src_keys = [], []
 
     # cope with upload_part_copy
@@ -1230,7 +1230,7 @@ async def continue_upload(
 
     logger.debug(f"continue_upload: {request} -> {locators}")
 
-    return [
+    res = [
         ContinueUploadResponse(
             id=locator.id,
             tag=locator.location_tag,
@@ -1257,6 +1257,9 @@ async def continue_upload(
         )
         for i, locator in enumerate(locators)
     ]
+
+    print("end time: ", datetime.now())
+    return res
 
 
 @router.post("/list_objects")
@@ -1561,7 +1564,9 @@ async def locate_object_status(
     return object_status_lst
 
 
-def create_logical_object(existing_object, request, version_suspended=False, delete_marker=False):
+def create_logical_object(
+    existing_object, request, version_suspended=False, delete_marker=False
+):
     return DBLogicalObject(
         bucket=existing_object.bucket if existing_object else request.bucket,
         key=existing_object.key if existing_object else request.key,
@@ -1580,31 +1585,3 @@ def create_logical_object(existing_object, request, version_suspended=False, del
         delete_marker=delete_marker,
     )
 
-
-def create_physical_object_locators(
-    logical_object,
-    request,
-    region_tag,
-    physical_bucket_locator,
-    primary_write_region,
-    existing_tags=None,
-):
-    locator = DBPhysicalObjectLocator(
-        logical_object=logical_object,  # link the physical object with the logical object
-        location_tag=region_tag,
-        cloud=physical_bucket_locator.cloud,
-        region=physical_bucket_locator.region,
-        bucket=physical_bucket_locator.bucket,
-        key=physical_bucket_locator.prefix + request.key,
-        lock_acquired_ts=datetime.utcnow(),
-        status=Status.pending,
-        is_primary=(
-            region_tag == primary_write_region
-        ),  # NOTE: location of first write is primary
-    )
-
-    if existing_tags:
-        assert region_tag in existing_tags, "region tag should be in existing tags!"
-        locator.id = existing_tags[region_tag]
-
-    return locator

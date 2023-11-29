@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 import os
+from numba import njit
 
 router = APIRouter()
 init_region_tags = (
@@ -416,10 +417,13 @@ async def put_bucket_versioning(
     return locators_lst
 
 
+@njit
 @router.post("/check_version_setting")
 async def check_version_setting(
     request: HeadBucketRequest, db: Session = Depends(get_session)
 ) -> bool:
+    print("start check time: ", datetime.now())
+
     stmt = select(DBLogicalBucket).where(
         DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
     )
@@ -429,6 +433,8 @@ async def check_version_setting(
         return Response(status_code=404, content="Not Found")
 
     logger.debug(f"check_version_setting: {request} -> {bucket}")
+
+    print("end check time: ", datetime.now())
 
     # both suspended and enabled versioning setting should be able to upload objects multiple times
     if bucket.version_enabled is None:

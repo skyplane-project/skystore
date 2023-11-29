@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Index,
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
@@ -33,6 +34,8 @@ class DBLogicalBucket(Base):
 
     # Add relationship to logical object
     logical_objects = relationship("DBLogicalObject", back_populates="logical_bucket")
+
+    __table_args__ = (Index("ix_logical_buckets_bucket_status", "bucket", "status"),)
 
 
 class DBPhysicalBucketLocator(Base):

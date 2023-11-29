@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Index,
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field, NonNegativeInt
@@ -50,6 +51,10 @@ class DBLogicalObject(Base):
     physical_object_locators = relationship(
         "DBPhysicalObjectLocator",
         back_populates="logical_object",
+    )
+
+    __table_args__ = (
+        Index("ix_logical_objects_bucket_key_status", "bucket", "key", "status"),
     )
 
 
@@ -98,6 +103,12 @@ class DBPhysicalObjectLocator(Base):
         "DBLogicalObject",
         back_populates="physical_object_locators",
         foreign_keys=[logical_object_id],
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_physical_object_locators_bucket_key_status", "bucket", "key", "status"
+        ),
     )
 
 
