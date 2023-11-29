@@ -95,9 +95,16 @@ class DirectTransfer(TransferPolicy):
             DBPhysicalObjectLocator: the single matched region to fetch from
         """
 
-        for locator in physical_locators:
-            if self.config.storage_region == locator.location_tag:
-                return locator
+        locator = next(
+            (
+                l
+                for l in physical_locators
+                if self.config.storage_region == l.location_tag
+            ),
+            None,
+        )
+        if locator:
+            return locator
         pass
 
     def name(self) -> str:

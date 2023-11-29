@@ -539,7 +539,7 @@ async def locate_object(
         f"locate_object: chosen locator out of {len(locators.physical_object_locators)}, {request} -> {chosen_locator}"
     )
 
-    await db.refresh(chosen_locator, ["logical_object"])
+    # await db.refresh(chosen_locator, ["logical_object"])
 
     return LocateObjectResponse(
         id=chosen_locator.id,
@@ -548,13 +548,11 @@ async def locate_object(
         bucket=chosen_locator.bucket,
         region=chosen_locator.region,
         key=chosen_locator.key,
-        size=chosen_locator.logical_object.size,
-        last_modified=chosen_locator.logical_object.last_modified,
-        etag=chosen_locator.logical_object.etag,
+        size=locators.size,
+        last_modified=locators.last_modified,
+        etag=locators.etag,
         version_id=chosen_locator.version_id,  # here must use the physical version
-        version=chosen_locator.logical_object.id
-        if version_enabled is not None
-        else None,
+        version=locators.id if version_enabled is not None else None,
     )
 
 
@@ -699,12 +697,16 @@ async def start_upload(
     await db.execute(text("BEGIN IMMEDIATE;"))
 
     version_enabled, logical_bucket = (
-        await db.execute(
-            select(DBLogicalBucket.version_enabled, DBLogicalBucket)
-            .where(DBLogicalBucket.bucket == request.bucket)
-            .options(joinedload(DBLogicalBucket.physical_bucket_locators))
+        (
+            await db.execute(
+                select(DBLogicalBucket.version_enabled, DBLogicalBucket)
+                .where(DBLogicalBucket.bucket == request.bucket)
+                .options(joinedload(DBLogicalBucket.physical_bucket_locators))
+            )
         )
-    ).unique().one_or_none()
+        .unique()
+        .one_or_none()
+    )
 
     # we can still provide version_id when version_enalbed is False (corresponding to the `Suspended`)
     # status in S3
@@ -917,7 +919,7 @@ async def start_upload(
         )
     locators = []
     existing_locators = []
-    
+
     for region_tag in upload_to_region_tags:
         # If the version_enabled is NULL, we should skip the existing tags, only create new physical object locators for the newly upload regions
         # If the version_enabled is True, we should create new physical object locators for the newly created logical object no matter what regions we are trying to upload
@@ -966,7 +968,7 @@ async def start_upload(
                         region_tag == primary_write_region
                     ),  # NOTE: location of first write is primary
                 )
-            ) 
+            )
         else:
             existing_locators.append(
                 DBPhysicalObjectLocator(
@@ -984,7 +986,7 @@ async def start_upload(
                     ),  # NOTE: location of first write is primary
                 )
             )
-            
+
     db.add_all(locators)
     await db.commit()
 
@@ -1584,4 +1586,3 @@ def create_logical_object(
         version_suspended=version_suspended,
         delete_marker=delete_marker,
     )
-

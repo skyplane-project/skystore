@@ -29,7 +29,6 @@ from fastapi import APIRouter, Depends, status
 from operations.utils.db import get_session, logger
 from typing import List
 import os
-from numba import njit
 
 router = APIRouter()
 init_region_tags = (
@@ -417,7 +416,6 @@ async def put_bucket_versioning(
     return locators_lst
 
 
-@njit
 @router.post("/check_version_setting")
 async def check_version_setting(
     request: HeadBucketRequest, db: Session = Depends(get_session)
