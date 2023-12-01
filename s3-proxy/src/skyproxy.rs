@@ -2,19 +2,21 @@ use crate::objstore_client::ObjectStoreClient;
 use crate::utils::stream_utils::split_streaming_blob;
 use crate::utils::type_utils::*;
 
-use s3s::dto::*;
-use s3s::stream::ByteStream;
-use s3s::{S3Request, S3Response, S3Result, S3};
-
+use bytes::{Bytes, BytesMut};
 use chrono::Utc;
 use core::panic;
+use futures::stream::{Stream, StreamExt};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use s3s::stream::ByteStream;
+use s3s::{dto::*, Body};
+use s3s::{S3Request, S3Response, S3Result, S3};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{SystemTime, Instant};
+use std::time::{Instant, SystemTime};
+use tokio_util::io::StreamReader;
 use tracing::error;
 
 pub struct SkyProxy {
@@ -297,8 +299,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListObjectsInput>,
     ) -> S3Result<S3Response<ListObjectsOutput>> {
-
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         let v2 = self
             .list_objects_v2(req.map_input(Into::into))
@@ -315,9 +316,13 @@ impl S3 for SkyProxy {
             ..Default::default()
         };
 
-        let end_time = Instant::now();
-        
-        write_time_duration_to_file("LIST OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+
+        // write_time_duration_to_file(
+        //     "LIST OBJECTS".to_string(),
+        //     (end_time - start_time).as_millis(),
+        //     "measure.txt",
+        // );
 
         Ok(S3Response::new(output))
     }
@@ -567,8 +572,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<HeadObjectInput>,
     ) -> S3Result<S3Response<HeadObjectOutput>> {
-
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         let vid = req.input.version_id.map(|id| id.parse::<i32>().unwrap());
 
@@ -691,8 +695,12 @@ impl S3 for SkyProxy {
                 .insert("X-SKYSTORE-WARMUP-ETAGS", e_tags_str.parse().unwrap());
         }
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("HEAD OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+        // write_time_duration_to_file(
+        //     "HEAD OBJECT".to_string(),
+        //     (end_time - start_time).as_millis(),
+        //     "measure.txt",
+        // );
 
         Ok(head_object_response)
     }
@@ -730,8 +738,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<GetObjectInput>,
     ) -> S3Result<S3Response<GetObjectOutput>> {
-
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         let bucket = req.input.bucket.clone();
         let key = req.input.key.clone();
@@ -867,15 +874,15 @@ impl S3 for SkyProxy {
                             }))
                             .await;
                         // let end_time = Instant::now();
-                        // write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        // write_time_duration_to_file(
+                        //     "GET OBJECT".to_string(),
+                        //     (end_time - start_time).as_millis(),
+                        //     "measure.txt",
+                        // );
                         // return res;
                     }
                 } else {
-
-                    let mid2_time = Instant::now();
-                    println!("GET OBJECT: time for locating object 2 : {} ms", (mid2_time - start_time).as_millis());
-
-                    let res = self
+                    let mut res = self
                         .store_clients
                         .get(&location.tag)
                         .unwrap()
@@ -885,27 +892,40 @@ impl S3 for SkyProxy {
                             input.version_id = location.version_id; // physical version
                             input
                         }))
-                        .await;
-                    let end_time = Instant::now();
-                    println!("GET OBJECT: time for getting object : {} ms", (end_time - mid2_time).as_millis());
+                        .await?;
+                    let mut blob = res.output.body.unwrap();
+                    // blob impl Stream
+                    // read all bytes from blob
+                    let mut bytes = BytesMut::new();
+                    // let mut stream_reader = StreamReader::new(blob);
+                    while let Some(item) = blob.next().await {
+                        let item = item.unwrap();
+                        bytes.extend_from_slice(&item);
+                    }
+                    let new_body = Some(StreamingBlob::from(Body::from(bytes.freeze())));
+                    res.output.body = new_body;
+                    // let res = S3Response::new(GetObjectOutput {
+                    //     body: Some(StreamingBlob::from(Body::from(bytes.freeze()))),
+                    //     ..Default::default()
+                    // });
 
-                    // read the bytestream into memory
-                    // res.unwrap().output.body = split_streaming_blob(res.unwrap().output.body.unwrap(), 1).0.pop();
-
-                    println!("GET OBJECT: total time: {} ms", (end_time - start_time).as_millis());
-
+                    // let end_time = Instant::now();
                     // write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
-                    return res;
+                    return Ok(res);
                 }
             }
             None => {
                 // let end_time = Instant::now();
-                // write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                // write_time_duration_to_file(
+                //     "GET OBJECT NOT FOUND".to_string(),
+                //     (end_time - start_time).as_millis(),
+                //     "measure.txt",
+                // );
                 Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Object not found",))
+                    s3s::S3ErrorCode::NoSuchKey,
+                    "Object not found",
+                ))
             }
-        
         }
     }
 
@@ -916,14 +936,13 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
 
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         if self.version_enable == *"NULL" {
             let locator = self
                 .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
                 .await?;
             if let Some(locator) = locator {
-
                 // let end_time = Instant::now();
                 // write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
@@ -934,9 +953,9 @@ impl S3 for SkyProxy {
             }
         }
 
-        let mid_time = Instant::now();
+        // let mid_time = Instant::now();
 
-        println!("PUT OBJECT: check version setting time: {} ms", (mid_time - start_time).as_millis());
+        // println!("PUT OBJECT: check version setting time: {} ms", (mid_time - start_time).as_millis());
 
         let start_upload_resp = apis::start_upload(
             &self.dir_conf,
@@ -953,9 +972,9 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        let end_time = Instant::now();
+        // let end_time = Instant::now();
 
-        println!("PUT OBJECT: start upload time (in control plane) : {} ms", (end_time - mid_time).as_millis());
+        // println!("PUT OBJECT: start upload time (in control plane) : {} ms", (end_time - mid_time).as_millis());
 
         let mut tasks = tokio::task::JoinSet::new();
         let locators = start_upload_resp.locators;
@@ -983,7 +1002,11 @@ impl S3 for SkyProxy {
                 });
 
                 let content_length = req.input.content_length;
-                let size_to_get = if content_length.is_none() {size} else {content_length.unwrap()};
+                let size_to_get = if content_length.is_none() {
+                    size
+                } else {
+                    content_length.unwrap()
+                };
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
@@ -1019,10 +1042,10 @@ impl S3 for SkyProxy {
         while let Some(Ok(e_tag)) = tasks.join_next().await {
             e_tags.push(e_tag);
         }
-        
-        let end_time1 = Instant::now();
 
-        println!("PUT OBJECT: time for completing upload : {} ms", (end_time1 - end_time).as_millis());
+        // let end_time = Instant::now();
+
+        // println!("PUT OBJECT: time for completing upload : {} ms", (end_time1 - end_time).as_millis());
 
         // write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
@@ -1038,8 +1061,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<DeleteObjectsInput>,
     ) -> S3Result<S3Response<DeleteObjectsOutput>> {
-
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         // Send start delete objects request
         let object_identifiers: Vec<_> = req
@@ -1126,8 +1148,12 @@ impl S3 for SkyProxy {
                     ..Default::default()
                 });
 
-                let end_time = Instant::now();
-                write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                // let end_time = Instant::now();
+                // write_time_duration_to_file(
+                //     "DELETE OBJECTS".to_string(),
+                //     (end_time - start_time).as_millis(),
+                //     "measure.txt",
+                // );
 
                 return Ok(res);
             }
@@ -1327,8 +1353,12 @@ impl S3 for SkyProxy {
             }
         }
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("DELETE OBJECTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+        // write_time_duration_to_file(
+        //     "DELETE OBJECTS".to_string(),
+        //     (end_time - start_time).as_millis(),
+        //     "measure.txt",
+        // );
 
         Ok(S3Response::new(DeleteObjectsOutput {
             deleted: Some(deleted_objects),
@@ -1403,7 +1433,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<CopyObjectInput>,
     ) -> S3Result<S3Response<CopyObjectOutput>> {
-
         let start_time = Instant::now();
 
         //TODO for future: people commonly use copy_object to modify the metadata, instead of creatig a new today.
@@ -1562,7 +1591,11 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        write_time_duration_to_file("COPY OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file(
+            "COPY OBJECT".to_string(),
+            (end_time - start_time).as_millis(),
+            "measure.txt",
+        );
 
         Ok(res)
     }
@@ -1656,7 +1689,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<AbortMultipartUploadInput>,
     ) -> S3Result<S3Response<AbortMultipartUploadOutput>> {
-
         let start_time = Instant::now();
 
         let mut id_map = HashMap::new();
@@ -1703,7 +1735,11 @@ impl S3 for SkyProxy {
         }
 
         let end_time = Instant::now();
-        write_time_duration_to_file("ABORT MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file(
+            "ABORT MULTIPART UPLOAD".to_string(),
+            (end_time - start_time).as_millis(),
+            "measure.txt",
+        );
 
         Ok(S3Response::new(AbortMultipartUploadOutput::default()))
     }
@@ -1713,7 +1749,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListMultipartUploadsInput>,
     ) -> S3Result<S3Response<ListMultipartUploadsOutput>> {
-
         let start_time = Instant::now();
 
         let resp = apis::list_multipart_uploads(
@@ -1744,7 +1779,11 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        write_time_duration_to_file("LIST MULTIPART UPLOADS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file(
+            "LIST MULTIPART UPLOADS".to_string(),
+            (end_time - start_time).as_millis(),
+            "measure.txt",
+        );
 
         Ok(res)
     }
@@ -1754,7 +1793,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListPartsInput>,
     ) -> S3Result<S3Response<ListPartsOutput>> {
-
         let start_time = Instant::now();
 
         match apis::list_parts(
@@ -1784,15 +1822,22 @@ impl S3 for SkyProxy {
                     key: Some(req.input.key.clone()),
                     upload_id: Some(req.input.upload_id.clone()),
                     ..Default::default()
-                    });
+                });
                 let end_time = Instant::now();
-                write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file(
+                    "LIST PARTS".to_string(),
+                    (end_time - start_time).as_millis(),
+                    "measure.txt",
+                );
                 Ok(res)
             }
             Err(err) => {
-
                 let end_time = Instant::now();
-                write_time_duration_to_file("LIST PARTS".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                write_time_duration_to_file(
+                    "LIST PARTS".to_string(),
+                    (end_time - start_time).as_millis(),
+                    "measure.txt",
+                );
 
                 error!("list_parts failed: {:?}", err);
                 Err(s3s::S3Error::with_message(
@@ -1900,7 +1945,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<UploadPartCopyInput>,
     ) -> S3Result<S3Response<UploadPartCopyOutput>> {
-
         let start_time = Instant::now();
 
         let (src_bucket, src_key, version_id) = match &req.input.copy_source {
@@ -2029,7 +2073,11 @@ impl S3 for SkyProxy {
         });
 
         let end_time = Instant::now();
-        write_time_duration_to_file("UPLOAD PART COPY".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        write_time_duration_to_file(
+            "UPLOAD PART COPY".to_string(),
+            (end_time - start_time).as_millis(),
+            "measure.txt",
+        );
 
         Ok(res)
     }

@@ -1,5 +1,5 @@
 use s3s::dto::*;
-use std::io::{Write, Result};
+use std::io::{Result, Write};
 
 // copy_source struct
 pub struct CopySourceInfo {
@@ -361,7 +361,6 @@ pub fn parse_range(range: &str) -> (u64, Option<u64>) {
     let end = parts[1].parse::<u64>().unwrap();
     (start, Some(end))
 }
-
 
 pub fn write_time_duration_to_file(op: String, duration: u128, path: &str) {
     let mut file = std::fs::OpenOptions::new()

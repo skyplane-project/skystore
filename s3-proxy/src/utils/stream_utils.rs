@@ -55,7 +55,10 @@ where
     }
 }
 
-pub fn split_streaming_blob(incoming: StreamingBlob, num_splits: usize) -> (Vec<StreamingBlob>, Vec<i64>) {
+pub fn split_streaming_blob(
+    incoming: StreamingBlob,
+    num_splits: usize,
+) -> (Vec<StreamingBlob>, Vec<i64>) {
     // Effectively an unbounded buffer.
     let mut publisher = flo_stream::Publisher::new(usize::MAX);
 

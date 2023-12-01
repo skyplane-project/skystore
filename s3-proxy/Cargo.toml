@@ -40,3 +40,5 @@ google-cloud-storage = "0.11.0"
 google-cloud-default = { version = "0.2.0", features = ["storage"] }
 futures-lite = "1.13.0"
 percent-encoding = "2.1.0"
+hyper-rustls = { version = "*", features = ["webpki-roots", "http2", "webpki-tokio"] }
+aws-smithy-client = "0.55.3"

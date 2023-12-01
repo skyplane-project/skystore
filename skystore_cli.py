@@ -11,7 +11,7 @@ app = typer.Typer(name="skystore")
 env = os.environ.copy()
 
 DEFAULT_SKY_S3_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "target/debug/sky-s3"
+    os.path.dirname(os.path.abspath(__file__)), "target/release/sky-s3"
 )
 
 DEFAULT_STORE_SERVER_PATH = os.path.join(
@@ -124,7 +124,7 @@ def init(
         )
     else:
         subprocess.Popen(
-            ["cargo", "run"],
+            ["cargo", "run", "--release"],
             env=env,
         )
     typer.secho(f"SkyStore initialized at: {'https://127.0.0.1:8002'}", fg="green")
