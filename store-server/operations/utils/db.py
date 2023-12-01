@@ -5,7 +5,7 @@ from rich.logging import RichHandler
 from typing import Annotated
 import os
 from sqlalchemy.pool import NullPool
-from sqlalchemy import event, text
+from sqlalchemy import event, text, Engine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +29,13 @@ engine = create_async_engine(
 #     future=True,
 #     poolclass=NullPool
 # )
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA synchronous = OFF")
+    cursor.execute("PRAGMA journal_mode=WAL;")
+    cursor.close()
 
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 

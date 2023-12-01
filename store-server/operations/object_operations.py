@@ -106,7 +106,8 @@ async def start_delete_objects(
 ) -> DeleteObjectsResponse:
     # measure the time
     start = datetime.now()
-
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     await db.execute(text("BEGIN IMMEDIATE;"))
 
     # await db.execute(text("LOCK TABLE logical_objects IN ACCESS EXCLUSIVE MODE;"))
@@ -149,7 +150,6 @@ async def start_delete_objects(
         if multipart_upload_id:
             stmt = (
                 select(DBLogicalObject)
-                .options(selectinload(DBLogicalObject.physical_object_locators))
                 .where(DBLogicalObject.bucket == request.bucket)
                 .where(DBLogicalObject.key == key)
                 .where(
@@ -159,18 +159,19 @@ async def start_delete_objects(
                     )
                 )
                 .where(DBLogicalObject.multipart_upload_id == multipart_upload_id)
+                .options(joinedload(DBLogicalObject.physical_object_locators))
             )
         else:
             stmt = (
                 select(DBLogicalObject)
-                .options(selectinload(DBLogicalObject.physical_object_locators))
                 .where(DBLogicalObject.bucket == request.bucket)
                 .where(DBLogicalObject.key == key)
                 .where(DBLogicalObject.status == Status.ready)
                 .order_by(DBLogicalObject.id.desc())
+                .options(joinedload(DBLogicalObject.physical_object_locators))
             )
         # multiple versioning support
-        logical_objs = (await db.scalars(stmt)).all()
+        logical_objs = (await db.scalars(stmt)).unique().all()
 
         end = datetime.now()
 
@@ -361,7 +362,8 @@ async def complete_delete_objects(
     # If the op type is delete, we need to delete the physical object locators and logical objects possibly
     # If the op type is replace, we don't need to do anything
     # If the op type is add, we need to update the metadata of the existing objects from pending to ready
-
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     # TODO: need to deal with partial failures
     if request.multipart_upload_ids and len(request.ids) != len(
         request.multipart_upload_ids
@@ -437,7 +439,7 @@ async def complete_delete_objects(
                 logger.error(f"physical locator not found: {request}")
                 return Response(status_code=404, content="Physical Object Not Found")
 
-            await db.refresh(physical_locator, ["logical_object"])
+            # await db.refresh(physical_locator, ["logical_object"])
 
             logger.debug(f"complete_delete_object: {request} -> {physical_locator}")
 
@@ -488,6 +490,8 @@ async def locate_object(
     request: LocateObjectRequest, db: Session = Depends(get_session)
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
+    
+    print("locate start: ", datetime.now())
 
     version_enabled = (
         await db.execute(
@@ -540,8 +544,9 @@ async def locate_object(
     )
 
     # await db.refresh(chosen_locator, ["logical_object"])
+    
 
-    return LocateObjectResponse(
+    res = LocateObjectResponse(
         id=chosen_locator.id,
         tag=chosen_locator.location_tag,
         cloud=chosen_locator.cloud,
@@ -554,6 +559,10 @@ async def locate_object(
         version_id=chosen_locator.version_id,  # here must use the physical version
         version=locators.id if version_enabled is not None else None,
     )
+    
+    print("end locate time: ", datetime.now())
+    
+    return res 
 
 
 @router.post("/start_warmup")
@@ -692,8 +701,10 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
-    await db.execute(text("PRAGMA journal_mode=WAL;"))
-    await db.execute(text("PRAGMA synchronous=OFF;"))
+    
+    start = datetime.now()
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     await db.execute(text("BEGIN IMMEDIATE;"))
 
     version_enabled, logical_bucket = (
@@ -991,6 +1002,10 @@ async def start_upload(
     await db.commit()
 
     logger.debug(f"start_upload: {request} -> {locators}")
+    
+    end = datetime.now()
+    
+    print("start upload time: ", end - start)
 
     return StartUploadResponse(
         multipart_upload_id=logical_object.multipart_upload_id,
@@ -1018,8 +1033,9 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    await db.execute(text("PRAGMA journal_mode=WAL;"))
-    await db.execute(text("PRAGMA synchronous=OFF;"))
+    start = datetime.now()
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
         select(DBPhysicalObjectLocator)
         .where(DBPhysicalObjectLocator.id == request.id)
@@ -1051,15 +1067,20 @@ async def complete_upload(
         logical_object.etag = request.etag
         logical_object.last_modified = request.last_modified.replace(tzinfo=None)
     await db.commit()
+    
+    end = datetime.now()
+    
+    print("complete upload time: ", end - start)
 
 
 @router.patch("/set_multipart_id")
 async def set_multipart_id(
     request: PatchUploadMultipartUploadId, db: Session = Depends(get_session)
 ):
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
         .where(DBPhysicalObjectLocator.id == request.id)
     )
     physical_locator = await db.scalar(stmt)
@@ -1080,17 +1101,19 @@ async def append_part(
     request: PatchUploadMultipartUploadPart, db: Session = Depends(get_session)
 ):
     print("start time: ", datetime.now())
-
+    # await db.execute(text("PRAGMA journal_mode=WAL;"))
+    # await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
         select(DBPhysicalObjectLocator)
-        .join(DBLogicalObject)
+        # .join(DBLogicalObject)
         .where(DBPhysicalObjectLocator.id == request.id)
+        .options(joinedload(DBPhysicalObjectLocator.logical_object))
     )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
         logger.error(f"physical locator not found: {request}")
         return Response(status_code=404, content="Not Found")
-    await db.refresh(physical_locator, ["logical_object"])
+    # await db.refresh(physical_locator, ["logical_object"])
 
     logger.debug(f"append_part: {request} -> {physical_locator}")
 
@@ -1164,12 +1187,12 @@ async def continue_upload(
     # the upload_id is a unique identifer
     stmt = (
         select(DBLogicalObject)
-        .options(selectinload(DBLogicalObject.physical_object_locators))
         .where(DBLogicalObject.bucket == request.bucket)
         .where(DBLogicalObject.key == request.key)
         .where(DBLogicalObject.status == Status.pending)
         .where(DBLogicalObject.multipart_upload_id == request.multipart_upload_id)
         .order_by(DBLogicalObject.id.desc())
+        .options(joinedload(DBLogicalObject.physical_object_locators))
         # .first()
     )
     locators = (await db.scalars(stmt)).first()
@@ -1232,7 +1255,7 @@ async def continue_upload(
 
     logger.debug(f"continue_upload: {request} -> {locators}")
 
-    res = [
+    return [
         ContinueUploadResponse(
             id=locator.id,
             tag=locator.location_tag,
@@ -1259,9 +1282,6 @@ async def continue_upload(
         )
         for i, locator in enumerate(locators)
     ]
-
-    print("end time: ", datetime.now())
-    return res
 
 
 @router.post("/list_objects")
@@ -1378,7 +1398,7 @@ async def list_objects_versioning(
 async def head_object(
     request: HeadObjectRequest, db: Session = Depends(get_session)
 ) -> HeadObjectResponse:
-    print("head_object: ", request)
+    # print("head_object: ", request)
 
     version_enabled = (
         await db.execute(
@@ -1471,7 +1491,7 @@ async def list_parts(
     if len(objects) == 0:
         return Response(status_code=404, content="Object Multipart Not Found")
 
-    assert len(objects) == 1, "should only have one object"
+    # assert len(objects) == 1, "should only have one object"
     await db.refresh(objects[0], ["multipart_upload_parts"])
     logger.debug(
         f"list_parts: {request} -> {objects[0], objects[0].multipart_upload_parts}"

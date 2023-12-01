@@ -109,7 +109,7 @@ def init(
     if start_server:
         subprocess.Popen(
             f"cd {DEFAULT_STORE_SERVER_PATH}; "
-            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
+            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000 --workers=8",
             shell=True,
             env=env,
         )
@@ -127,7 +127,7 @@ def init(
             ["cargo", "run"],
             env=env,
         )
-    typer.secho(f"SkyStore initialized at: {'http://127.0.0.1:8002'}", fg="green")
+    typer.secho(f"SkyStore initialized at: {'https://127.0.0.1:8002'}", fg="green")
 
 
 @app.command()
@@ -151,7 +151,7 @@ def register(
             config = json.load(f)
 
         resp = requests.post(
-            f"http://{server_addr}:3000/register_buckets",
+            f"https://{server_addr}:3000/register_buckets",
             json={"bucket": config["bucket"], "config": config["config"], "versioning": config["versioning"],},
         )
         if resp.status_code == 200:

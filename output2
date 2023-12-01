@@ -1,0 +1,16 @@
+INFO:     Will watch for changes in these directories: ['/home/ubuntu/skystore/store-server']
+WARNING:  "workers" flag is ignored when reloading is enabled.
+INFO:     Uvicorn running on http://127.0.0.1:3000 (Press CTRL+C to quit)
+INFO:     Started reloader process [75073] using WatchFiles
+/home/ubuntu/skystore/store-server/operations/policy/utils/helpers.py:89: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  row = row[0]
+INFO:     Started server process [75075]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+/home/ubuntu/skystore/store-server/operations/policy/utils/helpers.py:89: FutureWarning: Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`
+  row = row[0]
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [75075]
+INFO:     Stopping reloader process [75073]

@@ -11,6 +11,6 @@
             }
         ]
     },
-    "skystore_bucket_prefix" : "skystore"
-    
+    "skystore_bucket_prefix" : "skystore",
+    "versioning": true
 }

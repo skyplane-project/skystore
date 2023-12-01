@@ -774,7 +774,7 @@ impl S3 for SkyProxy {
                                 models::StartUploadRequest {
                                     bucket: bucket.clone(),
                                     key: key.clone(),
-                                    client_from_region: client_from_region_clone.clone(),
+                                    client_from_region: client_from_region_clone,
                                     version_id: vid, // logical version
                                     is_multipart: false,
                                     copy_src_bucket: None,
@@ -790,7 +790,7 @@ impl S3 for SkyProxy {
                             if let Ok(start_upload_resp) = start_upload_resp_result {
                                 let locators = start_upload_resp.locators;
                                 let request_template = clone_put_object_request(
-                                    &new_put_object_request(bucket.clone(), key.clone()),
+                                    &new_put_object_request(bucket, key),
                                     None,
                                 );
 
@@ -824,7 +824,7 @@ impl S3 for SkyProxy {
                                         models::PatchUploadIsCompleted {
                                             id: locator.id,
                                             size: head_resp.output.content_length as u64,
-                                            etag: e_tag.clone(),
+                                            etag: e_tag,
                                             last_modified: timestamp_to_string(
                                                 head_resp.output.last_modified.unwrap(),
                                             ),
@@ -849,13 +849,13 @@ impl S3 for SkyProxy {
                             ..Default::default()
                         });
 
-                        let end_time = Instant::now();
+                        // let end_time = Instant::now();
 
-                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        // write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
                         return Ok(response);
                     } else {
-                        let res = self
+                        return self
                             .store_clients
                             .get(&self.client_from_region)
                             .unwrap()
@@ -866,11 +866,15 @@ impl S3 for SkyProxy {
                                 input
                             }))
                             .await;
-                        let end_time = Instant::now();
-                        write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
-                        return res;
+                        // let end_time = Instant::now();
+                        // write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                        // return res;
                     }
                 } else {
+
+                    let mid2_time = Instant::now();
+                    println!("GET OBJECT: time for locating object 2 : {} ms", (mid2_time - start_time).as_millis());
+
                     let res = self
                         .store_clients
                         .get(&location.tag)
@@ -883,13 +887,20 @@ impl S3 for SkyProxy {
                         }))
                         .await;
                     let end_time = Instant::now();
-                    write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                    println!("GET OBJECT: time for getting object : {} ms", (end_time - mid2_time).as_millis());
+
+                    // read the bytestream into memory
+                    // res.unwrap().output.body = split_streaming_blob(res.unwrap().output.body.unwrap(), 1).0.pop();
+
+                    println!("GET OBJECT: total time: {} ms", (end_time - start_time).as_millis());
+
+                    // write_time_duration_to_file("GET OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                     return res;
                 }
             }
             None => {
-                let end_time = Instant::now();
-                write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+                // let end_time = Instant::now();
+                // write_time_duration_to_file("GET OBJECT NOT FOUND".to_string(), (end_time - start_time).as_millis(), "measure.txt");
                 Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::NoSuchKey,
                 "Object not found",))
@@ -905,7 +916,7 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
 
-        // let start_time = Instant::now();
+        let start_time = Instant::now();
 
         if self.version_enable == *"NULL" {
             let locator = self
@@ -923,9 +934,9 @@ impl S3 for SkyProxy {
             }
         }
 
-        // let start_time = Instant::now();
+        let mid_time = Instant::now();
 
-        // println!("PUT OBJECT: check version setting time: {} ms", (mid_time - start_time).as_millis());
+        println!("PUT OBJECT: check version setting time: {} ms", (mid_time - start_time).as_millis());
 
         let start_upload_resp = apis::start_upload(
             &self.dir_conf,
@@ -942,9 +953,9 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        // let end_time = Instant::now();
+        let end_time = Instant::now();
 
-        // println!("PUT OBJECT: start upload time (in control plane) : {} ms", (end_time - start_time).as_millis());
+        println!("PUT OBJECT: start upload time (in control plane) : {} ms", (end_time - mid_time).as_millis());
 
         let mut tasks = tokio::task::JoinSet::new();
         let locators = start_upload_resp.locators;
@@ -1009,9 +1020,9 @@ impl S3 for SkyProxy {
             e_tags.push(e_tag);
         }
         
-        // let end_time = Instant::now();
+        let end_time1 = Instant::now();
 
-        // println!("PUT OBJECT: time for completing upload : {} ms", (end_time - start_time).as_millis());
+        println!("PUT OBJECT: time for completing upload : {} ms", (end_time1 - end_time).as_millis());
 
         // write_time_duration_to_file("PUT OBJECT".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
@@ -1039,16 +1050,16 @@ impl S3 for SkyProxy {
             // .map(|obj| obj.key.clone())
             .collect();
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
+        // let version_enabled = apis::check_version_setting(
+        //     &self.dir_conf,
+        //     models::HeadBucketRequest {
+        //         bucket: req.input.bucket.clone(),
+        //     },
+        // )
+        // .await
+        // .unwrap();
 
-        if !version_enabled
+        if self.version_enable == *"NULL"
             && req
                 .input
                 .delete
@@ -1208,7 +1219,8 @@ impl S3 for SkyProxy {
             // complete delete objects
             let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
             // we might need to deal with fails ids
-            let fails_ids: Vec<_> = fails.clone().into_iter().filter_map(Result::err).collect();
+            let fails_empty = fails.is_empty();
+            let fails_ids: Vec<_> = fails.into_iter().filter_map(Result::err).collect();
             let err_msg = fails_ids
                 .iter()
                 .map(|fail| fail.3.clone())
@@ -1235,8 +1247,8 @@ impl S3 for SkyProxy {
                 .unwrap();
             }
 
-            if !version_enabled {
-                if fails.is_empty() {
+            if self.version_enable == *"NULL" {
+                if fails_empty {
                     // if version is not enabled, the version vector must be empty
                     deleted_objects.push(DeletedObject {
                         key: Some(key.clone()),
@@ -1254,7 +1266,7 @@ impl S3 for SkyProxy {
             } else {
                 // if we failed to delete the logical object, and this object is not a delete marker,
                 // we need to add it to the errors vector
-                if !fails.is_empty() && !delete_markers_map[&key].delete_marker {
+                if !fails_empty && !delete_markers_map[&key].delete_marker {
                     errors.push(Error {
                         key: Some(key),
                         code: Some("InternalError".to_string()),
@@ -1270,7 +1282,7 @@ impl S3 for SkyProxy {
                             delete_marker: true,
                             delete_marker_version_id: delete_markers_map[&key]
                                 .version_id
-                                .clone()
+                                .as_ref()
                                 .map(|id| id.to_string()), // logical version
                             version_id: None,
                         });
@@ -1281,7 +1293,7 @@ impl S3 for SkyProxy {
                                 delete_marker: true,
                                 delete_marker_version_id: delete_markers_map[&key]
                                     .version_id
-                                    .clone()
+                                    .as_ref()
                                     .map(|id| id.to_string()), // logical version
                                 version_id: version.clone(),
                             });
@@ -1289,14 +1301,14 @@ impl S3 for SkyProxy {
                     }
 
                     let mut fails_ids_vec = Vec::new();
-                    let mut fails_version_vec = Vec::new();
+                    // let mut fails_version_vec = Vec::new();
                     let mut fails_op_type_vec = Vec::new();
 
                     // deal with fails vector, fails_ids vector might be empty
                     // println!("fails_ids: {:?}", fails_ids);
-                    for (id, version, op_type, _) in &fails_ids {
+                    for (id, _, op_type, _) in &fails_ids {
                         fails_ids_vec.push(*id);
-                        fails_version_vec.push(version.clone());
+                        // fails_version_vec.push(version);
                         fails_op_type_vec.push(op_type.clone());
                     }
                     if !fails_ids_vec.is_empty() {
@@ -1561,25 +1573,25 @@ impl S3 for SkyProxy {
         req: S3Request<CreateMultipartUploadInput>,
     ) -> S3Result<S3Response<CreateMultipartUploadOutput>> {
 
-        let start_time = Instant::now();
+        // let start_time: Instant = Instant::now();
 
         let locator = self
             .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
             .await?;
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
+        // let version_enabled = apis::check_version_setting(
+        //     &self.dir_conf,
+        //     models::HeadBucketRequest {
+        //         bucket: req.input.bucket.clone(),
+        //     },
+        // )
+        // .await
+        // .unwrap();
 
-        if locator.is_some() && !version_enabled {
+        if locator.is_some() && self.version_enable == *"NULL" {
             return Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                "Object already exists. TODO for multipart upload overwite.",
+                "Object already exists.",
             ));
         };
 
@@ -1633,8 +1645,8 @@ impl S3 for SkyProxy {
             ..Default::default()
         });
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("CREATE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+        // write_time_duration_to_file("CREATE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
@@ -1797,7 +1809,7 @@ impl S3 for SkyProxy {
         req: S3Request<UploadPartInput>,
     ) -> S3Result<S3Response<UploadPartOutput>> {
 
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         let resp = apis::continue_upload(
             &self.dir_conf,
@@ -1850,7 +1862,7 @@ impl S3 for SkyProxy {
                         models::PatchUploadMultipartUploadPart {
                             id: locator.id,
                             part_number,
-                            etag: etag.clone(),
+                            etag: etag,
                             size: content_length as u64,
                         },
                     )
@@ -1874,8 +1886,8 @@ impl S3 for SkyProxy {
         .unwrap();
         assert!(parts.len() == 1);
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("UPLOAD PART".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+        // write_time_duration_to_file("UPLOAD PART".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(S3Response::new(UploadPartOutput {
             e_tag: Some(parts[0].etag.clone()),
@@ -2028,7 +2040,7 @@ impl S3 for SkyProxy {
         req: S3Request<CompleteMultipartUploadInput>,
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
 
-        let start_time = Instant::now();
+        // let start_time = Instant::now();
 
         let locators = match apis::continue_upload(
             &self.dir_conf,
@@ -2142,8 +2154,8 @@ impl S3 for SkyProxy {
             ..Default::default()
         });
 
-        let end_time = Instant::now();
-        write_time_duration_to_file("COMPLETE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
+        // let end_time = Instant::now();
+        // write_time_duration_to_file("COMPLETE MULTIPART UPLOAD".to_string(), (end_time - start_time).as_millis(), "measure.txt");
 
         Ok(res)
     }
