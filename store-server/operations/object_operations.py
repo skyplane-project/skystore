@@ -105,10 +105,9 @@ async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
     # measure the time
-    start = datetime.now()
+    # start = datetime.now()
     # await db.execute(text("PRAGMA journal_mode=WAL;"))
     # await db.execute(text("PRAGMA synchronous=OFF;"))
-    await db.execute(text("BEGIN IMMEDIATE;"))
 
     # await db.execute(text("LOCK TABLE logical_objects IN ACCESS EXCLUSIVE MODE;"))
 
@@ -120,13 +119,16 @@ async def start_delete_objects(
         )
     ).all()[0][0]
 
+    if version_enabled is not True:
+        await db.execute(text("BEGIN IMMEDIATE;"))
+
     specific_version = any(
         len(request.object_identifiers[key]) > 0 for key in request.object_identifiers
     )
 
-    end = datetime.now()
+    # end = datetime.now()
 
-    print("start delete objects: version setting detection: ", end - start)
+    # print("start delete objects: version setting detection: ", end - start)
 
     if version_enabled is None and specific_version:
         return Response(status_code=400, content="Versioning is not enabled")
@@ -145,7 +147,7 @@ async def start_delete_objects(
     for key, multipart_upload_id in zip_longest(
         request.object_identifiers, request.multipart_upload_ids or []
     ):
-        start = datetime.now()
+        # start = datetime.now()
 
         if multipart_upload_id:
             stmt = (
@@ -173,14 +175,14 @@ async def start_delete_objects(
         # multiple versioning support
         logical_objs = (await db.scalars(stmt)).unique().all()
 
-        end = datetime.now()
+        # end = datetime.now()
 
-        print(
-            "start delete objects: query logical objects with key {} in loop: ".format(
-                key
-            ),
-            end - start,
-        )
+        # print(
+        #     "start delete objects: query logical objects with key {} in loop: ".format(
+        #         key
+        #     ),
+        #     end - start,
+        # )
 
         if len(logical_objs) == 0:
             return Response(status_code=404, content="Objects not found")
@@ -196,7 +198,7 @@ async def start_delete_objects(
         # and if there is a version-suspended marker, it will be the first one
         # if it's a multipart, the upload_id is unique, so we can just delete the first one
 
-        start = datetime.now()
+        # start = datetime.now()
 
         for idx, logical_obj in enumerate(logical_objs):
             # Follow the semantics of S3:
@@ -320,14 +322,14 @@ async def start_delete_objects(
             if replaced or add_obj:
                 break
 
-        end = datetime.now()
+        # end = datetime.now()
 
-        print(
-            "start delete objects: delete corresponding physical objects with key {} in loop: ".format(
-                key
-            ),
-            end - start,
-        )
+        # print(
+        #     "start delete objects: delete corresponding physical objects with key {} in loop: ".format(
+        #         key
+        #     ),
+        #     end - start,
+        # )
 
         print("version setting: ", version_enabled)
         print("logical_obj.id: ", logical_obj.id)
@@ -491,7 +493,7 @@ async def locate_object(
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
     
-    print("locate start: ", datetime.now())
+    # print("locate start: ", datetime.now())
 
     version_enabled = (
         await db.execute(
@@ -560,7 +562,7 @@ async def locate_object(
         version=locators.id if version_enabled is not None else None,
     )
     
-    print("end locate time: ", datetime.now())
+    # print("end locate time: ", datetime.now())
     
     return res 
 
@@ -702,10 +704,9 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     
-    start = datetime.now()
+    # start = datetime.now()
     # await db.execute(text("PRAGMA journal_mode=WAL;"))
     # await db.execute(text("PRAGMA synchronous=OFF;"))
-    await db.execute(text("BEGIN IMMEDIATE;"))
 
     version_enabled, logical_bucket = (
         (
@@ -718,6 +719,9 @@ async def start_upload(
         .unique()
         .one_or_none()
     )
+    
+    if version_enabled is not True:
+        await db.execute(text("BEGIN IMMEDIATE;"))
 
     # we can still provide version_id when version_enalbed is False (corresponding to the `Suspended`)
     # status in S3
@@ -1003,9 +1007,9 @@ async def start_upload(
 
     logger.debug(f"start_upload: {request} -> {locators}")
     
-    end = datetime.now()
+    # end = datetime.now()
     
-    print("start upload time: ", end - start)
+    # print("start upload time: ", end - start)
 
     return StartUploadResponse(
         multipart_upload_id=logical_object.multipart_upload_id,
@@ -1033,7 +1037,7 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    start = datetime.now()
+    # start = datetime.now()
     # await db.execute(text("PRAGMA journal_mode=WAL;"))
     # await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
@@ -1068,9 +1072,9 @@ async def complete_upload(
         logical_object.last_modified = request.last_modified.replace(tzinfo=None)
     await db.commit()
     
-    end = datetime.now()
+    # end = datetime.now()
     
-    print("complete upload time: ", end - start)
+    # print("complete upload time: ", end - start)
 
 
 @router.patch("/set_multipart_id")
@@ -1100,7 +1104,7 @@ async def set_multipart_id(
 async def append_part(
     request: PatchUploadMultipartUploadPart, db: Session = Depends(get_session)
 ):
-    print("start time: ", datetime.now())
+    # print("start time: ", datetime.now())
     # await db.execute(text("PRAGMA journal_mode=WAL;"))
     # await db.execute(text("PRAGMA synchronous=OFF;"))
     stmt = (
@@ -1165,14 +1169,14 @@ async def append_part(
 
     await db.commit()
 
-    print("end time: ", datetime.now())
+    # print("end time: ", datetime.now())
 
 
 @router.post("/continue_upload")
 async def continue_upload(
     request: ContinueUploadRequest, db: Session = Depends(get_session)
 ) -> List[ContinueUploadResponse]:
-    print("start time: ", datetime.now())
+    # print("start time: ", datetime.now())
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
