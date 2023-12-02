@@ -3,27 +3,73 @@
     "config": {
         "physical_locations": [
             {
-                "name": "aws:us-west-2",
+                "name": "aws:ap-northeast-2",
                 "cloud": "aws",
-                "region": "us-west-2",
-                "bucket": "my-sky-bucket-101",
+                "region": "ap-northeast-2",
+                "bucket": "skystore-ap-northeast-2",
                 "is_primary": true
             },
             {
-                "name": "aws:us-east-2",
+                "name": "aws:sa-east-1",
                 "cloud": "aws",
-                "region": "us-east-2",
-                "bucket": "my-sky-bucket-100",
+                "region": "sa-east-1",
+                "bucket": "skystore-sa-east-1",
                 "need_warmup": true
             },
             {
-                "name": "aws:us-west-1",
+                "name": "aws:eu-west-2",
                 "cloud": "aws",
-                "region": "us-west-1",
-                "bucket": "my-sky-bucket-99"
+                "region": "eu-west-2",
+                "bucket": "skystore-eu-west-2"
+            },
+            {
+                "name": "aws:us-west-2",
+                "cloud": "aws",
+                "region": "us-west-2",
+                "bucket": "skystore-us-west-2",
+                "is_primary": true
+            },
+            {
+                "name": "aws:eu-north-1",
+                "cloud": "aws",
+                "region": "eu-north-1",
+                "bucket": "skystore-eu-north-1",
+                "need_warmup": true
+            },
+            {
+                "name": "aws:ca-central-1",
+                "cloud": "aws",
+                "region": "ca-central-1",
+                "bucket": "skystore-ca-central-1"
+            },
+            {
+                "name": "aws:ap-southeast-1",
+                "cloud": "aws",
+                "region": "ap-southeast-1",
+                "bucket": "skystore-ap-southeast-1",
+                "is_primary": true
+            },
+            {
+                "name": "aws:eu-central-2",
+                "cloud": "aws",
+                "region": "eu-central-2",
+                "bucket": "skystore-eu-central-2",
+                "need_warmup": true
+            },
+            {
+                "name": "aws:ap-east-1",
+                "cloud": "aws",
+                "region": "ap-east-1",
+                "bucket": "skystore-ap-east-1"
+            },
+            {
+                "name": "aws:eu-south-2",
+                "cloud": "aws",
+                "region": "eu-south-2",
+                "bucket": "skystore-eu-south-2"
             }
         ]
     },
-    "skystore_bucket_prefix" : "skystore"
-    
+    "skystore_bucket_prefix" : "skystore",
+    "versioning": "true"
 }
