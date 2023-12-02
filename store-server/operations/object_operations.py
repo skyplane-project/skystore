@@ -79,7 +79,17 @@ async def update_policy(
         if put_policy_type == "write_local":
             put_policy = LocalWrite()
         elif put_policy_type == "single_region":
-            put_policy = SingleRegionWrite()
+            config = {
+                "storage_region": "aws:us-west-1",
+                "placement_policy": request.put_policy,
+                "transfer_policy": request.get_policy,
+                "latency_slo": {
+                    "read": 50,
+                    "write": 60,
+                },
+                "consistency": "eventual"
+            }
+            put_policy = SingleRegionWrite(config=config)
         elif put_policy_type == "copy_on_read":
             put_policy = PullOnRead()
         elif put_policy_type == "replicate_all":
@@ -331,8 +341,8 @@ async def start_delete_objects(
         #     end - start,
         # )
 
-        print("version setting: ", version_enabled)
-        print("logical_obj.id: ", logical_obj.id)
+        # print("version setting: ", version_enabled)
+        # print("logical_obj.id: ", logical_obj.id)
 
         locator_dict[key] = locators
         delete_marker_dict[key] = DeleteMarker(

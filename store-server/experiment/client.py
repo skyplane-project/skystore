@@ -156,7 +156,7 @@ def create_instance(
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
             "skystore_bucket_prefix": "skystore",
-            "put_policy": "write_local",
+            "put_policy": "copy_on_read",
             "get_policy": "cheapest",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
@@ -187,8 +187,8 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/skyplane-project/skystore.git"
-        clone_cmd = f"git clone {url}; cd skystore; git switch experiments; "
+        url = "https://github.com/shaopu1225/skystore.git"
+        clone_cmd = f"git clone {url}; cd skystore; git switch experiment; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
@@ -217,7 +217,7 @@ def create_instance(
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build; \
-                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &"
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output &"
         server.run_command(cmd1)
         server.run_command(cmd2)
         server.run_command(cmd3)

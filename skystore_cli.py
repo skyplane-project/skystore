@@ -109,7 +109,7 @@ def init(
     if start_server:
         subprocess.Popen(
             f"cd {DEFAULT_STORE_SERVER_PATH}; "
-            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000 --workers=8",
+            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
             shell=True,
             env=env,
         )

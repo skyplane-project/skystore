@@ -420,7 +420,7 @@ async def put_bucket_versioning(
 async def check_version_setting(
     request: HeadBucketRequest, db: Session = Depends(get_session)
 ) -> bool:
-    print("start check time: ", datetime.now())
+    # print("start check time: ", datetime.now())
 
     stmt = select(DBLogicalBucket).where(
         DBLogicalBucket.bucket == request.bucket, DBLogicalBucket.status == Status.ready
@@ -432,7 +432,7 @@ async def check_version_setting(
 
     logger.debug(f"check_version_setting: {request} -> {bucket}")
 
-    print("end check time: ", datetime.now())
+    # print("end check time: ", datetime.now())
 
     # both suspended and enabled versioning setting should be able to upload objects multiple times
     if bucket.version_enabled is None:
