@@ -1,0 +1,30 @@
+{
+    "bucket": "default-skybucket",
+    "config": {
+        "physical_locations": [
+            {
+                "name": "aws:us-east-2",
+                "cloud": "aws",
+                "region": "us-east-2",
+                "bucket": "skystore-us-east-2",
+                "is_primary": true
+            },
+            {
+                "name": "aws:us-west-2",
+                "cloud": "aws",
+                "region": "us-west-2",
+                "bucket": "skystore-us-west-2",
+                "is_primary": true
+            },
+            {
+                "name": "aws:us-west-1",
+                "cloud": "aws",
+                "region": "us-east-2",
+                "bucket": "my-sky-bucket-2",
+                "is_primary": true
+            }
+        ]
+    },
+    "skystore_bucket_prefix" : "skystore",
+    "versioning": true
+}
