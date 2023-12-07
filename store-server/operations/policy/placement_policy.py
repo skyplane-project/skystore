@@ -30,7 +30,10 @@ class SingleRegionWrite(PlacementPolicy):
         Returns:
             List[str]: single region to write to
         """
+        
+        # NOTE: hard coded for now; make this a variable init in def __init__
         single_store_region = "aws:us-west-1"
+        
         assert single_store_region in self.init_regions
         return [single_store_region]
 
@@ -57,7 +60,7 @@ class ReplicateAll(PlacementPolicy):
         """
         return self.init_regions
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         return "replicate_all"
 
 
@@ -79,8 +82,10 @@ class PushonWrite(PlacementPolicy):
         Returns:
             List[str]: the regions to push to, including the primary region and the regions we want to push to
         """
-        # assert all push regions in init_regions
+        
+        # hard coded for now; make this a variable init in def __init__
         push_regions = ["aws:us-west-1", "aws:us-east-1"]
+        # assert all push regions in init regions
         assert all(r in self.init_regions for r in push_regions)
 
         return list(set([req.client_from_region] + push_regions))
@@ -126,7 +131,7 @@ class LocalWrite(PlacementPolicy):
         return "write_local"
 
 
-def build_placement_policy_from_name(
+def get_placement_policy(
     name: str, init_regions: List[str]
 ) -> PlacementPolicy:
     if name == "single_region":

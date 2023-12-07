@@ -58,6 +58,9 @@ async def create_database(
         await conn.execute(
             f"ALTER DATABASE {db_name} SET DEFAULT_TRANSACTION_ISOLATION TO 'read committed';"
         )
+        
+        # NOTW: these are the optimizations can be applied in VM setup
+        
         # await conn.execute(f"ALTER DATABASE {db_name} SET synchronous_commit TO off;")
         # await conn.execute(f"ALTER DATABASE {db_name} SET wal_level TO minimal;")
         # await conn.execute(f"ALTER DATABASE {db_name} SET fsync TO off;")
@@ -126,7 +129,7 @@ engine = create_async_engine(
     echo=LOG_SQL,
     future=True,
     # NOTE: only enable this when you are testing
-    # poolclass=NullPool, # NOTE: this is to avoid the "database is being accessed by other users" error
+    poolclass=NullPool, # NOTE: this is to avoid the "database is being accessed by other users" error
 )
 
 

@@ -11,7 +11,6 @@ class TransferPolicy:
     def get(
         self, req: LocateObjectRequest, physical_locators: List[DBPhysicalObjectLocator]
     ) -> DBPhysicalObjectLocator:
-        print("TransferPolicy.get() called")
         pass
 
     def name(self) -> str:
@@ -108,7 +107,7 @@ class DirectTransfer(TransferPolicy):
         return "direct"
 
 
-def build_transfer_policy_from_name(name: str) -> TransferPolicy:
+def get_transfer_policy(name: str) -> TransferPolicy:
     if name == "cheapest":
         return CheapestTransfer()
     elif name == "closest":

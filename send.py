@@ -13,7 +13,6 @@ app = FastAPI()
 
 @app.post("/send_message/")
 async def send_message(message, host):
-    #print(message)
     async with httpx.AsyncClient() as client:
         response = await client.post(f"http://{host}:3000/update_metrics", json=message)
         return response.json()

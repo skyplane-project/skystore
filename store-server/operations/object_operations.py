@@ -44,8 +44,8 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import build_placement_policy_from_name
-from .policy.transfer_policy import build_transfer_policy_from_name
+from operations.policy.placement_policy import get_placement_policy
+from .policy.transfer_policy import get_transfer_policy
 from .bucket_operations import init_region_tags
 import UltraDict as ud
 
@@ -54,6 +54,7 @@ router = APIRouter()
 # initialize a ultradict to store the policy name in shared memory
 # so that can be used by multiple workers started by uvicorn
 # NOTE: we cannot store the class instance directly
+policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=None)
 except Exception as _:
@@ -440,7 +441,7 @@ async def locate_object(
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
 
-    get_policy = build_transfer_policy_from_name(policy_ultra_dict["get_policy"])
+    get_policy = get_transfer_policy(policy_ultra_dict["get_policy"])
 
     version_enabled = (
         await db.execute(
@@ -449,8 +450,6 @@ async def locate_object(
             )
         )
     ).all()
-
-    print("version_enabled: ", version_enabled)
 
     version_enabled = version_enabled[0][0]
 
@@ -485,8 +484,6 @@ async def locate_object(
         return Response(status_code=405, content="Not allowed to get a delete marker")
 
     await db.refresh(locators, ["physical_object_locators"])
-
-    # print(locators.physical_object_locators)
 
     chosen_locator = get_policy.get(request, locators.physical_object_locators)
 
@@ -646,7 +643,7 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     # construct the put policy based on the policy name
-    put_policy = build_placement_policy_from_name(
+    put_policy = get_placement_policy(
         policy_ultra_dict["put_policy"], init_region_tags
     )
 
@@ -984,7 +981,7 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    put_policy = build_placement_policy_from_name(
+    put_policy = get_placement_policy(
         policy_ultra_dict["put_policy"], init_region_tags
     )
 
@@ -1047,9 +1044,7 @@ async def set_multipart_id(
 async def append_part(
     request: PatchUploadMultipartUploadPart, db: Session = Depends(get_session)
 ):
-    # print("start time: ", datetime.now())
-    # await db.execute(text("PRAGMA journal_mode=WAL;"))
-    # await db.execute(text("PRAGMA synchronous=OFF;"))
+
     stmt = (
         select(DBPhysicalObjectLocator)
         # .join(DBLogicalObject)
@@ -1113,14 +1108,11 @@ async def append_part(
 
     await db.commit()
 
-    # print("end time: ", datetime.now())
-
 
 @router.post("/continue_upload")
 async def continue_upload(
     request: ContinueUploadRequest, db: Session = Depends(get_session)
 ) -> List[ContinueUploadResponse]:
-    # print("start time: ", datetime.now())
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -1298,8 +1290,6 @@ async def list_objects(
     objects = await db.execute(stmt)
     objects_all = objects.scalars().all()  # NOTE: DO NOT use `scalars` here
 
-    # print("list obejcts: ", objects_all)
-
     logger.debug(f"list_objects: {request} -> {objects_all}")
 
     return [
@@ -1370,7 +1360,6 @@ async def list_objects_versioning(
 async def head_object(
     request: HeadObjectRequest, db: Session = Depends(get_session)
 ) -> HeadObjectResponse:
-    # print("head_object: ", request)
 
     version_enabled = (
         await db.execute(

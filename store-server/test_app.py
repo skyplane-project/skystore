@@ -20,8 +20,6 @@ def test_remove_db(client):
 def test_delete_object(client):
     """Test that the `delete_object` endpoint functions correctly."""
 
-    print("test_delete_object")
-
     resp = client.post(
         "/start_create_bucket",
         json={

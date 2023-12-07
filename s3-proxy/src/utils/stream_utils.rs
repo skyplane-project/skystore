@@ -65,7 +65,6 @@ pub fn split_streaming_blob(
     // size_hint is required so the S3 client can set content length header properly.
     // that's why we just need it once in the beginning and keep it static.
     let hint = incoming.remaining_length();
-    // println!("hint: {:?}", hint);
 
     let mut result: Vec<StreamingBlob> = Vec::new();
     let mut size: Vec<i64> = Vec::new();
@@ -73,10 +72,6 @@ pub fn split_streaming_blob(
         let sub = publisher.subscribe();
         let stream =
             WrapToResultStream::new(sub, RemainingLength::new_exact(hint.exact().unwrap()));
-        // let boxed: Box< dyn Stream<Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync>>>
-        //         + Send,
-        // > = Box::new(stream);
-        // let sub_blob = StreamingBlob::from(Body::from(hyper::Body::from(boxed)));
         let sub_blob = StreamingBlob::new(stream);
         let stream_size = sub_blob.remaining_length().exact().unwrap();
         result.push(sub_blob);

@@ -15,7 +15,7 @@ use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{Instant, SystemTime};
+use std::time::{SystemTime};
 use tracing::error;
 
 pub struct SkyProxy {
@@ -1385,7 +1385,6 @@ impl S3 for SkyProxy {
                     let mut fails_op_type_vec = Vec::new();
 
                     // deal with fails vector, fails_ids vector might be empty
-                    // println!("fails_ids: {:?}", fails_ids);
                     for (id, _, op_type, _) in &fails_ids {
                         fails_ids_vec.push(*id);
                         // fails_version_vec.push(version);
