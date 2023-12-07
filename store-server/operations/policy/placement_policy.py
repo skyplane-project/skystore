@@ -53,7 +53,7 @@ class ReplicateAll(PlacementPolicy):
         """
         return self.init_regions
 
-    def get_policy(self) -> str:
+    def name(self) -> str:
         return "replicate_all"
 
 
