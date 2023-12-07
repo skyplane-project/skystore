@@ -29,9 +29,11 @@ from operations.schemas.object_schemas import (
     MultipartResponse,
     DeleteMarker,
     SetPolicyRequest,
+    Metrics,
+    DBMetrics,
 )
 from operations.schemas.bucket_schemas import DBLogicalBucket
-from sqlalchemy.orm import selectinload, Session, joinedload, lazyload
+from sqlalchemy.orm import selectinload, Session, joinedload
 from itertools import zip_longest
 from sqlalchemy.sql import select
 from sqlalchemy import or_, text, and_
@@ -42,71 +44,42 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import (
-    put_policy,
-    SingleRegionWrite,
-    ReplicateAll,
-    PushonWrite,
-    PullOnRead,
-    LocalWrite,
-)
-from .policy.transfer_policy import (
-    get_policy,
-    DirectTransfer,
-    CheapestTransfer,
-    ClosestTransfer,
-)
-
+from operations.policy.placement_policy import build_placement_policy_from_name
+from .policy.transfer_policy import build_transfer_policy_from_name
+from .bucket_operations import init_region_tags
+import UltraDict as ud
 
 router = APIRouter()
+
+# initialize a ultradict to store the policy name in shared memory
+# so that can be used by multiple workers started by uvicorn
+# NOTE: we cannot store the class instance directly
+try:
+    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=None)
+except Exception as _:
+    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
+policy_ultra_dict["get_policy"] = ""
+policy_ultra_dict["put_policy"] = ""
 
 
 @router.post("/update_policy")
 async def update_policy(
     request: SetPolicyRequest, db: Session = Depends(get_session)
 ) -> None:
-    global get_policy, put_policy
     put_policy_type = request.put_policy
     get_policy_type = request.get_policy
 
-    old_put_policy_type = put_policy.name()
-    old_get_policy_type = get_policy.name()
+    old_put_policy_type = policy_ultra_dict["put_policy"]
+    old_get_policy_type = policy_ultra_dict["get_policy"]
 
     if put_policy_type is None and get_policy_type is None:
         raise ValueError("Invalid policy type")
 
     if put_policy_type is not None and put_policy_type != old_put_policy_type:
-        if put_policy_type == "write_local":
-            put_policy = LocalWrite()
-        elif put_policy_type == "single_region":
-            config = {
-                "storage_region": "aws:us-west-1",
-                "placement_policy": request.put_policy,
-                "transfer_policy": request.get_policy,
-                "latency_slo": {
-                    "read": 50,
-                    "write": 60,
-                },
-                "consistency": "eventual"
-            }
-            put_policy = SingleRegionWrite(config=config)
-        elif put_policy_type == "copy_on_read":
-            put_policy = PullOnRead()
-        elif put_policy_type == "replicate_all":
-            put_policy = ReplicateAll()
-        elif put_policy_type == "push":
-            put_policy = PushonWrite()
-        else:
-            raise ValueError("Invalid placement policy type")
+        policy_ultra_dict["put_policy"] = put_policy_type
+
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
-        if get_policy_type == "direct":
-            get_policy = DirectTransfer()
-        elif get_policy_type == "cheapest":
-            get_policy = CheapestTransfer()
-        elif get_policy_type == "closest":
-            get_policy = ClosestTransfer()
-        else:
-            raise ValueError("Invalid transfer policy type")
+        policy_ultra_dict["get_policy"] = get_policy_type
 
 
 # TODO: when creating new logical object, we need to consider different put policy
@@ -114,13 +87,6 @@ async def update_policy(
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
-    # measure the time
-    # start = datetime.now()
-    # await db.execute(text("PRAGMA journal_mode=WAL;"))
-    # await db.execute(text("PRAGMA synchronous=OFF;"))
-
-    # await db.execute(text("LOCK TABLE logical_objects IN ACCESS EXCLUSIVE MODE;"))
-
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -130,15 +96,12 @@ async def start_delete_objects(
     ).all()[0][0]
 
     if version_enabled is not True:
-        await db.execute(text("BEGIN IMMEDIATE;"))
+        # await db.execute(text("BEGIN IMMEDIATE;"))
+        await db.execute(text("LOCK TABLE logical_objects IN EXCLUSIVE MODE;"))
 
     specific_version = any(
         len(request.object_identifiers[key]) > 0 for key in request.object_identifiers
     )
-
-    # end = datetime.now()
-
-    # print("start delete objects: version setting detection: ", end - start)
 
     if version_enabled is None and specific_version:
         return Response(status_code=400, content="Versioning is not enabled")
@@ -157,8 +120,6 @@ async def start_delete_objects(
     for key, multipart_upload_id in zip_longest(
         request.object_identifiers, request.multipart_upload_ids or []
     ):
-        # start = datetime.now()
-
         if multipart_upload_id:
             stmt = (
                 select(DBLogicalObject)
@@ -185,15 +146,6 @@ async def start_delete_objects(
         # multiple versioning support
         logical_objs = (await db.scalars(stmt)).unique().all()
 
-        # end = datetime.now()
-
-        # print(
-        #     "start delete objects: query logical objects with key {} in loop: ".format(
-        #         key
-        #     ),
-        #     end - start,
-        # )
-
         if len(logical_objs) == 0:
             return Response(status_code=404, content="Objects not found")
 
@@ -207,8 +159,6 @@ async def start_delete_objects(
         # the first one will be the most recent one
         # and if there is a version-suspended marker, it will be the first one
         # if it's a multipart, the upload_id is unique, so we can just delete the first one
-
-        # start = datetime.now()
 
         for idx, logical_obj in enumerate(logical_objs):
             # Follow the semantics of S3:
@@ -332,18 +282,6 @@ async def start_delete_objects(
             if replaced or add_obj:
                 break
 
-        # end = datetime.now()
-
-        # print(
-        #     "start delete objects: delete corresponding physical objects with key {} in loop: ".format(
-        #         key
-        #     ),
-        #     end - start,
-        # )
-
-        # print("version setting: ", version_enabled)
-        # print("logical_obj.id: ", logical_obj.id)
-
         locator_dict[key] = locators
         delete_marker_dict[key] = DeleteMarker(
             delete_marker=logical_obj.delete_marker,
@@ -374,8 +312,7 @@ async def complete_delete_objects(
     # If the op type is delete, we need to delete the physical object locators and logical objects possibly
     # If the op type is replace, we don't need to do anything
     # If the op type is add, we need to update the metadata of the existing objects from pending to ready
-    # await db.execute(text("PRAGMA journal_mode=WAL;"))
-    # await db.execute(text("PRAGMA synchronous=OFF;"))
+
     # TODO: need to deal with partial failures
     if request.multipart_upload_ids and len(request.ids) != len(
         request.multipart_upload_ids
@@ -502,8 +439,8 @@ async def locate_object(
     request: LocateObjectRequest, db: Session = Depends(get_session)
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
-    
-    # print("locate start: ", datetime.now())
+
+    get_policy = build_transfer_policy_from_name(policy_ultra_dict["get_policy"])
 
     version_enabled = (
         await db.execute(
@@ -511,7 +448,11 @@ async def locate_object(
                 DBLogicalBucket.bucket == request.bucket
             )
         )
-    ).all()[0][0]
+    ).all()
+
+    print("version_enabled: ", version_enabled)
+
+    version_enabled = version_enabled[0][0]
 
     if version_enabled is None and request.version_id:
         return Response(status_code=400, content="Versioning is not enabled")
@@ -543,11 +484,9 @@ async def locate_object(
     if locators and locators.delete_marker and request.version_id:
         return Response(status_code=405, content="Not allowed to get a delete marker")
 
-    # if request.get_primary:
-    #     chosen_locator = next(locator for locator in locators if locator.is_primary)
-    #     reason = "exact match (primary)"
-    # else:
     await db.refresh(locators, ["physical_object_locators"])
+
+    # print(locators.physical_object_locators)
 
     chosen_locator = get_policy.get(request, locators.physical_object_locators)
 
@@ -555,10 +494,7 @@ async def locate_object(
         f"locate_object: chosen locator out of {len(locators.physical_object_locators)}, {request} -> {chosen_locator}"
     )
 
-    # await db.refresh(chosen_locator, ["logical_object"])
-    
-
-    res = LocateObjectResponse(
+    return LocateObjectResponse(
         id=chosen_locator.id,
         tag=chosen_locator.location_tag,
         cloud=chosen_locator.cloud,
@@ -571,10 +507,6 @@ async def locate_object(
         version_id=chosen_locator.version_id,  # here must use the physical version
         version=locators.id if version_enabled is not None else None,
     )
-    
-    # print("end locate time: ", datetime.now())
-    
-    return res 
 
 
 @router.post("/start_warmup")
@@ -713,12 +645,12 @@ async def start_warmup(
 async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
-    
-    # start = datetime.now()
-    # await db.execute(text("PRAGMA journal_mode=WAL;"))
-    # await db.execute(text("PRAGMA synchronous=OFF;"))
+    # construct the put policy based on the policy name
+    put_policy = build_placement_policy_from_name(
+        policy_ultra_dict["put_policy"], init_region_tags
+    )
 
-    version_enabled, logical_bucket = (
+    res = (
         (
             await db.execute(
                 select(DBLogicalBucket.version_enabled, DBLogicalBucket)
@@ -729,9 +661,17 @@ async def start_upload(
         .unique()
         .one_or_none()
     )
-    
+
+    if res is None:
+        # error
+        return Response(status_code=404, content="Bucket Not Found")
+
+    version_enabled = res[0]
+    logical_bucket = res[1]
+
     if version_enabled is not True:
-        await db.execute(text("BEGIN IMMEDIATE;"))
+        # await db.execute(text("BEGIN IMMEDIATE;"))
+        await db.execute(text("LOCK TABLE logical_objects IN EXCLUSIVE MODE;"))
 
     # we can still provide version_id when version_enalbed is False (corresponding to the `Suspended`)
     # status in S3
@@ -877,12 +817,14 @@ async def start_upload(
 
     primary_write_region = None
 
+    upload_to_region_tags = put_policy.place(request)
+    # upload_to_region_tags = ["aws:us-west-1"]
+
     # when enabling versioning, primary exist does not equal to the pull-on-read case
     # make sure we use copy-on-read policy
     if primary_exists and put_policy.name() == "copy_on_read":
         # Assume that physical bucket locators for this region already exists and we don't need to create them
         # For pull-on-read
-        upload_to_region_tags = put_policy.place(request)
         primary_write_region = [
             locator.location_tag
             for locator in existing_object.physical_object_locators
@@ -897,24 +839,23 @@ async def start_upload(
         assert (
             primary_write_region != request.client_from_region
         ), "should not be the same region"
+    # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
+    elif put_policy.name() == "push" or put_policy.name() == "replicate_all":
+        # Except this case, always set the first-write region of the OBJECT to be primary
+        primary_write_region = [
+            locator.location_tag
+            for locator in physical_bucket_locators
+            if locator.is_primary
+        ]
+        assert (
+            len(primary_write_region) == 1
+        ), "should only have one primary write region"
+        primary_write_region = primary_write_region[0]
+    elif put_policy.name() == "single_region":
+        primary_write_region = upload_to_region_tags[0]
     else:
-        # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-        if put_policy.name() == "push":
-            # Except this case, always set the first-write region of the OBJECT to be primary
-            upload_to_region_tags = put_policy.place(request, physical_bucket_locators)
-            primary_write_region = [
-                locator.location_tag
-                for locator in physical_bucket_locators
-                if locator.is_primary
-            ]
-            assert (
-                len(primary_write_region) == 1
-            ), "should only have one primary write region"
-            primary_write_region = primary_write_region[0]
-        else:
-            # Write to the local region and set the first-write region of the OBJECT to be primary
-            upload_to_region_tags = [request.client_from_region]
-            primary_write_region = request.client_from_region
+        # Write to the local region and set the first-write region of the OBJECT to be primary
+        primary_write_region = request.client_from_region
 
     copy_src_buckets = []
     copy_src_keys = []
@@ -1016,10 +957,6 @@ async def start_upload(
     await db.commit()
 
     logger.debug(f"start_upload: {request} -> {locators}")
-    
-    # end = datetime.now()
-    
-    # print("start upload time: ", end - start)
 
     return StartUploadResponse(
         multipart_upload_id=logical_object.multipart_upload_id,
@@ -1047,9 +984,10 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    # start = datetime.now()
-    # await db.execute(text("PRAGMA journal_mode=WAL;"))
-    # await db.execute(text("PRAGMA synchronous=OFF;"))
+    put_policy = build_placement_policy_from_name(
+        policy_ultra_dict["put_policy"], init_region_tags
+    )
+
     stmt = (
         select(DBPhysicalObjectLocator)
         .where(DBPhysicalObjectLocator.id == request.id)
@@ -1081,10 +1019,6 @@ async def complete_upload(
         logical_object.etag = request.etag
         logical_object.last_modified = request.last_modified.replace(tzinfo=None)
     await db.commit()
-    
-    # end = datetime.now()
-    
-    # print("complete upload time: ", end - start)
 
 
 @router.patch("/set_multipart_id")
@@ -1093,9 +1027,8 @@ async def set_multipart_id(
 ):
     # await db.execute(text("PRAGMA journal_mode=WAL;"))
     # await db.execute(text("PRAGMA synchronous=OFF;"))
-    stmt = (
-        select(DBPhysicalObjectLocator)
-        .where(DBPhysicalObjectLocator.id == request.id)
+    stmt = select(DBPhysicalObjectLocator).where(
+        DBPhysicalObjectLocator.id == request.id
     )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
@@ -1120,8 +1053,9 @@ async def append_part(
     stmt = (
         select(DBPhysicalObjectLocator)
         # .join(DBLogicalObject)
-        .where(DBPhysicalObjectLocator.id == request.id)
-        .options(joinedload(DBPhysicalObjectLocator.logical_object))
+        .where(DBPhysicalObjectLocator.id == request.id).options(
+            joinedload(DBPhysicalObjectLocator.logical_object)
+        )
     )
     physical_locator = await db.scalar(stmt)
     if physical_locator is None:
@@ -1320,19 +1254,41 @@ async def list_objects(
     if request.start_after is not None:
         conditions.append(DBLogicalObject.key > request.start_after)
 
-    stmt = (
-        select(
-            func.max(DBLogicalObject.id),
-            DBLogicalObject.bucket,
-            DBLogicalObject.key,
-            DBLogicalObject.size,
-            DBLogicalObject.etag,
-            DBLogicalObject.last_modified,
-            DBLogicalObject.status,
-            DBLogicalObject.multipart_upload_id,
-        )
+    # stmt = (
+    #     select(
+    #         func.max(DBLogicalObject.id),
+    #         DBLogicalObject.bucket,
+    #         DBLogicalObject.key,
+    #         DBLogicalObject.size,
+    #         DBLogicalObject.etag,
+    #         DBLogicalObject.last_modified,
+    #         DBLogicalObject.status,
+    #         DBLogicalObject.multipart_upload_id,
+    #     )
+    #     .where(*conditions)
+    #     .group_by(
+    #         DBLogicalObject.key,
+    #     )
+    #     .order_by(DBLogicalObject.key)
+    # )
+
+    subquery = (
+        select(DBLogicalObject.key, func.max(DBLogicalObject.id).label("max_id"))
         .where(*conditions)
         .group_by(DBLogicalObject.key)
+        .subquery()
+    )
+
+    # Create the main query that joins the subquery
+    stmt = (
+        select(DBLogicalObject)
+        .join(
+            subquery,
+            and_(
+                DBLogicalObject.key == subquery.c.key,
+                DBLogicalObject.id == subquery.c.max_id,
+            ),
+        )
         .order_by(DBLogicalObject.key)
     )
 
@@ -1340,7 +1296,9 @@ async def list_objects(
         stmt = stmt.limit(request.max_keys)
 
     objects = await db.execute(stmt)
-    objects_all = objects.all()  # NOTE: DO NOT use `scalars` here
+    objects_all = objects.scalars().all()  # NOTE: DO NOT use `scalars` here
+
+    # print("list obejcts: ", objects_all)
 
     logger.debug(f"list_objects: {request} -> {objects_all}")
 
@@ -1598,6 +1556,23 @@ async def locate_object_status(
         object_status_lst.append(ObjectStatus(status=locator.status))
     # return object status
     return object_status_lst
+
+
+@router.post("/update_metrics")
+async def update_metrics(metric: Metrics, db: Session = Depends(get_session)):
+    # build the metrics
+    mtr = DBMetrics(
+        timestamp=metric.timestamp,
+        request_region=metric.request_region,
+        destination_region=metric.destination_region,
+        latency=metric.latency,
+        key=metric.key,
+        size=metric.size,
+        op=metric.op,
+    )
+
+    db.add(mtr)
+    await db.commit()
 
 
 def create_logical_object(

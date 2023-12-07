@@ -1,6 +1,5 @@
 from ..schemas.object_schemas import LocateObjectRequest, DBPhysicalObjectLocator
 from .utils.helpers import make_nx_graph
-from .model.config import Config
 from typing import List
 
 
@@ -12,6 +11,7 @@ class TransferPolicy:
     def get(
         self, req: LocateObjectRequest, physical_locators: List[DBPhysicalObjectLocator]
     ) -> DBPhysicalObjectLocator:
+        print("TransferPolicy.get() called")
         pass
 
     def name(self) -> str:
@@ -79,11 +79,6 @@ class ClosestTransfer(TransferPolicy):
 
 
 class DirectTransfer(TransferPolicy):
-    def __init__(self, config: Config) -> None:
-        super().__init__()
-        self.config = config
-        pass
-
     def get(
         self, req: LocateObjectRequest, physical_locators: List[DBPhysicalObjectLocator]
     ) -> DBPhysicalObjectLocator:
@@ -95,11 +90,13 @@ class DirectTransfer(TransferPolicy):
             DBPhysicalObjectLocator: the single matched region to fetch from
         """
 
+        config_region = ["aws:us-west-1"]
+
         locator = next(
             (
-                l
-                for l in physical_locators
-                if self.config.storage_region == l.location_tag
+                locator
+                for locator in physical_locators
+                if config_region == locator.location_tag
             ),
             None,
         )
@@ -111,4 +108,12 @@ class DirectTransfer(TransferPolicy):
         return "direct"
 
 
-get_policy = TransferPolicy()
+def build_transfer_policy_from_name(name: str) -> TransferPolicy:
+    if name == "cheapest":
+        return CheapestTransfer()
+    elif name == "closest":
+        return ClosestTransfer()
+    elif name == "direct":
+        return DirectTransfer()
+    else:
+        raise Exception("Unknown transfer policy name")

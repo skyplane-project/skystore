@@ -131,10 +131,16 @@ async def shutdown_event():
 
 @app.on_event("startup")
 async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        # await conn.exec_driver_sql("pragma journal_mode=memory")
-        # await conn.exec_driver_sql("pragma synchronous=OFF")
+    while True:
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                # await conn.exec_driver_sql("pragma journal_mode=memory")
+                # await conn.exec_driver_sql("pragma synchronous=OFF")
+                break
+        except Exception as _:
+            print("Database still creating, waiting for 5 seconds...")
+            await asyncio.sleep(5)
 
     task = asyncio.create_task(rm_lock_on_timeout())
     background_tasks.add(task)

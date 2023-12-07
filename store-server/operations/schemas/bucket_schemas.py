@@ -19,7 +19,9 @@ class DBLogicalBucket(Base):
     __tablename__ = "logical_buckets"
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-    bucket = Column(String,unique=True)
+    # id = Column(Integer, primary_key=True, autoincrement=True)
+    bucket = Column(String, unique=True)
+    # bucket = Column(String)
     prefix = Column(String)
 
     # NOTE: do we need status per logical bucket?
@@ -42,10 +44,12 @@ class DBPhysicalBucketLocator(Base):
     __tablename__ = "physical_bucket_locators"
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    # id = Column(Integer, primary_key=True, autoincrement=True)
 
     location_tag = Column(String)
     cloud = Column(String)
     region = Column(String)
+    # bucket = Column(String)
     bucket = Column(String, unique=True)
     prefix = Column(String, default="")
 

@@ -156,7 +156,7 @@ def create_instance(
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
             "skystore_bucket_prefix": "skystore",
-            "put_policy": "copy_on_read",
+            "put_policy": "replicate_all",
             "get_policy": "cheapest",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
@@ -216,8 +216,8 @@ def create_instance(
         cmd3 = f"cd /home/ubuntu/skystore; \
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
-                /home/ubuntu/.cargo/bin/cargo build; \
-                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output &"
+                /home/ubuntu/.cargo/bin/cargo build --release; \
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output 2>&1 &"
         server.run_command(cmd1)
         server.run_command(cmd2)
         server.run_command(cmd3)
@@ -282,7 +282,7 @@ def issue_requests(trace_file_path: str):
     print("Create instance finished.")
 
     # wait for the init background task to finish
-    time.sleep(10)
+    time.sleep(20)
 
     previous_timestamp = None
     s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"  # get/put object requires signature

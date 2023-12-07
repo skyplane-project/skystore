@@ -27,7 +27,7 @@
                 "cloud": "aws",
                 "region": "us-west-2",
                 "bucket": "skystore-us-west-2",
-                "is_primary": true
+                "is_primary": false
             },
             {
                 "name": "aws:eu-north-1",
@@ -47,7 +47,7 @@
                 "cloud": "aws",
                 "region": "ap-southeast-1",
                 "bucket": "skystore-ap-southeast-1",
-                "is_primary": true
+                "is_primary": false
             },
             {
                 "name": "aws:eu-central-2",

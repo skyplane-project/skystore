@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     Index,
+    Float,
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field, NonNegativeInt
@@ -165,6 +166,19 @@ class DBPhysicalMultipartUploadPart(Base):
     part_number = Column(Integer)
     etag = Column(String)
     size = Column(Integer)
+
+
+class DBMetrics(Base):
+    __tablename__ = "metrics"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String, nullable=False)
+    latency = Column(Float, nullable=False)
+    request_region = Column(String, nullable=False)
+    destination_region = Column(String, nullable=False)
+    key = Column(String, nullable=False)
+    size = Column(BIGINT, nullable=False)
+    op = Column(String, nullable=False)
 
 
 class StartUploadRequest(LocateObjectRequest):
@@ -327,3 +341,13 @@ class DeleteObjectsIsCompleted(BaseModel):
 class SetPolicyRequest(BaseModel):
     get_policy: Optional[str] = None
     put_policy: Optional[str] = None
+
+
+class Metrics(BaseModel):
+    timestamp: str
+    latency: float
+    request_region: str
+    destination_region: str
+    key: str
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
+    op: str

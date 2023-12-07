@@ -1,13 +1,11 @@
 from typing import List
 from ..schemas.object_schemas import StartUploadRequest
-from ..schemas.bucket_schemas import DBPhysicalBucketLocator
 from .utils.helpers import make_nx_graph
-from .model.config import Config
 
 
 class PlacementPolicy:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, init_regions: List[str] = []) -> None:
+        self.init_regions = init_regions
 
     def place(self, req: StartUploadRequest) -> List[str]:
         pass
@@ -21,9 +19,8 @@ class SingleRegionWrite(PlacementPolicy):
     Write to the same region as the original storage region defined in the config
     """
 
-    def __init__(self, config: Config) -> None:
-        super().__init__()
-        self.config = config
+    def __init__(self, init_regions: List[str]) -> None:
+        super().__init__(init_regions)
         pass
 
     def place(self, req: StartUploadRequest) -> List[str]:
@@ -33,7 +30,9 @@ class SingleRegionWrite(PlacementPolicy):
         Returns:
             List[str]: single region to write to
         """
-        return [self.config.storage_region]
+        single_store_region = "aws:us-west-1"
+        assert single_store_region in self.init_regions
+        return [single_store_region]
 
     def name(self) -> str:
         return "single_region"
@@ -44,8 +43,8 @@ class ReplicateAll(PlacementPolicy):
     Replicate all objects to all regions
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, init_regions: List[str]) -> None:
+        super().__init__(init_regions)
         self.stat_graph = make_nx_graph()
         pass
 
@@ -56,7 +55,7 @@ class ReplicateAll(PlacementPolicy):
         Returns:
             List[str]: all available regions in the current nodes graph
         """
-        return list(self.stat_graph.nodes())
+        return self.init_regions
 
     def get_policy(self) -> str:
         return "replicate_all"
@@ -67,25 +66,24 @@ class PushonWrite(PlacementPolicy):
     Write local and push asynchronously to a set of pushed regions
     """
 
+    def __init__(self, init_regions: List[str]) -> None:
+        super().__init__(init_regions)
+
     def place(
         self,
         req: StartUploadRequest,
-        physical_bucket_locators: List[DBPhysicalBucketLocator],
     ) -> List[str]:
         """
         Args:
             req: StartUploadRequest
-            physical_bucket_locators: List[DBPhysicalBucketLocator]
         Returns:
-            List[str]: the regions to push to, including the primary region and the regions that need warmup
+            List[str]: the regions to push to, including the primary region and the regions we want to push to
         """
+        # assert all push regions in init_regions
+        push_regions = ["aws:us-west-1", "aws:us-east-1"]
+        assert all(r in self.init_regions for r in push_regions)
 
-        upload_to_region_tags = [
-            locator.location_tag
-            for locator in physical_bucket_locators
-            if locator.is_primary or locator.need_warmup
-        ]
-        return upload_to_region_tags
+        return list(set([req.client_from_region] + push_regions))
 
     def name(self) -> str:
         return "push"
@@ -128,4 +126,18 @@ class LocalWrite(PlacementPolicy):
         return "write_local"
 
 
-put_policy = PlacementPolicy()
+def build_placement_policy_from_name(
+    name: str, init_regions: List[str]
+) -> PlacementPolicy:
+    if name == "single_region":
+        return SingleRegionWrite(init_regions)
+    elif name == "replicate_all":
+        return ReplicateAll(init_regions)
+    elif name == "push":
+        return PushonWrite(init_regions)
+    elif name == "copy_on_read":
+        return PullOnRead(init_regions)
+    elif name == "write_local":
+        return LocalWrite(init_regions)
+    else:
+        raise ValueError(f"Unknown policy name: {name}")

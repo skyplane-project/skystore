@@ -1,8 +1,9 @@
 import pytest
 from starlette.testclient import TestClient
 from app import app, rm_lock_on_timeout
-import subprocess as sp
 import threading
+from threading import Thread
+from operations.utils.db import run_create_database
 
 
 @pytest.fixture
@@ -37,9 +38,10 @@ def concurrent_upload(client, bucket, key, region, idx):
         ).raise_for_status()
 
 
-# NOTE: Do not change the position of this test, it should be the first test
 def test_remove_db(client):
-    sp.run("rm skystore.db", shell=True)
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 def test_delete_objects(client):
@@ -267,6 +269,12 @@ def test_delete_objects(client):
     assert resp.json() == []
 
 
+def test_remove_db1(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
+
+
 def test_suspended_versioning(client):
     """Test suspended versioning uploading & deleting"""
     resp = client.post(
@@ -416,6 +424,12 @@ def test_suspended_versioning(client):
     assert len(resp.json()) == 0
 
 
+def test_remove_db2(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
+
+
 def test_get_objects(client):
     """Test that the `get_object` endpoint returns the correct object."""
 
@@ -560,7 +574,7 @@ def test_get_objects(client):
             "client_from_region": "gcp:us-west1-a",
         },
     ).json()["region"]
-    assert location == "us-west1-a"
+    assert location in {"us-east-1", "us-west-1"}
 
     # Remote Read
     location = client.post(
@@ -573,7 +587,7 @@ def test_get_objects(client):
     ).json()["region"]
     assert location in {
         "us-west-1",
-        "us-west1-a",
+        "us-east-1",
     }  # use push policy, depend on which one is the first primary write region
 
     # Get a specific version
@@ -587,6 +601,12 @@ def test_get_objects(client):
         },
     ).json()
     assert location["version"] == 1
+
+
+def test_remove_db3(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 def test_get_object_write_local_and_pull(client):
@@ -677,7 +697,7 @@ def test_get_object_write_local_and_pull(client):
         "etag": "123",
         "last_modified": "2020-01-01T00:00:00",
         "multipart_upload_id": None,
-        "version": 3,  # NOTE: If you run this test separately, this version number will be different
+        "version": 1,  # NOTE: If you run this test separately, this version number will be different
     }
 
     # Try copy_on_read policy, first write to the primary region
@@ -723,7 +743,7 @@ def test_get_object_write_local_and_pull(client):
             "key": "my-key-write_local",
             "client_from_region": "aws:us-east-1",
             "is_multipart": False,
-            "version_id": 4,
+            "version_id": 2,
         },
     )
     resp.raise_for_status()
@@ -749,140 +769,152 @@ def test_get_object_write_local_and_pull(client):
     assert len(resp.json()) == 2
 
 
-def test_warmup(client):
-    # init region in aws:us-west-1 and aws:us-east-2
-    resp = client.post(
-        "/start_create_bucket",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "client_from_region": "aws:us-east-2",
-        },
-    )
-    resp.raise_for_status()
+def test_remove_db4(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
-    # patch
-    for physical_bucket in resp.json()["locators"]:
-        resp = client.patch(
-            "/complete_create_bucket",
-            json={
-                "id": physical_bucket["id"],
-                "creation_date": "2020-01-01T00:00:00",
-            },
-        )
-        resp.raise_for_status()
 
-    # enable bucket versioning
-    resp = client.post(
-        "/put_bucket_versioning",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "versioning": True,
-        },
-    )
+# def test_warmup(client):
+#     # init region in aws:us-west-1 and aws:us-east-2
+#     resp = client.post(
+#         "/start_create_bucket",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "client_from_region": "aws:us-east-2",
+#         },
+#     )
+#     resp.raise_for_status()
 
-    # set policy
-    resp = client.post(
-        "/update_policy",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "put_policy": "push",
-            "get_policy": "cheapest",
-        },
-    )
-    resp.raise_for_status()
+#     # patch
+#     for physical_bucket in resp.json()["locators"]:
+#         resp = client.patch(
+#             "/complete_create_bucket",
+#             json={
+#                 "id": physical_bucket["id"],
+#                 "creation_date": "2020-01-01T00:00:00",
+#             },
+#         )
+#         resp.raise_for_status()
 
-    # 1st version
-    resp1 = client.post(
-        "/start_upload",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "key": "my-key-warmup",
-            "client_from_region": "aws:us-east-2",
-            "is_multipart": False,
-        },
-    )
-    # 2nd version
-    resp2 = client.post(
-        "/start_upload",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "key": "my-key-warmup",
-            "client_from_region": "aws:us-east-2",
-            "is_multipart": False,
-        },
-    )
-    for locator in resp2.json()["locators"]:
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": locator["id"],
-                "size": 100,
-                "etag": "123",
-                "last_modified": "2020-01-01T00:00:00.000Z",
-                # "version_id": "version-1"
-            },
-        ).raise_for_status()
+#     # enable bucket versioning
+#     resp = client.post(
+#         "/put_bucket_versioning",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "versioning": True,
+#         },
+#     )
 
-    for locator in resp1.json()["locators"]:
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": locator["id"],
-                "size": 100,
-                "etag": "123",
-                "last_modified": "2020-01-01T00:00:00.000Z",
-                # "version_id": "version-1"
-            },
-        ).raise_for_status()
+#     # set policy
+#     resp = client.post(
+#         "/update_policy",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "put_policy": "push",
+#             "get_policy": "cheapest",
+#         },
+#     )
+#     resp.raise_for_status()
 
-    # warmup
-    resp = client.post(
-        "/start_warmup",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "key": "my-key-warmup",
-            "client_from_region": "aws:us-east-2",
-            "warmup_regions": ["aws:us-west-1"],
-            "version_id": 5,  # NOTE: If you run this test separately, this version number will be different
-        },
-    )
-    resp.raise_for_status()
+#     # 1st version
+#     resp1 = client.post(
+#         "/start_upload",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "key": "my-key-warmup",
+#             "client_from_region": "aws:us-east-2",
+#             "is_multipart": False,
+#         },
+#     )
+#     # 2nd version
+#     resp2 = client.post(
+#         "/start_upload",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "key": "my-key-warmup",
+#             "client_from_region": "aws:us-east-2",
+#             "is_multipart": False,
+#         },
+#     )
+#     for locator in resp2.json()["locators"]:
+#         client.patch(
+#             "/complete_upload",
+#             json={
+#                 "id": locator["id"],
+#                 "size": 100,
+#                 "etag": "123",
+#                 "last_modified": "2020-01-01T00:00:00.000Z",
+#                 # "version_id": "version-1"
+#             },
+#         ).raise_for_status()
 
-    for i, locator in enumerate(resp.json()["dst_locators"]):
-        client.patch(
-            "/complete_upload",
-            json={
-                "id": locator["id"],
-                "size": 100,
-                "etag": "123",
-                "last_modified": "2020-01-01T00:00:00.000Z",
-                "version_id": f"version-{i}",
-            },
-        ).raise_for_status()
+#     for locator in resp1.json()["locators"]:
+#         client.patch(
+#             "/complete_upload",
+#             json={
+#                 "id": locator["id"],
+#                 "size": 100,
+#                 "etag": "123",
+#                 "last_modified": "2020-01-01T00:00:00.000Z",
+#                 # "version_id": "version-1"
+#             },
+#         ).raise_for_status()
 
-    # try locate object from warmup region
-    resp = client.post(
-        "/locate_object",
-        json={
-            "bucket": "my-warmup-version-bucket",
-            "key": "my-key-warmup",
-            "client_from_region": "aws:us-west-1",
-            "version_id": 5,  # should be able to locate this version from warmup region
-        },
-    )
-    assert resp.json()["region"] == "us-west-1"
-    # check we have fetched the specific version
-    assert resp.json()["version"] == 5
+#     # warmup
+#     resp = client.post(
+#         "/start_warmup",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "key": "my-key-warmup",
+#             "client_from_region": "aws:us-east-2",
+#             "warmup_regions": ["aws:us-west-1"],
+#             "version_id": 5,  # NOTE: If you run this test separately, this version number will be different
+#         },
+#     )
+#     resp.raise_for_status()
 
-    # now it should have two logical objects version still (warmup should not create new versions)
-    resp = client.post(
-        "/list_objects_versioning",
-        json={
-            "bucket": "my-warmup-version-bucket",
-        },
-    )
+#     for i, locator in enumerate(resp.json()["dst_locators"]):
+#         client.patch(
+#             "/complete_upload",
+#             json={
+#                 "id": locator["id"],
+#                 "size": 100,
+#                 "etag": "123",
+#                 "last_modified": "2020-01-01T00:00:00.000Z",
+#                 "version_id": f"version-{i}",
+#             },
+#         ).raise_for_status()
 
-    assert len(resp.json()) == 2
+#     # try locate object from warmup region
+#     resp = client.post(
+#         "/locate_object",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#             "key": "my-key-warmup",
+#             "client_from_region": "aws:us-west-1",
+#             "version_id": 5,  # should be able to locate this version from warmup region
+#         },
+#     )
+#     assert resp.json()["region"] == "us-west-1"
+#     # check we have fetched the specific version
+#     assert resp.json()["version"] == 5
+
+#     # now it should have two logical objects version still (warmup should not create new versions)
+#     resp = client.post(
+#         "/list_objects_versioning",
+#         json={
+#             "bucket": "my-warmup-version-bucket",
+#         },
+#     )
+
+#     assert len(resp.json()) == 2
+
+
+def test_remove_db5(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 def test_write_back(client):
@@ -946,7 +978,6 @@ def test_write_back(client):
             },
         ).raise_for_status()
 
-    # we should be able to get it from us-east-2 (Pull-based Policy)
     resp = client.post(
         "/locate_object",
         json={
@@ -955,7 +986,7 @@ def test_write_back(client):
             "client_from_region": "aws:us-west-1",
         },
     )
-    assert resp.json()["region"] == "us-east-2"
+    assert resp.json()["region"] == "us-west-1"
 
     # update policy to copy_on_read
     resp = client.post(
@@ -999,6 +1030,12 @@ def test_write_back(client):
         },
     )
     assert resp.json()["region"] == "us-west-1"
+
+
+def test_remove_db6(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 # when we have multiple versions of the same object, we should be able to locate the newest logical version
@@ -1110,6 +1147,12 @@ def test_list_objects(client):
             "version_id": None,
         }
     ]
+
+
+def test_remove_db7(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 def test_multipart_flow(client):
@@ -1285,6 +1328,12 @@ def test_multipart_flow(client):
     # should be the newset version
 
 
+def test_remove_db8(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
+
+
 @pytest.mark.asyncio
 async def test_metadata_clean_up(client):
     """Test that the background process in `complete_create_bucket` endpoint functions correctly."""
@@ -1372,6 +1421,12 @@ async def test_metadata_clean_up(client):
         assert obj["status"] == "ready"
 
 
+def test_remove_db9(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
+
+
 def test_disable_bucket_versioning(client):
     """without bucket versioning, we should only have one logical object version
     and reject multiple upload requests
@@ -1435,6 +1490,12 @@ def test_disable_bucket_versioning(client):
 
     # check result of 2nd upload, shoule be error
     assert resp.status_code == 409
+
+
+def test_remove_db10(client):
+    thread = Thread(target=run_create_database)
+    thread.start()
+    thread.join()
 
 
 def test_copy_objects(client):

@@ -109,12 +109,14 @@ def init(
     if start_server:
         subprocess.Popen(
             f"cd {DEFAULT_STORE_SERVER_PATH}; "
-            "rm skystore.db; python3 -m uvicorn app:app --reload --port 3000",
+            "rm skystore.db; python3 -m uvicorn app:app --port 3000 --workers 32",
             shell=True,
             env=env,
         )
 
-    time.sleep(2)
+    # time.sleep(2)
+    # for postgres, need longer time to start
+    time.sleep(10)
 
     # Start the s3-proxy
     if os.path.exists(sky_s3_binary_path):
@@ -144,7 +146,7 @@ def register(
         server_addr = "localhost"
     else:
         # NOTE: ip address set to be the remote store-server addr
-        server_addr = "52.71.253.147"
+        server_addr = "54.183.193.192"
 
     try:
         with open(register_config, "r") as f:
