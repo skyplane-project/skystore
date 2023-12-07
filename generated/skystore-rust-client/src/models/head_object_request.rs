@@ -26,10 +26,7 @@ impl HeadObjectRequest {
         HeadObjectRequest {
             bucket,
             key,
-<<<<<<< HEAD
             version_id: None,
-=======
->>>>>>> 36c1789 (Record/list metrics changes)
         }
     }
 }

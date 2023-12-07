@@ -24,11 +24,8 @@ Method | HTTP request | Description
 [**locate_bucket_status**](DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 [**locate_object**](DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 [**locate_object_status**](DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
-<<<<<<< HEAD
 [**put_bucket_versioning**](DefaultApi.md#put_bucket_versioning) | **POST** /put_bucket_versioning | Put Bucket Versioning
-=======
 [**record_metrics**](DefaultApi.md#record_metrics) | **POST** /record_metrics | Record Metrics
->>>>>>> 36c1789 (Record/list metrics changes)
 [**register_buckets**](DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 [**set_multipart_id**](DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 [**start_create_bucket**](DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket

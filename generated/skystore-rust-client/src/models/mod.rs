@@ -76,13 +76,10 @@ pub mod patch_upload_multipart_upload_part;
 pub use self::patch_upload_multipart_upload_part::PatchUploadMultipartUploadPart;
 pub mod physical_location;
 pub use self::physical_location::PhysicalLocation;
-<<<<<<< HEAD
 pub mod put_bucket_versioning_request;
 pub use self::put_bucket_versioning_request::PutBucketVersioningRequest;
-=======
 pub mod record_metrics_request;
 pub use self::record_metrics_request::RecordMetricsRequest;
->>>>>>> 36c1789 (Record/list metrics changes)
 pub mod register_bucket_request;
 pub use self::register_bucket_request::RegisterBucketRequest;
 pub mod start_upload_request;

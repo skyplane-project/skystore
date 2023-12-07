@@ -22,21 +22,11 @@ pub struct DeleteObjectsResponse {
 }
 
 impl DeleteObjectsResponse {
-<<<<<<< HEAD
-    pub fn new(
-        locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>,
-        delete_markers: ::std::collections::HashMap<String, crate::models::DeleteMarker>,
-        op_type: ::std::collections::HashMap<String, String>,
-    ) -> DeleteObjectsResponse {
+    pub fn new(locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>, delete_markers: ::std::collections::HashMap<String, crate::models::DeleteMarker>, op_type: ::std::collections::HashMap<String, String>) -> DeleteObjectsResponse {
         DeleteObjectsResponse {
             locators,
             delete_markers,
             op_type,
-=======
-    pub fn new(locators: ::std::collections::HashMap<String, Vec<crate::models::LocateObjectResponse>>) -> DeleteObjectsResponse {
-        DeleteObjectsResponse {
-            locators,
->>>>>>> 36c1789 (Record/list metrics changes)
         }
     }
 }

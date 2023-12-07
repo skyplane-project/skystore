@@ -15,26 +15,14 @@
 pub struct DeleteObjectsRequest {
     #[serde(rename = "bucket")]
     pub bucket: String,
-<<<<<<< HEAD
     #[serde(rename = "object_identifiers")]
     pub object_identifiers: ::std::collections::HashMap<String, Vec<i32>>,
-    #[serde(
-        rename = "multipart_upload_ids",
-        skip_serializing_if = "Option::is_none"
-    )]
-=======
-    #[serde(rename = "keys")]
-    pub keys: Vec<String>,
     #[serde(rename = "multipart_upload_ids", skip_serializing_if = "Option::is_none")]
->>>>>>> 36c1789 (Record/list metrics changes)
     pub multipart_upload_ids: Option<Vec<String>>,
 }
 
 impl DeleteObjectsRequest {
-    pub fn new(
-        bucket: String,
-        object_identifiers: ::std::collections::HashMap<String, Vec<i32>>,
-    ) -> DeleteObjectsRequest {
+    pub fn new(bucket: String, object_identifiers: ::std::collections::HashMap<String, Vec<i32>>) -> DeleteObjectsRequest {
         DeleteObjectsRequest {
             bucket,
             object_identifiers,

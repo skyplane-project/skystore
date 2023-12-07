@@ -45,11 +45,8 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**locate_bucket_status**](docs/DefaultApi.md#locate_bucket_status) | **POST** /locate_bucket_status | Locate Bucket Status
 *DefaultApi* | [**locate_object**](docs/DefaultApi.md#locate_object) | **POST** /locate_object | Locate Object
 *DefaultApi* | [**locate_object_status**](docs/DefaultApi.md#locate_object_status) | **POST** /locate_object_status | Locate Object Status
-<<<<<<< HEAD
 *DefaultApi* | [**put_bucket_versioning**](docs/DefaultApi.md#put_bucket_versioning) | **POST** /put_bucket_versioning | Put Bucket Versioning
-=======
 *DefaultApi* | [**record_metrics**](docs/DefaultApi.md#record_metrics) | **POST** /record_metrics | Record Metrics
->>>>>>> 36c1789 (Record/list metrics changes)
 *DefaultApi* | [**register_buckets**](docs/DefaultApi.md#register_buckets) | **POST** /register_buckets | Register Buckets
 *DefaultApi* | [**set_multipart_id**](docs/DefaultApi.md#set_multipart_id) | **PATCH** /set_multipart_id | Set Multipart Id
 *DefaultApi* | [**start_create_bucket**](docs/DefaultApi.md#start_create_bucket) | **POST** /start_create_bucket | Start Create Bucket
@@ -100,11 +97,8 @@ Class | Method | HTTP request | Description
  - [PatchUploadMultipartUploadId](docs/PatchUploadMultipartUploadId.md)
  - [PatchUploadMultipartUploadPart](docs/PatchUploadMultipartUploadPart.md)
  - [PhysicalLocation](docs/PhysicalLocation.md)
-<<<<<<< HEAD
  - [PutBucketVersioningRequest](docs/PutBucketVersioningRequest.md)
-=======
  - [RecordMetricsRequest](docs/RecordMetricsRequest.md)
->>>>>>> 36c1789 (Record/list metrics changes)
  - [RegisterBucketRequest](docs/RegisterBucketRequest.md)
  - [StartUploadRequest](docs/StartUploadRequest.md)
  - [StartUploadResponse](docs/StartUploadResponse.md)

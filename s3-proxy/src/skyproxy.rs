@@ -995,15 +995,7 @@ impl S3 for SkyProxy {
         .unwrap();
 
         let mut tasks = tokio::task::JoinSet::new();
-<<<<<<< HEAD
         let locators = start_upload_resp.clone().locators;
-        let region = match locators.first() {
-            Some(loc) => loc.region.clone(),
-            None => String::new(),
-        };
-=======
-        let locators = start_upload_resp.locators;
->>>>>>> 9a9f4dc (fixed metrics to record before actual  get/put calls)
         let request_template = clone_put_object_request(&req.input, None);
         let input_blobs = split_streaming_blob(req.input.body.unwrap(), locators.len());
 

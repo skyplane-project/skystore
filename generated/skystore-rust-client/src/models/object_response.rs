@@ -28,11 +28,7 @@ pub struct ObjectResponse {
 }
 
 impl ObjectResponse {
-<<<<<<< HEAD
     pub fn new(bucket: String, key: String, size: u64) -> ObjectResponse {
-=======
-    pub fn new(bucket: String, key: String, size: u64, etag: String, last_modified: String) -> ObjectResponse {
->>>>>>> 36c1789 (Record/list metrics changes)
         ObjectResponse {
             bucket,
             key,

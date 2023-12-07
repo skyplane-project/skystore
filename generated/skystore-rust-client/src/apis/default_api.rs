@@ -177,17 +177,18 @@ pub enum LocateObjectStatusError {
     UnknownValue(serde_json::Value),
 }
 
-<<<<<<< HEAD
 /// struct for typed errors of method [`put_bucket_versioning`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PutBucketVersioningError {
-=======
+    Status422(crate::models::HttpValidationError),
+    UnknownValue(serde_json::Value),
+}
+
 /// struct for typed errors of method [`record_metrics`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RecordMetricsError {
->>>>>>> 36c1789 (Record/list metrics changes)
     Status422(crate::models::HttpValidationError),
     UnknownValue(serde_json::Value),
 }
@@ -277,25 +278,16 @@ pub async fn append_part(configuration: &configuration::Configuration, patch_upl
     }
 }
 
-<<<<<<< HEAD
-pub async fn check_version_setting(
-    configuration: &configuration::Configuration,
-    head_bucket_request: crate::models::HeadBucketRequest,
-) -> Result<bool, Error<CheckVersionSettingError>> {
+pub async fn check_version_setting(configuration: &configuration::Configuration, head_bucket_request: crate::models::HeadBucketRequest) -> Result<bool, Error<CheckVersionSettingError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!(
-        "{}/check_version_setting",
-        local_var_configuration.base_path
-    );
-    let mut local_var_req_builder =
-        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+    let local_var_uri_str = format!("{}/check_version_setting", local_var_configuration.base_path);
+    let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
-        local_var_req_builder =
-            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
     local_var_req_builder = local_var_req_builder.json(&head_bucket_request);
 
@@ -308,24 +300,13 @@ pub async fn check_version_setting(
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
-        let local_var_entity: Option<CheckVersionSettingError> =
-            serde_json::from_str(&local_var_content).ok();
-        let local_var_error = ResponseContent {
-            status: local_var_status,
-            content: local_var_content,
-            entity: local_var_entity,
-        };
+        let local_var_entity: Option<CheckVersionSettingError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
         Err(Error::ResponseError(local_var_error))
     }
 }
 
-pub async fn complete_create_bucket(
-    configuration: &configuration::Configuration,
-    create_bucket_is_completed: crate::models::CreateBucketIsCompleted,
-) -> Result<serde_json::Value, Error<CompleteCreateBucketError>> {
-=======
 pub async fn complete_create_bucket(configuration: &configuration::Configuration, create_bucket_is_completed: crate::models::CreateBucketIsCompleted) -> Result<serde_json::Value, Error<CompleteCreateBucketError>> {
->>>>>>> 36c1789 (Record/list metrics changes)
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -659,25 +640,16 @@ pub async fn list_objects(configuration: &configuration::Configuration, list_obj
     }
 }
 
-<<<<<<< HEAD
-pub async fn list_objects_versioning(
-    configuration: &configuration::Configuration,
-    list_object_request: crate::models::ListObjectRequest,
-) -> Result<Vec<crate::models::ObjectResponse>, Error<ListObjectsVersioningError>> {
+pub async fn list_objects_versioning(configuration: &configuration::Configuration, list_object_request: crate::models::ListObjectRequest) -> Result<Vec<crate::models::ObjectResponse>, Error<ListObjectsVersioningError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!(
-        "{}/list_objects_versioning",
-        local_var_configuration.base_path
-    );
-    let mut local_var_req_builder =
-        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+    let local_var_uri_str = format!("{}/list_objects_versioning", local_var_configuration.base_path);
+    let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
-        local_var_req_builder =
-            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
     local_var_req_builder = local_var_req_builder.json(&list_object_request);
 
@@ -690,24 +662,13 @@ pub async fn list_objects_versioning(
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
-        let local_var_entity: Option<ListObjectsVersioningError> =
-            serde_json::from_str(&local_var_content).ok();
-        let local_var_error = ResponseContent {
-            status: local_var_status,
-            content: local_var_content,
-            entity: local_var_entity,
-        };
+        let local_var_entity: Option<ListObjectsVersioningError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
         Err(Error::ResponseError(local_var_error))
     }
 }
 
-pub async fn list_parts(
-    configuration: &configuration::Configuration,
-    list_parts_request: crate::models::ListPartsRequest,
-) -> Result<Vec<crate::models::LogicalPartResponse>, Error<ListPartsError>> {
-=======
 pub async fn list_parts(configuration: &configuration::Configuration, list_parts_request: crate::models::ListPartsRequest) -> Result<Vec<crate::models::LogicalPartResponse>, Error<ListPartsError>> {
->>>>>>> 36c1789 (Record/list metrics changes)
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -823,14 +784,7 @@ pub async fn locate_object(configuration: &configuration::Configuration, locate_
 }
 
 /// Given the logical object information, return the status of the object. Currently only used for testing metadata cleanup.
-<<<<<<< HEAD
-pub async fn locate_object_status(
-    configuration: &configuration::Configuration,
-    locate_object_request: crate::models::LocateObjectRequest,
-) -> Result<Vec<crate::models::ObjectStatus>, Error<LocateObjectStatusError>> {
-=======
-pub async fn locate_object_status(configuration: &configuration::Configuration, locate_object_request: crate::models::LocateObjectRequest) -> Result<crate::models::ObjectStatus, Error<LocateObjectStatusError>> {
->>>>>>> 36c1789 (Record/list metrics changes)
+pub async fn locate_object_status(configuration: &configuration::Configuration, locate_object_request: crate::models::LocateObjectRequest) -> Result<Vec<crate::models::ObjectStatus>, Error<LocateObjectStatusError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -858,40 +812,18 @@ pub async fn locate_object_status(configuration: &configuration::Configuration, 
     }
 }
 
-<<<<<<< HEAD
-pub async fn put_bucket_versioning(
-    configuration: &configuration::Configuration,
-    put_bucket_versioning_request: crate::models::PutBucketVersioningRequest,
-) -> Result<Vec<crate::models::LocateBucketResponse>, Error<PutBucketVersioningError>> {
-=======
-pub async fn record_metrics(configuration: &configuration::Configuration, record_metrics_request: crate::models::RecordMetricsRequest) -> Result<serde_json::Value, Error<RecordMetricsError>> {
->>>>>>> 36c1789 (Record/list metrics changes)
+pub async fn put_bucket_versioning(configuration: &configuration::Configuration, put_bucket_versioning_request: crate::models::PutBucketVersioningRequest) -> Result<Vec<crate::models::LocateBucketResponse>, Error<PutBucketVersioningError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
 
-<<<<<<< HEAD
-    let local_var_uri_str = format!(
-        "{}/put_bucket_versioning",
-        local_var_configuration.base_path
-    );
-    let mut local_var_req_builder =
-        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
-
-    if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
-        local_var_req_builder =
-            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
-    }
-    local_var_req_builder = local_var_req_builder.json(&put_bucket_versioning_request);
-=======
-    let local_var_uri_str = format!("{}/record_metrics", local_var_configuration.base_path);
+    let local_var_uri_str = format!("{}/put_bucket_versioning", local_var_configuration.base_path);
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
-    local_var_req_builder = local_var_req_builder.json(&record_metrics_request);
->>>>>>> 36c1789 (Record/list metrics changes)
+    local_var_req_builder = local_var_req_builder.json(&put_bucket_versioning_request);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -902,30 +834,41 @@ pub async fn record_metrics(configuration: &configuration::Configuration, record
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
-<<<<<<< HEAD
-        let local_var_entity: Option<PutBucketVersioningError> =
-            serde_json::from_str(&local_var_content).ok();
-        let local_var_error = ResponseContent {
-            status: local_var_status,
-            content: local_var_content,
-            entity: local_var_entity,
-        };
-=======
-        let local_var_entity: Option<RecordMetricsError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_entity: Option<PutBucketVersioningError> = serde_json::from_str(&local_var_content).ok();
         let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
->>>>>>> 36c1789 (Record/list metrics changes)
         Err(Error::ResponseError(local_var_error))
     }
 }
 
-<<<<<<< HEAD
-pub async fn register_buckets(
-    configuration: &configuration::Configuration,
-    register_bucket_request: crate::models::RegisterBucketRequest,
-) -> Result<serde_json::Value, Error<RegisterBucketsError>> {
-=======
+pub async fn record_metrics(configuration: &configuration::Configuration, record_metrics_request: crate::models::RecordMetricsRequest) -> Result<serde_json::Value, Error<RecordMetricsError>> {
+    let local_var_configuration = configuration;
+
+    let local_var_client = &local_var_configuration.client;
+
+    let local_var_uri_str = format!("{}/record_metrics", local_var_configuration.base_path);
+    let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&record_metrics_request);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<RecordMetricsError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
 pub async fn register_buckets(configuration: &configuration::Configuration, register_bucket_request: crate::models::RegisterBucketRequest) -> Result<serde_json::Value, Error<RegisterBucketsError>> {
->>>>>>> 36c1789 (Record/list metrics changes)
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
