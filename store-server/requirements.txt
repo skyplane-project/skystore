@@ -11,3 +11,10 @@ sqlalchemy_repr
 rich
 jq
 greenlet
+numpy
+pandas
+networkx
+asyncpg
+psycopg2
+sqlalchemy_utils
+filelock

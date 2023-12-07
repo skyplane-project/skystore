@@ -1,10 +1,23 @@
 use s3s::dto::*;
+use serde::{Deserialize, Serialize};
+use std::io::{Result, Write};
 
 // copy_source struct
 pub struct CopySourceInfo {
     pub bucket: String,
     pub key: String,
     pub version_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OpMetrics {
+    pub timestamp: String,
+    pub latency: f32,
+    pub request_region: String,
+    pub destination_region: String,
+    pub key: String,
+    pub size: u64,
+    pub op: String,
 }
 
 #[allow(dead_code)]
@@ -359,4 +372,15 @@ pub fn parse_range(range: &str) -> (u64, Option<u64>) {
     }
     let end = parts[1].parse::<u64>().unwrap();
     (start, Some(end))
+}
+
+pub fn write_metrics_to_file(mut metrics: String, path: &str) -> Result<()> {
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(path)
+        .unwrap();
+    metrics += "\n";
+    file.write_all(metrics.as_bytes())
 }

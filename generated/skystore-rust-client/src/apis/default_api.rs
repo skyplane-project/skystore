@@ -231,6 +231,14 @@ pub enum StartWarmupError {
     UnknownValue(serde_json::Value),
 }
 
+/// struct for typed errors of method [`update_policy`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum UpdatePolicyError {
+    Status422(crate::models::HttpValidationError),
+    UnknownValue(serde_json::Value),
+}
+
 pub async fn append_part(
     configuration: &configuration::Configuration,
     patch_upload_multipart_upload_part: crate::models::PatchUploadMultipartUploadPart,
@@ -1268,6 +1276,44 @@ pub async fn start_warmup(
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
         let local_var_entity: Option<StartWarmupError> =
+            serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent {
+            status: local_var_status,
+            content: local_var_content,
+            entity: local_var_entity,
+        };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
+pub async fn update_policy(
+    configuration: &configuration::Configuration,
+    set_policy_request: crate::models::SetPolicyRequest,
+) -> Result<serde_json::Value, Error<UpdatePolicyError>> {
+    let local_var_configuration = configuration;
+
+    let local_var_client = &local_var_configuration.client;
+
+    let local_var_uri_str = format!("{}/update_policy", local_var_configuration.base_path);
+    let mut local_var_req_builder =
+        local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+        local_var_req_builder =
+            local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&set_policy_request);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<UpdatePolicyError> =
             serde_json::from_str(&local_var_content).ok();
         let local_var_error = ResponseContent {
             status: local_var_status,

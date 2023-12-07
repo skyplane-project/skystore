@@ -55,26 +55,27 @@ where
     }
 }
 
-pub fn split_streaming_blob(incoming: StreamingBlob, num_splits: usize) -> Vec<StreamingBlob> {
+pub fn split_streaming_blob(
+    incoming: StreamingBlob,
+    num_splits: usize,
+) -> (Vec<StreamingBlob>, Vec<i64>) {
     // Effectively an unbounded buffer.
     let mut publisher = flo_stream::Publisher::new(usize::MAX);
 
     // size_hint is required so the S3 client can set content length header properly.
     // that's why we just need it once in the beginning and keep it static.
     let hint = incoming.remaining_length();
-    // println!("hint: {:?}", hint);
 
     let mut result: Vec<StreamingBlob> = Vec::new();
+    let mut size: Vec<i64> = Vec::new();
     for _ in 0..num_splits {
         let sub = publisher.subscribe();
         let stream =
             WrapToResultStream::new(sub, RemainingLength::new_exact(hint.exact().unwrap()));
-        // let boxed: Box< dyn Stream<Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync>>>
-        //         + Send,
-        // > = Box::new(stream);
-        // let sub_blob = StreamingBlob::from(Body::from(hyper::Body::from(boxed)));
         let sub_blob = StreamingBlob::new(stream);
+        let stream_size = sub_blob.remaining_length().exact().unwrap();
         result.push(sub_blob);
+        size.push(stream_size as i64);
     }
 
     // TODO: make return a JoinHandle if caller needs it.
@@ -86,7 +87,7 @@ pub fn split_streaming_blob(incoming: StreamingBlob, num_splits: usize) -> Vec<S
         drop(publisher);
     });
 
-    result
+    (result, size)
 }
 
 #[cfg(test)]
@@ -108,7 +109,7 @@ mod test_flo {
 
         let blob: StreamingBlob = StreamingBlob::from(Body::from("hello world".to_string()));
 
-        let mut out = split_streaming_blob(blob, 2);
+        let (mut out, _) = split_streaming_blob(blob, 2);
         assert!(out.len() == 2);
 
         let sub_blob1 = out.pop().unwrap();

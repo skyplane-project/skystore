@@ -14,13 +14,20 @@ pub struct RegisterBucketRequest {
     pub bucket: String,
     #[serde(rename = "config")]
     pub config: Box<crate::models::Configuration>,
+    #[serde(rename = "versioning")]
+    pub versioning: bool,
 }
 
 impl RegisterBucketRequest {
-    pub fn new(bucket: String, config: crate::models::Configuration) -> RegisterBucketRequest {
+    pub fn new(
+        bucket: String,
+        config: crate::models::Configuration,
+        versioning: bool,
+    ) -> RegisterBucketRequest {
         RegisterBucketRequest {
             bucket,
             config: Box::new(config),
+            versioning,
         }
     }
 }

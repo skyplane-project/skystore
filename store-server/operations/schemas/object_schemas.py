@@ -7,6 +7,8 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Index,
+    Float,
 )
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field, NonNegativeInt
@@ -50,6 +52,10 @@ class DBLogicalObject(Base):
     physical_object_locators = relationship(
         "DBPhysicalObjectLocator",
         back_populates="logical_object",
+    )
+
+    __table_args__ = (
+        Index("ix_logical_objects_bucket_key_status", "bucket", "key", "status"),
     )
 
 
@@ -98,6 +104,12 @@ class DBPhysicalObjectLocator(Base):
         "DBLogicalObject",
         back_populates="physical_object_locators",
         foreign_keys=[logical_object_id],
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_physical_object_locators_bucket_key_status", "bucket", "key", "status"
+        ),
     )
 
 
@@ -156,6 +168,19 @@ class DBPhysicalMultipartUploadPart(Base):
     size = Column(Integer)
 
 
+class DBMetrics(Base):
+    __tablename__ = "metrics"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String, nullable=False)
+    latency = Column(Float, nullable=False)
+    request_region = Column(String, nullable=False)
+    destination_region = Column(String, nullable=False)
+    key = Column(String, nullable=False)
+    size = Column(BIGINT, nullable=False)
+    op = Column(String, nullable=False)
+
+
 class StartUploadRequest(LocateObjectRequest):
     is_multipart: bool
     # If we are performing a copy, we want to locate the source object physical locations,
@@ -163,9 +188,6 @@ class StartUploadRequest(LocateObjectRequest):
     # NOTE: for future, consider whether the bucket is needed here. Should we only do intra-bucket copy?
     copy_src_bucket: Optional[str] = None
     copy_src_key: Optional[str] = None
-
-    # Policy
-    policy: Optional[str] = "push"
 
 
 class StartUploadResponse(BaseModel):
@@ -192,7 +214,6 @@ class PatchUploadIsCompleted(BaseModel):
     etag: str
     last_modified: datetime
     version_id: Optional[str] = None
-    policy: Optional[str] = "push"
 
 
 class PatchUploadMultipartUploadId(BaseModel):
@@ -315,3 +336,18 @@ class DeleteObjectsIsCompleted(BaseModel):
     ids: List[int]
     multipart_upload_ids: Optional[List[str]] = None
     op_type: List[str]  # {'replace', 'delete', 'add'}
+
+
+class SetPolicyRequest(BaseModel):
+    get_policy: Optional[str] = None
+    put_policy: Optional[str] = None
+
+
+class Metrics(BaseModel):
+    timestamp: str
+    latency: float
+    request_region: str
+    destination_region: str
+    key: str
+    size: NonNegativeInt = Field(..., minimum=0, format="int64")
+    op: str

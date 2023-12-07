@@ -6,23 +6,55 @@ mod tests {
     use s3s::dto::*;
     use s3s::{S3Request, S3};
     use serial_test::serial;
+    use std::process::Command;
 
     lazy_static! {
         static ref REGIONS: Vec<String> = vec![
             "aws:us-west-1".to_string(),
             "aws:us-east-1".to_string(),
-            "gcp:us-west1".to_string(),
+            "gcp:us-west1-a".to_string(),
             "aws:eu-central-1".to_string(),
             "aws:us-west-1".to_string(),
             "aws:eu-north-1".to_string(),
             "aws:eu-south-1".to_string(),
         ];
         static ref CLIENT_FROM_REGION: String = "aws:us-west-1".to_string();
+        static ref TABLE_LIST: Vec<String> = vec![
+            "logical_objects".to_string(),
+            "logical_buckets".to_string(),
+            "physical_bucket_locators".to_string(),
+            "physical_object_locators".to_string(),
+            "logical_multipart_upload_parts".to_string(),
+            "physical_multipart_upload_parts".to_string(),
+            "metrics".to_string()
+        ];
+        static ref USER: String = "shaopu".to_string();
+        static ref DABNAME: String = "skystore".to_string();
     }
 
     fn generate_unique_bucket_name() -> String {
         let timestamp = chrono::Utc::now().timestamp_nanos();
         format!("my-bucket-{}", timestamp)
+    }
+
+    fn truncate_tables() {
+        for table in TABLE_LIST.iter() {
+            let output = Command::new("bash")
+                .arg("-c")
+                .arg(format!(
+                    "psql -U {0} -d {1} -c 'TRUNCATE TABLE {2} RESTART IDENTITY CASCADE;'",
+                    *USER, *DABNAME, *table
+                ))
+                .output()
+                .expect("Failed to execute command");
+
+            if output.status.success() {
+                println!("Command executed successfully");
+            } else {
+                eprintln!("Command failed to execute");
+                eprintln!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            }
+        }
     }
 
     async fn setup_sky_proxy() -> SkyProxy {
@@ -31,7 +63,7 @@ mod tests {
             CLIENT_FROM_REGION.clone(),
             true,
             true,
-            "push".to_string(),
+            ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "NULL".to_string(),
         )
@@ -44,7 +76,7 @@ mod tests {
             CLIENT_FROM_REGION.clone(),
             true,
             true,
-            "push".to_string(),
+            ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "Enabled".to_string(),
         )
@@ -61,6 +93,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_list_objects() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         // create a bucket
@@ -78,6 +111,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_then_get() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
         // let versioning_proxy = setup_sky_proxy_version_enabled().await;
 
@@ -170,6 +204,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_objects() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
@@ -222,6 +257,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_object() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
@@ -257,6 +293,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_copy_object() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         // create a bucket
@@ -316,6 +353,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_flow() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         // create a bucket
@@ -479,6 +517,7 @@ mod tests {
     #[serial]
     // #[ignore = "UploadPartCopy is not implemented in the emulator."]
     async fn test_multipart_flow_large() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         // create a bucket
@@ -669,6 +708,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_multipart_many_parts() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         // create a bucket
@@ -760,6 +800,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_abort_multipart_upload() {
+        truncate_tables();
         let proxy = setup_sky_proxy().await;
 
         let bucket_name = generate_unique_bucket_name();
@@ -850,6 +891,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_put_bucket_versioning() {
+        truncate_tables();
         // still use the proxy without explicit versioning enabled
         let proxy = setup_sky_proxy().await;
 

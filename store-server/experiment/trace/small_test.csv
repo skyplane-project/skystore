@@ -1,0 +1,12 @@
+timestamp,op,issue_region,obj_key,size
+2023-12-03 18:04:56,write,aws:us-west-2,ffa4948d,1389647
+2023-12-03 18:05:00,read,aws:us-east-1,ffa4948d,1389647
+2023-12-03 18:05:03,write,aws:us-east-1,74b3f5a3,2993624
+2023-12-03 18:05:08,read,aws:us-east-1,74b3f5a3,2993624
+2023-12-03 18:05:14,read,aws:us-east-2,ffa4948d,1389647
+2023-12-03 18:05:17,read,aws:us-east-1,ffa4948d,1389647
+2023-12-03 18:05:19,read,aws:us-east-1,74b3f5a3,2993624
+2023-12-03 18:05:26,write,aws:us-east-2,cbb12321,1444711
+2023-12-03 18:05:30,read,aws:us-east-2,74b3f5a3,2993624
+2023-12-03 18:05:38,read,aws:us-east-1,cbb12321,1444711
+2023-12-03 18:05:43,read,aws:us-west-2,ffa4948d,1389647

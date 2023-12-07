@@ -1,5 +1,6 @@
 use crate::objstore_client::ObjectStoreClient;
 use aws_sdk_s3::config::Region;
+use aws_smithy_client::hyper_ext;
 use reqwest::Url;
 use s3s::dto::*;
 use s3s::S3;
@@ -22,6 +23,7 @@ impl S3ObjectStoreClient {
             let url = Url::parse(&endpoint_url).unwrap();
             let host = url.host_str().unwrap().to_string();
             let region = host.split('.').nth(1).unwrap().to_string();
+
             aws_config::from_env()
                 .region(Region::new(region))
                 .endpoint_url(endpoint_url)
@@ -29,9 +31,21 @@ impl S3ObjectStoreClient {
                 .await
         };
 
-        let s3_config = aws_sdk_s3::config::Builder::from(&config)
-            .force_path_style(true)
-            .build();
+        let mut http_connector = hyper::client::HttpConnector::new();
+        http_connector.set_nodelay(true);
+        http_connector.enforce_http(false);
+        let https_connector = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_or_http()
+            .enable_http1()
+            .enable_http2()
+            .wrap_connector(http_connector);
+        let smithy_connector = hyper_ext::Adapter::builder().build(https_connector);
+
+        let mut builder = aws_sdk_s3::config::Builder::from(&config);
+        builder.set_http_connector(Some(smithy_connector));
+        let s3_config = builder.force_path_style(true).build();
+
         let sdk_client = aws_sdk_s3::client::Client::from_conf(s3_config);
         let s3_proxy = Proxy::from(sdk_client);
         Self { s3_proxy }

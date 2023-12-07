@@ -74,6 +74,8 @@ pub mod put_bucket_versioning_request;
 pub use self::put_bucket_versioning_request::PutBucketVersioningRequest;
 pub mod register_bucket_request;
 pub use self::register_bucket_request::RegisterBucketRequest;
+pub mod set_policy_request;
+pub use self::set_policy_request::SetPolicyRequest;
 pub mod start_upload_request;
 pub use self::start_upload_request::StartUploadRequest;
 pub mod start_upload_response;

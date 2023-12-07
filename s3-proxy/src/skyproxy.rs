@@ -2,16 +2,17 @@ use crate::objstore_client::ObjectStoreClient;
 use crate::utils::stream_utils::split_streaming_blob;
 use crate::utils::type_utils::*;
 
-use s3s::dto::*;
-use s3s::stream::ByteStream;
-use s3s::{S3Request, S3Response, S3Result, S3};
-
+use bytes::BytesMut;
 use chrono::Utc;
 use core::panic;
+use futures::StreamExt;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use s3s::stream::ByteStream;
+use s3s::{dto::*, Body};
+use s3s::{S3Request, S3Response, S3Result, S3};
 use skystore_rust_client::apis::configuration::Configuration;
 use skystore_rust_client::apis::default_api as apis;
-use skystore_rust_client::models;
+use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -21,7 +22,8 @@ pub struct SkyProxy {
     pub store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
     pub dir_conf: Configuration,
     pub client_from_region: String,
-    pub policy: String,
+    pub get_policy: String,
+    pub put_policy: String,
     pub skystore_bucket_prefix: String,
     pub version_enable: String,
 }
@@ -32,7 +34,7 @@ impl SkyProxy {
         client_from_region: String,
         local: bool,
         local_server: bool,
-        policy: String,
+        policy: (String, String),
         skystore_bucket_prefix: String,
         version_enable: String,
     ) -> Self {
@@ -188,7 +190,7 @@ impl SkyProxy {
                 "http://127.0.0.1:3000".to_string()
             } else {
                 // NOTE: ip address set to be the remote store-server addr
-                "http://54.183.123.82:3000".to_string()
+                "http://54.183.193.192:3000".to_string()
             },
             ..Default::default()
         };
@@ -197,11 +199,23 @@ impl SkyProxy {
             .await
             .expect("directory service not healthy");
 
+        // set policy
+        apis::update_policy(
+            &dir_conf,
+            models::SetPolicyRequest {
+                get_policy: Some(policy.0.clone()),
+                put_policy: Some(policy.1.clone()),
+            },
+        )
+        .await
+        .expect("update policy failed");
+
         Self {
             store_clients,
             dir_conf,
             client_from_region,
-            policy,
+            get_policy: policy.0,
+            put_policy: policy.1,
             skystore_bucket_prefix,
             version_enable,
         }
@@ -215,7 +229,8 @@ impl Clone for SkyProxy {
             dir_conf: self.dir_conf.clone(),
             client_from_region: self.client_from_region.clone(),
             skystore_bucket_prefix: self.skystore_bucket_prefix.clone(),
-            policy: self.policy.clone(),
+            get_policy: self.get_policy.clone(),
+            put_policy: self.put_policy.clone(),
             version_enable: self.version_enable.clone(),
         }
     }
@@ -231,7 +246,8 @@ impl std::fmt::Debug for SkyProxy {
             .field("store_clients", &client_keys)
             .field("dir_conf", &self.dir_conf)
             .field("client_from_region", &self.client_from_region)
-            .field("policy", &self.policy)
+            .field("policy", &self.get_policy)
+            .field("policy", &self.put_policy)
             .finish()
     }
 }
@@ -296,6 +312,7 @@ impl S3 for SkyProxy {
             max_keys: v2.max_keys,
             ..Default::default()
         };
+
         Ok(S3Response::new(output))
     }
     ///////////////////////////////////////////////////////////////////////////
@@ -546,21 +563,8 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<HeadObjectOutput>> {
         let vid = req.input.version_id.map(|id| id.parse::<i32>().unwrap());
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if vid.is_some() && !version_enabled {
-            return Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Version is not enabled.",
-            ));
-        }
+        // since we will detect whether we have enabled versioning the the server side,
+        // we don't need to check versioning status here
 
         // Directly call the control plane instead of going through the object store
         let head_resp = apis::head_object(
@@ -619,7 +623,6 @@ impl S3 for SkyProxy {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy = self.policy.clone();
 
                 let src_bucket = src_locator.bucket.clone();
                 let src_key = src_locator.key.clone();
@@ -657,7 +660,6 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
-                            policy: Some(policy),
                             version_id: head_output.output.version_id, // physical version
                         },
                     )
@@ -724,22 +726,6 @@ impl S3 for SkyProxy {
             .clone()
             .map(|id| id.parse::<i32>().unwrap());
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if vid.is_some() && !version_enabled {
-            return Err(s3s::S3Error::with_message(
-                s3s::S3ErrorCode::NoSuchKey,
-                "Version is not enabled.",
-            ));
-        }
-
         let locator = self.locate_object(bucket.clone(), key.clone(), vid).await?;
 
         match locator {
@@ -762,9 +748,8 @@ impl S3 for SkyProxy {
                         let dir_conf_clone = self.dir_conf.clone();
                         let client_from_region_clone = self.client_from_region.clone();
                         let store_clients_clone = self.store_clients.clone();
-                        let policy = self.policy.clone();
 
-                        let mut input_blobs = split_streaming_blob(data, 2); // locators.len() + 1
+                        let (mut input_blobs, _) = split_streaming_blob(data, 2); // locators.len() + 1
                         let response_blob = input_blobs.pop();
 
                         // Spawn a background task to store the object in the local object store
@@ -774,23 +759,23 @@ impl S3 for SkyProxy {
                                 models::StartUploadRequest {
                                     bucket: bucket.clone(),
                                     key: key.clone(),
-                                    client_from_region: client_from_region_clone.clone(),
+                                    client_from_region: client_from_region_clone,
                                     version_id: vid, // logical version
                                     is_multipart: false,
                                     copy_src_bucket: None,
                                     copy_src_key: None,
-                                    policy: Some(policy.clone()),
                                 },
                             )
                             .await;
 
+                            // When version setting is NULL:
                             // In case of multi-concurrent GET request with copy_on_read policy,
                             // only upload if start_upload returns successful, this indicates that the object is not in the local object store
                             // status neither pending nor ready
                             if let Ok(start_upload_resp) = start_upload_resp_result {
                                 let locators = start_upload_resp.locators;
                                 let request_template = clone_put_object_request(
-                                    &new_put_object_request(bucket.clone(), key.clone()),
+                                    &new_put_object_request(bucket, key),
                                     None,
                                 );
 
@@ -824,16 +809,39 @@ impl S3 for SkyProxy {
                                         models::PatchUploadIsCompleted {
                                             id: locator.id,
                                             size: head_resp.output.content_length as u64,
-                                            etag: e_tag.clone(),
+                                            etag: e_tag,
                                             last_modified: timestamp_to_string(
                                                 head_resp.output.last_modified.unwrap(),
                                             ),
-                                            policy: Some(policy.clone()),
                                             version_id: head_resp.output.version_id, // physical version
                                         },
                                     )
                                     .await
                                     .unwrap();
+
+                                    // let put_latency = start_time.elapsed().as_secs_f32();
+                                    // let system_time: SystemTime = Utc::now().into();
+                                    // let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                                    // // build the metrics struct
+                                    // let metrics = OpMetrics {
+                                    //     timestamp: timestamp_to_string(timestamp),
+                                    //     latency: put_latency,
+                                    //     request_region: client_from_region,
+                                    //     destination_region: locator.tag.clone(),
+                                    //     key: key,
+                                    //     size: head_resp.output.content_length as u64,
+                                    //     op: "PUT".to_string(),
+                                    // };
+
+                                    // // Serialize the instance to a JSON string.
+                                    // let serialized_metrics = serde_json::to_string(&metrics).unwrap();
+
+                                    // let res = write_metrics_to_file(serialized_metrics, "metrics.json");
+
+                                    // if let Err(e) = res {
+                                    //     panic!("Error writing metrics to file: {}", e);
+                                    // }
                                 }
                             }
                         });
@@ -849,32 +857,137 @@ impl S3 for SkyProxy {
                             version_id: vid.map(|id| id.to_string()), // logical version
                             ..Default::default()
                         });
+
+                        // let get_latency = start_time.elapsed().as_secs_f32();
+                        // let system_time: SystemTime = Utc::now().into();
+                        // let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                        // // build the metrics struct
+                        // let metrics = OpMetrics {
+                        //     timestamp: timestamp_to_string(timestamp),
+                        //     latency: get_latency,
+                        //     request_region: client_from_region,
+                        //     destination_region: location.tag.clone(),
+                        //     key: key_clone,
+                        //     size: get_resp.output.content_length as u64,
+                        //     op: "GET".to_string(),
+                        // };
+
+                        // // Serialize the instance to a JSON string.
+                        // let serialized_metrics = serde_json::to_string(&metrics).unwrap();
+
+                        // let res = write_metrics_to_file(serialized_metrics, "metrics.json");
+
+                        // if let Err(e) = res {
+                        //     panic!("Error writing metrics to file: {}", e);
+                        // }
+
                         return Ok(response);
                     } else {
-                        return self
+                        let mut res = self
                             .store_clients
                             .get(&self.client_from_region)
                             .unwrap()
                             .get_object(req.map_input(|mut input: GetObjectInput| {
                                 input.bucket = location.bucket;
                                 input.key = location.key;
-                                input.version_id = location.version_id; // physical version
+                                input.version_id = location.version_id; //logical version
                                 input
                             }))
-                            .await;
+                            .await?;
+
+                        let blob = res.output.body.unwrap();
+                        // blob impl Stream
+                        // read all bytes from blob
+                        let collected_blob = blob
+                            .fold(BytesMut::new(), |mut acc, chunk| async move {
+                                acc.extend_from_slice(&chunk.unwrap());
+                                acc
+                            })
+                            .await
+                            .freeze();
+                        let new_body = Some(StreamingBlob::from(Body::from(collected_blob)));
+                        res.output.body = new_body;
+                        res.output.version_id = vid.map(|id| id.to_string()); // logical version
+
+                        // let get_latency = start_time.elapsed().as_secs_f32();
+                        // let system_time: SystemTime = Utc::now().into();
+                        // let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                        // // build the metrics struct
+                        // let metrics = OpMetrics {
+                        //     timestamp: timestamp_to_string(timestamp),
+                        //     latency: get_latency,
+                        //     request_region: client_from_region,
+                        //     destination_region: location.tag.clone(),
+                        //     key: key_clone,
+                        //     size: res.output.content_length as u64,
+                        //     op: "GET".to_string(),
+                        // };
+
+                        // // Serialize the instance to a JSON string.
+                        // let serialized_metrics = serde_json::to_string(&metrics).unwrap();
+
+                        // let write_res = write_metrics_to_file(serialized_metrics, "metrics.json");
+
+                        // if let Err(e) = write_res {
+                        //     panic!("Error writing metrics to file: {}", e);
+                        // }
+
+                        return Ok(res);
                     }
                 } else {
-                    return self
+                    let mut res = self
                         .store_clients
                         .get(&location.tag)
                         .unwrap()
                         .get_object(req.map_input(|mut input: GetObjectInput| {
                             input.bucket = location.bucket;
                             input.key = location.key;
-                            input.version_id = location.version_id; // physical version
+                            input.version_id = location.version_id; // logical version
                             input
                         }))
-                        .await;
+                        .await?;
+                    let blob = res.output.body.unwrap();
+
+                    // Assuming 'stream' is your Stream of Bytes
+                    let collected_blob = blob
+                        .fold(BytesMut::new(), |mut acc, chunk| async move {
+                            acc.extend_from_slice(&chunk.unwrap());
+                            acc
+                        })
+                        .await
+                        .freeze();
+
+                    let new_body = Some(StreamingBlob::from(Body::from(collected_blob)));
+                    res.output.body = new_body;
+                    res.output.version_id = vid.map(|id| id.to_string()); // logical version
+
+                    // let get_latency = start_time.elapsed().as_secs_f32();
+                    // let system_time: SystemTime = Utc::now().into();
+                    // let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                    // // build the metrics struct
+                    // let metrics = OpMetrics {
+                    //     timestamp: timestamp_to_string(timestamp),
+                    //     latency: get_latency,
+                    //     request_region: client_from_region,
+                    //     destination_region: location.tag.clone(),
+                    //     key: key_clone,
+                    //     size: res.output.content_length as u64,
+                    //     op: "GET".to_string(),
+                    // };
+
+                    // // Serialize the instance to a JSON string.
+                    // let serialized_metrics = serde_json::to_string(&metrics).unwrap();
+
+                    // let write_res = write_metrics_to_file(serialized_metrics, "metrics.json");
+
+                    // if let Err(e) = write_res {
+                    //     panic!("Error writing metrics to file: {}", e);
+                    // }
+
+                    return Ok(res);
                 }
             }
             None => Err(s3s::S3Error::with_message(
@@ -891,18 +1004,9 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
 
-        // check bucket version setting
-        // Idempotent PUT should only perform when versioning is null/suspended
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
+        // let start_time = Instant::now();
 
-        if !version_enabled {
+        if self.version_enable == *"NULL" {
             let locator = self
                 .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
                 .await?;
@@ -924,27 +1028,26 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: None,
                 copy_src_key: None,
-                policy: Some(self.policy.clone()),
             },
         )
         .await
         .unwrap();
 
         let mut tasks = tokio::task::JoinSet::new();
-        let locators = start_upload_resp.clone().locators;
+        let locators = start_upload_resp.locators;
         let request_template = clone_put_object_request(&req.input, None);
-        let input_blobs = split_streaming_blob(req.input.body.unwrap(), locators.len());
+        let (input_blobs, sizes) = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
         let vid = locators[0].version.map(|id| id.to_string()); // logical version
 
         locators
             .into_iter()
             .zip(input_blobs.into_iter())
-            .for_each(|(locator, input_blob)| {
+            .zip(sizes.into_iter())
+            .for_each(|((locator, input_blob), size)| {
                 let conf = self.dir_conf.clone();
                 let client: Arc<Box<dyn ObjectStoreClient>> =
                     self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy_clone = self.policy.clone();
                 let req = S3Request::new(clone_put_object_request(
                     &request_template,
                     Some(input_blob),
@@ -955,51 +1058,57 @@ impl S3 for SkyProxy {
                     input
                 });
 
-                let (content_length, bucket, key) = (
-                    req.input.content_length,
-                    locator.bucket.clone(),
-                    locator.key.clone(),
-                );
+                let content_length = req.input.content_length;
+                let size_to_get = if let Some(content_length) = content_length {
+                    content_length
+                } else {
+                    size
+                };
+
+                // let client_from_region = self.client_from_region.clone();
+                // let key = req.input.key.clone();
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
-
-                    // Retrieve the object metatada through HEAD request.
-                    // So we get the proper size, etag, and last_modified.
-                    // No need to fetch from S3 if content length is provided, assume (size = input.content_length, last_modified=current time)
-                    let (size_to_set, last_modified) = match content_length {
-                        Some(length) => (length, current_timestamp_string()),
-                        None => {
-                            // Fetch from S3 when content_length is not provided
-                            let head_resp = client
-                                .head_object(S3Request::new(new_head_object_request(
-                                    bucket,
-                                    key,
-                                    put_resp.output.version_id.clone(), // physical version
-                                )))
-                                .await
-                                .unwrap();
-                            (
-                                head_resp.output.content_length,
-                                timestamp_to_string(head_resp.output.last_modified.unwrap()),
-                            )
-                        }
-                    };
+                    let last_modified = current_timestamp_string();
 
                     apis::complete_upload(
                         &conf,
                         models::PatchUploadIsCompleted {
                             id: locator.id,
-                            size: size_to_set as u64,
+                            size: size_to_get as u64,
                             etag: e_tag.clone(),
                             last_modified,
-                            policy: Some(policy_clone),
                             version_id: put_resp.output.version_id, // physical version
                         },
                     )
                     .await
                     .unwrap();
+
+                    // let put_latency = start_time.elapsed().as_secs_f32();
+                    // let system_time: SystemTime = Utc::now().into();
+                    // let timestamp: s3s::dto::Timestamp = system_time.into();
+
+                    // // build the metrics struct
+                    // let metrics = OpMetrics {
+                    //     timestamp: timestamp_to_string(timestamp),
+                    //     latency: put_latency,
+                    //     request_region: client_from_region,
+                    //     destination_region: locator.tag.clone(),
+                    //     key,
+                    //     size: size_to_get as u64,
+                    //     op: "PUT".to_string(),
+                    // };
+
+                    // // Serialize the instance to a JSON string.
+                    // let serialized_metrics = serde_json::to_string(&metrics).unwrap();
+
+                    // let res = write_metrics_to_file(serialized_metrics, "metrics.json");
+
+                    // if let Err(e) = res {
+                    //     panic!("Error writing metrics to file: {}", e);
+                    // }
 
                     e_tag
                 });
@@ -1010,11 +1119,13 @@ impl S3 for SkyProxy {
             e_tags.push(e_tag);
         }
 
-        Ok(S3Response::new(PutObjectOutput {
+        let res = Ok(S3Response::new(PutObjectOutput {
             e_tag: e_tags.pop(),
-            version_id: vid.clone(), // logical version
+            version_id: vid, // logical version
             ..Default::default()
-        }))
+        }));
+
+        return res;
     }
 
     #[tracing::instrument(level = "info")]
@@ -1030,6 +1141,20 @@ impl S3 for SkyProxy {
             .iter()
             // .map(|obj| obj.key.clone())
             .collect();
+
+        if self.version_enable == *"NULL"
+            && req
+                .input
+                .delete
+                .objects
+                .iter()
+                .any(|obj| obj.version_id.is_some())
+        {
+            return Err(s3s::S3Error::with_message(
+                s3s::S3ErrorCode::NoSuchKey,
+                "Version is not enabled.",
+            ));
+        }
 
         // transform the object identifiers vcector to HashMap
         let mut id_map: HashMap<String, Vec<i32>> = HashMap::new();
@@ -1067,7 +1192,8 @@ impl S3 for SkyProxy {
                 //      Other errors: return delete failures
                 // 2) Partial Failure: some object can be deleted, some not
                 //      Deal with it on server & dataplane side
-                return Ok(S3Response::new(DeleteObjectsOutput {
+
+                let res = S3Response::new(DeleteObjectsOutput {
                     deleted: Some(
                         object_identifiers
                             .iter()
@@ -1081,7 +1207,9 @@ impl S3 for SkyProxy {
                     ),
                     errors: None,
                     ..Default::default()
-                }));
+                });
+
+                return Ok(res);
             }
         };
 
@@ -1118,6 +1246,9 @@ impl S3 for SkyProxy {
                         )),
                         Err(_) => Err((
                             key_clone.clone(),
+                            locator.id,
+                            version, // logical version
+                            op_type_key,
                             format!("Failed to delete object with key: {}", key_clone),
                         )),
                     }
@@ -1128,7 +1259,7 @@ impl S3 for SkyProxy {
         // Collect results and complete delete objects
         let mut key_to_results: HashMap<
             String,
-            Vec<Result<(i32, Option<String>, String), String>>,
+            Vec<Result<(i32, Option<String>, String), (i32, Option<String>, String, String)>>,
         > = HashMap::new();
         while let Some(result) = tasks.join_next().await {
             match result {
@@ -1140,8 +1271,13 @@ impl S3 for SkyProxy {
                             op_type,
                         )));
                     }
-                    Err((key, err)) => {
-                        key_to_results.entry(key).or_default().push(Err(err));
+                    Err((key, id, version, op_type, err)) => {
+                        key_to_results.entry(key).or_default().push(Err((
+                            id,
+                            version.map(|id| id.to_string()),
+                            op_type,
+                            err,
+                        )));
                     }
                 },
                 // TODO: how to handle this?
@@ -1162,6 +1298,14 @@ impl S3 for SkyProxy {
 
             // complete delete objects
             let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
+            // we might need to deal with fails ids
+            let fails_empty = fails.is_empty();
+            let fails_ids: Vec<_> = fails.into_iter().filter_map(Result::err).collect();
+            let err_msg = fails_ids
+                .iter()
+                .map(|fail| fail.3.clone())
+                .collect::<Vec<String>>()
+                .join(",");
             let mut ids = Vec::new();
             let mut versions = Vec::new();
             let mut op_types = Vec::new();
@@ -1183,27 +1327,82 @@ impl S3 for SkyProxy {
                 .unwrap();
             }
 
-            if fails.is_empty() {
-                // one key might have several versions being deleted
-                // the versions vector should store logical versions
-                for version in &versions {
+            if self.version_enable == *"NULL" {
+                if fails_empty {
+                    // if version is not enabled, the version vector must be empty
                     deleted_objects.push(DeletedObject {
                         key: Some(key.clone()),
-                        delete_marker: delete_markers_map[&key].delete_marker, // TODO: add versioning support
-                        delete_marker_version_id: delete_markers_map[&key]
-                            .version_id
-                            .clone()
-                            .map(|id| id.to_string()), // logical version
-                        version_id: version.clone(),
+                        delete_marker: false,
+                        ..Default::default()
+                    });
+                } else {
+                    errors.push(Error {
+                        key: Some(key),
+                        code: Some("InternalError".to_string()),
+                        message: Some(err_msg),
+                        ..Default::default()
                     });
                 }
             } else {
-                errors.push(Error {
-                    key: Some(key),
-                    code: Some("InternalError".to_string()),
-                    message: Some(fails.into_iter().map(Result::unwrap_err).collect()),
-                    ..Default::default()
-                });
+                // if we failed to delete the logical object, and this object is not a delete marker,
+                // we need to add it to the errors vector
+                if !fails_empty && !delete_markers_map[&key].delete_marker {
+                    errors.push(Error {
+                        key: Some(key),
+                        code: Some("InternalError".to_string()),
+                        message: Some(err_msg),
+                        ..Default::default()
+                    });
+                } else {
+                    // now the version vector can be empty or not
+                    // first dealing with the success vector
+                    if versions.is_empty() {
+                        deleted_objects.push(DeletedObject {
+                            key: Some(key.clone()),
+                            delete_marker: true,
+                            delete_marker_version_id: delete_markers_map[&key]
+                                .version_id
+                                .as_ref()
+                                .map(|id| id.to_string()), // logical version
+                            version_id: None,
+                        });
+                    } else {
+                        for version in &versions {
+                            deleted_objects.push(DeletedObject {
+                                key: Some(key.clone()),
+                                delete_marker: true,
+                                delete_marker_version_id: delete_markers_map[&key]
+                                    .version_id
+                                    .as_ref()
+                                    .map(|id| id.to_string()), // logical version
+                                version_id: version.clone(),
+                            });
+                        }
+                    }
+
+                    let mut fails_ids_vec = Vec::new();
+                    // let mut fails_version_vec = Vec::new();
+                    let mut fails_op_type_vec = Vec::new();
+
+                    // deal with fails vector, fails_ids vector might be empty
+                    for (id, _, op_type, _) in &fails_ids {
+                        fails_ids_vec.push(*id);
+                        // fails_version_vec.push(version);
+                        fails_op_type_vec.push(op_type.clone());
+                    }
+                    if !fails_ids_vec.is_empty() {
+                        apis::complete_delete_objects(
+                            &self.dir_conf,
+                            models::DeleteObjectsIsCompleted {
+                                ids: fails_ids_vec,
+                                multipart_upload_ids: None,
+                                op_type: fails_op_type_vec,
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    }
+                }
             }
         }
 
@@ -1358,7 +1557,6 @@ impl S3 for SkyProxy {
                 is_multipart: false,
                 copy_src_bucket: Some(src_bucket.to_string()),
                 copy_src_key: Some(src_key.to_string()),
-                policy: Some(self.policy.clone()),
             },
         )
         .await
@@ -1377,7 +1575,6 @@ impl S3 for SkyProxy {
             .for_each(|(locator, (src_bucket, src_key))| {
                 let conf = self.dir_conf.clone();
                 let client = self.store_clients.get(&locator.tag).unwrap().clone();
-                let policy_clone = self.policy.clone();
                 let version_clone = locator.version_id.clone(); // physical version
 
                 tasks.spawn(async move {
@@ -1412,7 +1609,6 @@ impl S3 for SkyProxy {
                             last_modified: timestamp_to_string(
                                 head_output.output.last_modified.unwrap(),
                             ),
-                            policy: Some(policy_clone),
                             version_id: head_output.output.version_id, // physical version
                         },
                     )
@@ -1428,7 +1624,7 @@ impl S3 for SkyProxy {
             e_tags.push(e_tag);
         }
 
-        Ok(S3Response::new(CopyObjectOutput {
+        let res = S3Response::new(CopyObjectOutput {
             copy_object_result: Some(CopyObjectResult {
                 e_tag: e_tags.pop(),
                 ..Default::default()
@@ -1436,7 +1632,9 @@ impl S3 for SkyProxy {
             copy_source_version_id: version.map(|id| id.to_string()), // logical version
             version_id: vid,                                          // logical version
             ..Default::default()
-        }))
+        });
+
+        Ok(res)
     }
 
     #[tracing::instrument(level = "info")]
@@ -1448,23 +1646,13 @@ impl S3 for SkyProxy {
             .locate_object(req.input.bucket.clone(), req.input.key.clone(), None)
             .await?;
 
-        let version_enabled = apis::check_version_setting(
-            &self.dir_conf,
-            models::HeadBucketRequest {
-                bucket: req.input.bucket.clone(),
-            },
-        )
-        .await
-        .unwrap();
-
-        if locator.is_some() && !version_enabled {
+        if locator.is_some() && self.version_enable == *"NULL" {
             return Err(s3s::S3Error::with_message(
                 s3s::S3ErrorCode::InternalError,
-                "Object already exists. TODO for multipart upload overwite.",
+                "Object already exists.",
             ));
         };
 
-        let policy = self.policy.clone();
         let upload_resp = apis::start_upload(
             &self.dir_conf,
             models::StartUploadRequest {
@@ -1475,7 +1663,6 @@ impl S3 for SkyProxy {
                 is_multipart: true,
                 copy_src_bucket: None,
                 copy_src_key: None,
-                policy: Some(policy),
             },
         )
         .await
@@ -1509,12 +1696,14 @@ impl S3 for SkyProxy {
             .unwrap();
         }
 
-        Ok(S3Response::new(CreateMultipartUploadOutput {
+        let res = S3Response::new(CreateMultipartUploadOutput {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
             upload_id: upload_resp.multipart_upload_id,
             ..Default::default()
-        }))
+        });
+
+        Ok(res)
     }
 
     #[tracing::instrument(level = "info")]
@@ -1585,7 +1774,7 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        Ok(S3Response::new(ListMultipartUploadsOutput {
+        let res = S3Response::new(ListMultipartUploadsOutput {
             uploads: Some(
                 resp.into_iter()
                     .map(|u| MultipartUpload {
@@ -1598,7 +1787,9 @@ impl S3 for SkyProxy {
             bucket: Some(req.input.bucket.clone()),
             prefix: req.input.prefix.clone(),
             ..Default::default()
-        }))
+        });
+
+        Ok(res)
     }
 
     #[tracing::instrument(level = "info")]
@@ -1617,22 +1808,25 @@ impl S3 for SkyProxy {
         )
         .await
         {
-            Ok(resp) => Ok(S3Response::new(ListPartsOutput {
-                parts: Some(
-                    resp.into_iter()
-                        .map(|p| Part {
-                            part_number: p.part_number,
-                            size: p.size as i64,
-                            e_tag: Some(p.etag),
-                            ..Default::default()
-                        })
-                        .collect(),
-                ),
-                bucket: Some(req.input.bucket.clone()),
-                key: Some(req.input.key.clone()),
-                upload_id: Some(req.input.upload_id.clone()),
-                ..Default::default()
-            })),
+            Ok(resp) => {
+                let res = S3Response::new(ListPartsOutput {
+                    parts: Some(
+                        resp.into_iter()
+                            .map(|p| Part {
+                                part_number: p.part_number,
+                                size: p.size as i64,
+                                e_tag: Some(p.etag),
+                                ..Default::default()
+                            })
+                            .collect(),
+                    ),
+                    bucket: Some(req.input.bucket.clone()),
+                    key: Some(req.input.key.clone()),
+                    upload_id: Some(req.input.upload_id.clone()),
+                    ..Default::default()
+                });
+                Ok(res)
+            }
             Err(err) => {
                 error!("list_parts failed: {:?}", err);
                 Err(s3s::S3Error::with_message(
@@ -1674,7 +1868,7 @@ impl S3 for SkyProxy {
             .remaining_length()
             .exact()
             .unwrap();
-        let body_clones = split_streaming_blob(req.input.body.unwrap(), resp.len());
+        let (body_clones, _) = split_streaming_blob(req.input.body.unwrap(), resp.len());
         resp.into_iter()
             .zip(body_clones.into_iter())
             .for_each(|(locator, body)| {
@@ -1699,7 +1893,7 @@ impl S3 for SkyProxy {
                         models::PatchUploadMultipartUploadPart {
                             id: locator.id,
                             part_number,
-                            etag: etag.clone(),
+                            etag,
                             size: content_length as u64,
                         },
                     )
@@ -1850,14 +2044,16 @@ impl S3 for SkyProxy {
         .unwrap();
         assert!(parts.len() == 1, "parts: {parts:?}");
 
-        Ok(S3Response::new(UploadPartCopyOutput {
+        let res = S3Response::new(UploadPartCopyOutput {
             copy_part_result: Some(CopyPartResult {
                 e_tag: Some(parts[0].etag.clone()),
                 ..Default::default()
             }),
             copy_source_version_id: vid.map(|id| id.to_string()), // logical version
             ..Default::default()
-        }))
+        });
+
+        Ok(res)
     }
 
     #[tracing::instrument(level = "info")]
@@ -1865,6 +2061,8 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<CompleteMultipartUploadInput>,
     ) -> S3Result<S3Response<CompleteMultipartUploadOutput>> {
+        // let start_time = Instant::now();
+
         let locators = match apis::continue_upload(
             &self.dir_conf,
             models::ContinueUploadRequest {
@@ -1951,7 +2149,6 @@ impl S3 for SkyProxy {
                     etag: resp.output.e_tag.unwrap(),
                     size: head_resp.output.content_length as u64,
                     last_modified: timestamp_to_string(head_resp.output.last_modified.unwrap()),
-                    policy: Some(self.policy.clone()),
                     version_id: resp.output.version_id, // physical version
                 },
             )
@@ -1970,13 +2167,15 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
-        Ok(S3Response::new(CompleteMultipartUploadOutput {
+        let res = S3Response::new(CompleteMultipartUploadOutput {
             bucket: Some(req.input.bucket.clone()),
             key: Some(req.input.key.clone()),
             e_tag: Some(head_resp.etag),
             version_id: head_resp.version_id.map(|id| id.to_string()), // logical version
             ..Default::default()
-        }))
+        });
+
+        Ok(res)
     }
 
     #[tracing::instrument(level = "info")]

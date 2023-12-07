@@ -1,14 +1,11 @@
-# PatchUploadIsCompleted
+# SetPolicyRequest
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **i32** |  | 
-**size** | **u64** |  | 
-**etag** | **String** |  | 
-**last_modified** | **String** |  | 
-**version_id** | Option<**String**> |  | [optional]
+**get_policy** | Option<**String**> |  | [optional]
+**put_policy** | Option<**String**> |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

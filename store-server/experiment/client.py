@@ -156,7 +156,8 @@ def create_instance(
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
             "skystore_bucket_prefix": "skystore",
-            "policy": "write_local",
+            "put_policy": "replicate_all",
+            "get_policy": "cheapest",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(
@@ -186,8 +187,8 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/skyplane-project/skystore.git"
-        clone_cmd = f"git clone {url}; cd skystore; "
+        url = "https://github.com/shaopu1225/skystore.git"
+        clone_cmd = f"git clone {url}; cd skystore; git switch experiment; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
@@ -215,8 +216,8 @@ def create_instance(
         cmd3 = f"cd /home/ubuntu/skystore; \
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
-                /home/ubuntu/.cargo/bin/cargo build; \
-                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > /dev/null 2>&1 &"
+                /home/ubuntu/.cargo/bin/cargo build --release; \
+                nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output 2>&1 &"
         server.run_command(cmd1)
         server.run_command(cmd2)
         server.run_command(cmd3)
@@ -281,7 +282,7 @@ def issue_requests(trace_file_path: str):
     print("Create instance finished.")
 
     # wait for the init background task to finish
-    time.sleep(10)
+    time.sleep(20)
 
     previous_timestamp = None
     s3_args = "--endpoint-url http://127.0.0.1:8002 --no-verify-ssl"  # get/put object requires signature
@@ -306,9 +307,9 @@ def issue_requests(trace_file_path: str):
                 if op == "write":
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
-                    cmd = f"aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
+                    cmd = f"time aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
-                    cmd = f"aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
+                    cmd = f"time aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
 
                 print(f"Executing command: {cmd}")
                 stdout, stderr = server.run_command(cmd)

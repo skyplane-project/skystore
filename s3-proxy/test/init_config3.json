@@ -1,0 +1,7 @@
+{
+    "init_regions": [
+        "aws:us-west-1"
+    ],
+    "client_from_region": "aws:us-west-1",
+    "skystore_bucket_prefix" : "skystore"
+}

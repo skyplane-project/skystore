@@ -3,10 +3,10 @@
     "config": {
         "physical_locations": [
             {
-                "name": "aws:us-east-2",
+                "name": "aws:us-west-1",
                 "cloud": "aws",
-                "region": "us-east-2",
-                "bucket": "my-sky-bucket-2",
+                "region": "us-west-1",
+                "bucket": "my-sky-bucket-1",
                 "is_primary": true
             }
         ]
