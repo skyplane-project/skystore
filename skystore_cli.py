@@ -154,7 +154,11 @@ def register(
 
         resp = requests.post(
             f"http://{server_addr}:3000/register_buckets",
-            json={"bucket": config["bucket"], "config": config["config"], "versioning": config["versioning"],},
+            json={
+                "bucket": config["bucket"],
+                "config": config["config"],
+                "versioning": config["versioning"],
+            },
         )
         if resp.status_code == 200:
             typer.secho("Successfully registered.", fg="green")

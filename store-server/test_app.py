@@ -4,6 +4,7 @@ from app import app, rm_lock_on_timeout
 from operations.utils.db import run_create_database
 from threading import Thread
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as client:

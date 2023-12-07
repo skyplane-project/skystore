@@ -15,7 +15,7 @@ use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{SystemTime};
+use std::time::SystemTime;
 use tracing::error;
 
 pub struct SkyProxy {

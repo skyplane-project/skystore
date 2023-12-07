@@ -45,8 +45,8 @@ from typing import List
 from datetime import datetime
 from itertools import chain
 from operations.policy.placement_policy import get_placement_policy
-from .policy.transfer_policy import get_transfer_policy
-from .bucket_operations import init_region_tags
+from operations.policy.transfer_policy import get_transfer_policy
+from operations.bucket_operations import init_region_tags
 import UltraDict as ud
 
 router = APIRouter()
@@ -643,9 +643,7 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     # construct the put policy based on the policy name
-    put_policy = get_placement_policy(
-        policy_ultra_dict["put_policy"], init_region_tags
-    )
+    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
 
     res = (
         (
@@ -981,9 +979,7 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    put_policy = get_placement_policy(
-        policy_ultra_dict["put_policy"], init_region_tags
-    )
+    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
 
     stmt = (
         select(DBPhysicalObjectLocator)
@@ -1044,7 +1040,6 @@ async def set_multipart_id(
 async def append_part(
     request: PatchUploadMultipartUploadPart, db: Session = Depends(get_session)
 ):
-
     stmt = (
         select(DBPhysicalObjectLocator)
         # .join(DBLogicalObject)
@@ -1360,7 +1355,6 @@ async def list_objects_versioning(
 async def head_object(
     request: HeadObjectRequest, db: Session = Depends(get_session)
 ) -> HeadObjectResponse:
-
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(

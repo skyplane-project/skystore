@@ -11,6 +11,7 @@ app = FastAPI()
     you can include this script into your client script.
 """
 
+
 @app.post("/send_message/")
 async def send_message(message, host):
     async with httpx.AsyncClient() as client:
@@ -27,6 +28,7 @@ def read_metrics():
             metrics.append(json.loads(line))
     return metrics
 
+
 async def main():
     last_file_line = 0
     sleep_time = 0
@@ -38,15 +40,19 @@ async def main():
             continue
         print("new metrics", metrics[last_file_line:])
         for metric in metrics[last_file_line:]:
-            await send_message({
-                "timestamp": metric["timestamp"],
-                "latency": metric["latency"],
-                "request_region": metric["request_region"],
-                "destination_region": metric["destination_region"],
-                "key": metric["key"],
-                "size": metric["size"],
-                "op": metric["op"]
-                }, "54.215.122.16")
+            await send_message(
+                {
+                    "timestamp": metric["timestamp"],
+                    "latency": metric["latency"],
+                    "request_region": metric["request_region"],
+                    "destination_region": metric["destination_region"],
+                    "key": metric["key"],
+                    "size": metric["size"],
+                    "op": metric["op"],
+                },
+                "54.215.122.16",
+            )
         last_file_line = len(metrics)
+
 
 asyncio.run(main())

@@ -1,6 +1,6 @@
 from typing import List
-from ..schemas.object_schemas import StartUploadRequest
-from .utils.helpers import make_nx_graph
+from operations.schemas.object_schemas import StartUploadRequest
+from operations.policy.utils.helpers import make_nx_graph
 
 
 class PlacementPolicy:
@@ -30,10 +30,10 @@ class SingleRegionWrite(PlacementPolicy):
         Returns:
             List[str]: single region to write to
         """
-        
+
         # NOTE: hard coded for now; make this a variable init in def __init__
         single_store_region = "aws:us-west-1"
-        
+
         assert single_store_region in self.init_regions
         return [single_store_region]
 
@@ -82,7 +82,7 @@ class PushonWrite(PlacementPolicy):
         Returns:
             List[str]: the regions to push to, including the primary region and the regions we want to push to
         """
-        
+
         # hard coded for now; make this a variable init in def __init__
         push_regions = ["aws:us-west-1", "aws:us-east-1"]
         # assert all push regions in init regions
@@ -131,9 +131,7 @@ class LocalWrite(PlacementPolicy):
         return "write_local"
 
 
-def get_placement_policy(
-    name: str, init_regions: List[str]
-) -> PlacementPolicy:
+def get_placement_policy(name: str, init_regions: List[str]) -> PlacementPolicy:
     if name == "single_region":
         return SingleRegionWrite(init_regions)
     elif name == "replicate_all":
