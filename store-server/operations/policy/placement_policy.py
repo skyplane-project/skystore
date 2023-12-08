@@ -1,6 +1,7 @@
 from typing import List
 from operations.schemas.object_schemas import StartUploadRequest
 from operations.policy.utils.helpers import make_nx_graph
+from operations.policy.transfer_policy import DataTransferGraph
 
 
 class PlacementPolicy:
@@ -48,7 +49,7 @@ class ReplicateAll(PlacementPolicy):
 
     def __init__(self, init_regions: List[str]) -> None:
         super().__init__(init_regions)
-        self.stat_graph = make_nx_graph()
+        self.stat_graph = DataTransferGraph.get_instance()
         pass
 
     def place(self, req: StartUploadRequest) -> List[str]:

@@ -124,7 +124,7 @@ engine = create_async_engine(
     echo=LOG_SQL,
     future=True,
     # NOTE: only enable this when you are testing
-    # poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
+    poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
 )
 
 

@@ -55,13 +55,14 @@ router = APIRouter()
 # initialize a ultradict to store the policy name in shared memory
 # so that can be used by multiple workers started by uvicorn
 # NOTE: we cannot store the class instance directly
-policy_ultra_dict = None
-try:
-    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True, buffer_size=10000000)
-except Exception as _:
-    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False, buffer_size=10000000)
-policy_ultra_dict["get_policy"] = pkl.dumps(TransferPolicy(), -1)
-policy_ultra_dict["put_policy"] = pkl.dumps(PlacementPolicy(), -1)
+
+# policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False, buffer_size=10000000)
+# policy_ultra_dict["get_policy"] = pkl.dumps(TransferPolicy(), protocol=pkl.HIGHEST_PROTOCOL)
+# policy_ultra_dict["put_policy"] = pkl.dumps(PlacementPolicy(), protocol=pkl.HIGHEST_PROTOCOL)
+
+policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict")
+policy_ultra_dict["get_policy"] = ""
+policy_ultra_dict["put_policy"] = ""
 
 
 @router.post("/update_policy")
@@ -71,17 +72,21 @@ async def update_policy(
     put_policy_type = request.put_policy
     get_policy_type = request.get_policy
 
-    old_put_policy_type = pkl.loads(policy_ultra_dict["put_policy"]).name()
-    old_get_policy_type = pkl.loads(policy_ultra_dict["get_policy"]).name()
+    # old_put_policy_type = pkl.loads(policy_ultra_dict["put_policy"]).name()
+    # old_get_policy_type = pkl.loads(policy_ultra_dict["get_policy"]).name()
+    old_put_policy_type = policy_ultra_dict["put_policy"]
+    old_get_policy_type = policy_ultra_dict["get_policy"]
 
     if put_policy_type is None and get_policy_type is None:
         raise ValueError("Invalid policy type")
 
     if put_policy_type is not None and put_policy_type != old_put_policy_type:
-        policy_ultra_dict["put_policy"] = pkl.dumps(get_placement_policy(put_policy_type, init_region_tags), -1)
+        # policy_ultra_dict["put_policy"] = pkl.dumps(get_placement_policy(put_policy_type, init_region_tags), protocol=pkl.HIGHEST_PROTOCOL)
+        policy_ultra_dict["put_policy"] = put_policy_type
 
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
-        policy_ultra_dict["get_policy"] = pkl.dumps(get_transfer_policy(get_policy_type), -1)
+        # policy_ultra_dict["get_policy"] = pkl.dumps(get_transfer_policy(get_policy_type), protocol=pkl.HIGHEST_PROTOCOL)
+        policy_ultra_dict["get_policy"] = get_policy_type
 
 
 # TODO: when creating new logical object, we need to consider different put policy
@@ -217,7 +222,7 @@ async def start_delete_objects(
                     replaced = True
             # For the case adding new objs to the DB, we need to commit first
             # in order to use them in the following traversal
-            if add_obj:
+            if add_obj or replaced:
                 await db.commit()
 
             if len(request.object_identifiers[key]) > 0 and (
@@ -273,6 +278,10 @@ async def start_delete_objects(
             if not add_obj and not replaced:
                 logical_obj.status = Status.pending_deletion
 
+            # for these cases, we only need to deal with the first logical object
+            if replaced or add_obj:
+                break
+            
             try:
                 await db.commit()
             except Exception as e:
@@ -280,10 +289,6 @@ async def start_delete_objects(
                 return Response(status_code=500, content="Error committing changes")
 
             logger.debug(f"start_delete_object: {request} -> {logical_obj}")
-
-            # for these cases, we only need to deal with the first logical object
-            if replaced or add_obj:
-                break
 
         locator_dict[key] = locators
         delete_marker_dict[key] = DeleteMarker(
@@ -442,9 +447,13 @@ async def locate_object(
     request: LocateObjectRequest, db: Session = Depends(get_session)
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
+    # print("size of policy: ", len(policy_ultra_dict["get_policy"]))
+    # start_time = datetime.utcnow()
+    # get_policy = pkl.loads(policy_ultra_dict["get_policy"])
 
-    get_policy = pkl.loads(policy_ultra_dict["get_policy"])
-
+    get_policy = get_transfer_policy(policy_ultra_dict["get_policy"])
+    # end_time = datetime.utcnow()
+    # print(f"get_policy: {end_time - start_time}")
 
     version_enabled = (
         await db.execute(
@@ -646,7 +655,8 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     # construct the put policy based on the policy name
-    put_policy = pkl.loads(policy_ultra_dict["put_policy"])
+    # put_policy = pkl.loads(policy_ultra_dict["put_policy"])
+    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
 
     res = (
         (
@@ -982,7 +992,8 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    put_policy = pkl.loads(policy_ultra_dict["put_policy"])
+    # put_policy = pkl.loads(policy_ultra_dict["put_policy"])
+    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
 
     stmt = (
         select(DBPhysicalObjectLocator)

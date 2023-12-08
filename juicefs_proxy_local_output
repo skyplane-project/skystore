@@ -1,0 +1,423 @@
+Start Functional Testing ...
++----------+---------------------+--------------------------------------------------+
+| CATEGORY |         TEST        |                      RESULT                      |
++----------+---------------------+--------------------------------------------------+
+|    basic |     create a bucket |                                             pass |
+|    basic |       put an object |                                             pass |
+|    basic |       get an object |                                             pass |
+|    basic |       get non-exist |                                             pass |
+|    basic |  get partial object | failed to get object with the offset out of r... |
+|    basic |      head an object |                                             pass |
+|    basic |    delete an object |                                             pass |
+|    basic |    delete non-exist |                                             pass |
+|    basic |        list objects |                                             pass |
+|    basic |         special key |                                             pass |
+|     sync |    put a big object |                                             pass |
+|     sync | put an empty object |                                             pass |
+|     sync |    multipart upload |                                             pass |
+|     sync |  change owner/group |                                      not support |
+|     sync |   change permission |                                      not support |
+|     sync |        change mtime |                                      not support |
++----------+---------------------+--------------------------------------------------+
+
+Start Performance Testing ...
+smallGet 0
+--get-- 0 cost 85.393375ms
+--read-- 0 cost 702.25µs
+--check-get-- 0 cost 958ns
+smallGet 1
+--get-- 1 cost 87.587792ms
+--read-- 1 cost 597.209µs
+--check-get-- 1 cost 917ns
+smallGet 2
+--get-- 2 cost 89.989ms
+--read-- 2 cost 416.416µs
+--check-get-- 2 cost 791ns
+smallGet 3
+--get-- 3 cost 73.988833ms
+--read-- 3 cost 438.584µs
+--check-get-- 3 cost 792ns
+smallGet 4
+--get-- 4 cost 78.17475ms
+--read-- 4 cost 388.875µs
+--check-get-- 4 cost 791ns
+smallGet 5
+--get-- 5 cost 87.4925ms
+--read-- 5 cost 362.958µs
+--check-get-- 5 cost 666ns
+smallGet 6
+--get-- 6 cost 68.358708ms
+--read-- 6 cost 316.833µs
+--check-get-- 6 cost 708ns
+smallGet 7
+--get-- 7 cost 74.654791ms
+--read-- 7 cost 419.625µs
+--check-get-- 7 cost 791ns
+smallGet 8
+--get-- 8 cost 88.023709ms
+--read-- 8 cost 365.833µs
+--check-get-- 8 cost 958ns
+smallGet 9
+--get-- 9 cost 85.346917ms
+--read-- 9 cost 382.375µs
+--check-get-- 9 cost 750ns
+smallGet 10
+--get-- 10 cost 85.508583ms
+--read-- 10 cost 299.417µs
+--check-get-- 10 cost 792ns
+smallGet 11
+--get-- 11 cost 80.408291ms
+--read-- 11 cost 373.583µs
+--check-get-- 11 cost 750ns
+smallGet 12
+--get-- 12 cost 85.669334ms
+--read-- 12 cost 328.958µs
+--check-get-- 12 cost 792ns
+smallGet 13
+--get-- 13 cost 88.701542ms
+--read-- 13 cost 288.583µs
+--check-get-- 13 cost 791ns
+smallGet 14
+--get-- 14 cost 86.710125ms
+--read-- 14 cost 304.25µs
+--check-get-- 14 cost 833ns
+smallGet 15
+--get-- 15 cost 81.500291ms
+--read-- 15 cost 357.334µs
+--check-get-- 15 cost 792ns
+smallGet 16
+--get-- 16 cost 82.019833ms
+--read-- 16 cost 434.542µs
+--check-get-- 16 cost 875ns
+smallGet 17
+--get-- 17 cost 95.361ms
+--read-- 17 cost 349.084µs
+--check-get-- 17 cost 750ns
+smallGet 18
+--get-- 18 cost 79.379834ms
+--read-- 18 cost 409.834µs
+--check-get-- 18 cost 750ns
+smallGet 19
+--get-- 19 cost 78.663625ms
+--read-- 19 cost 450.333µs
+--check-get-- 19 cost 834ns
+smallGet 20
+--get-- 20 cost 84.49425ms
+--read-- 20 cost 358.25µs
+--check-get-- 20 cost 750ns
+smallGet 21
+--get-- 21 cost 76.01775ms
+--read-- 21 cost 402.875µs
+--check-get-- 21 cost 792ns
+smallGet 22
+--get-- 22 cost 79.38125ms
+--read-- 22 cost 375.417µs
+--check-get-- 22 cost 792ns
+smallGet 23
+--get-- 23 cost 80.748375ms
+--read-- 23 cost 2.420792ms
+--check-get-- 23 cost 709ns
+smallGet 24
+--get-- 24 cost 78.79875ms
+--read-- 24 cost 310.292µs
+--check-get-- 24 cost 792ns
+smallGet 25
+--get-- 25 cost 80.464084ms
+--read-- 25 cost 323.167µs
+--check-get-- 25 cost 792ns
+smallGet 26
+--get-- 26 cost 86.519625ms
+--read-- 26 cost 329.75µs
+--check-get-- 26 cost 792ns
+smallGet 27
+--get-- 27 cost 85.061ms
+--read-- 27 cost 397.875µs
+--check-get-- 27 cost 750ns
+smallGet 28
+--get-- 28 cost 85.268208ms
+--read-- 28 cost 554.416µs
+--check-get-- 28 cost 875ns
+smallGet 29
+--get-- 29 cost 78.74075ms
+--read-- 29 cost 352.167µs
+--check-get-- 29 cost 833ns
+smallGet 30
+--get-- 30 cost 78.190375ms
+--read-- 30 cost 348.166µs
+--check-get-- 30 cost 750ns
+smallGet 31
+--get-- 31 cost 77.458584ms
+--read-- 31 cost 307.584µs
+--check-get-- 31 cost 875ns
+smallGet 32
+--get-- 32 cost 81.500917ms
+--read-- 32 cost 373.417µs
+--check-get-- 32 cost 791ns
+smallGet 33
+--get-- 33 cost 86.599792ms
+--read-- 33 cost 331.917µs
+--check-get-- 33 cost 708ns
+smallGet 34
+--get-- 34 cost 81.34525ms
+--read-- 34 cost 338.292µs
+--check-get-- 34 cost 834ns
+smallGet 35
+--get-- 35 cost 80.14225ms
+--read-- 35 cost 337.958µs
+--check-get-- 35 cost 834ns
+smallGet 36
+--get-- 36 cost 102.946083ms
+--read-- 36 cost 296.375µs
+--check-get-- 36 cost 792ns
+smallGet 37
+--get-- 37 cost 79.522583ms
+--read-- 37 cost 335.291µs
+--check-get-- 37 cost 792ns
+smallGet 38
+--get-- 38 cost 81.208833ms
+--read-- 38 cost 357.375µs
+--check-get-- 38 cost 875ns
+smallGet 39
+--get-- 39 cost 86.83ms
+--read-- 39 cost 285.375µs
+--check-get-- 39 cost 875ns
+smallGet 40
+--get-- 40 cost 76.122ms
+--read-- 40 cost 344.958µs
+--check-get-- 40 cost 834ns
+smallGet 41
+--get-- 41 cost 82.818708ms
+--read-- 41 cost 281.542µs
+--check-get-- 41 cost 750ns
+smallGet 42
+--get-- 42 cost 83.239875ms
+--read-- 42 cost 313.25µs
+--check-get-- 42 cost 792ns
+smallGet 43
+--get-- 43 cost 80.840208ms
+--read-- 43 cost 358.041µs
+--check-get-- 43 cost 1.083µs
+smallGet 44
+--get-- 44 cost 86.969208ms
+--read-- 44 cost 327.541µs
+--check-get-- 44 cost 834ns
+smallGet 45
+--get-- 45 cost 82.291041ms
+--read-- 45 cost 312.208µs
+--check-get-- 45 cost 750ns
+smallGet 46
+--get-- 46 cost 84.594459ms
+--read-- 46 cost 294µs
+--check-get-- 46 cost 833ns
+smallGet 47
+--get-- 47 cost 106.536833ms
+--read-- 47 cost 296.167µs
+--check-get-- 47 cost 834ns
+smallGet 48
+--get-- 48 cost 72.803042ms
+--read-- 48 cost 285.791µs
+--check-get-- 48 cost 834ns
+smallGet 49
+--get-- 49 cost 87.056792ms
+--read-- 49 cost 300.417µs
+--check-get-- 49 cost 834ns
+smallGet 50
+--get-- 50 cost 85.580917ms
+--read-- 50 cost 322.25µs
+--check-get-- 50 cost 750ns
+smallGet 51
+--get-- 51 cost 78.399125ms
+--read-- 51 cost 359.167µs
+--check-get-- 51 cost 833ns
+smallGet 52
+--get-- 52 cost 76.638125ms
+--read-- 52 cost 281.541µs
+--check-get-- 52 cost 792ns
+smallGet 53
+--get-- 53 cost 80.570792ms
+--read-- 53 cost 337µs
+--check-get-- 53 cost 750ns
+smallGet 54
+--get-- 54 cost 85.57225ms
+--read-- 54 cost 313.667µs
+--check-get-- 54 cost 709ns
+smallGet 55
+--get-- 55 cost 87.441666ms
+--read-- 55 cost 346.333µs
+--check-get-- 55 cost 791ns
+smallGet 56
+--get-- 56 cost 82.035625ms
+--read-- 56 cost 3.293167ms
+--check-get-- 56 cost 958ns
+smallGet 57
+--get-- 57 cost 79.712ms
+--read-- 57 cost 348.416µs
+--check-get-- 57 cost 791ns
+smallGet 58
+--get-- 58 cost 83.309792ms
+--read-- 58 cost 344µs
+--check-get-- 58 cost 833ns
+smallGet 59
+--get-- 59 cost 110.547084ms
+--read-- 59 cost 466.625µs
+--check-get-- 59 cost 875ns
+smallGet 60
+--get-- 60 cost 90.408833ms
+--read-- 60 cost 354.125µs
+--check-get-- 60 cost 958ns
+smallGet 61
+--get-- 61 cost 84.807042ms
+--read-- 61 cost 314.042µs
+--check-get-- 61 cost 792ns
+smallGet 62
+--get-- 62 cost 77.994375ms
+--read-- 62 cost 348.25µs
+--check-get-- 62 cost 792ns
+smallGet 63
+--get-- 63 cost 80.182625ms
+--read-- 63 cost 279.541µs
+--check-get-- 63 cost 916ns
+smallGet 64
+--get-- 64 cost 75.593709ms
+--read-- 64 cost 357.958µs
+--check-get-- 64 cost 583ns
+smallGet 65
+--get-- 65 cost 84.883ms
+--read-- 65 cost 291.667µs
+--check-get-- 65 cost 791ns
+smallGet 66
+--get-- 66 cost 81.695209ms
+--read-- 66 cost 289.625µs
+--check-get-- 66 cost 917ns
+smallGet 67
+--get-- 67 cost 80.611375ms
+--read-- 67 cost 351.5µs
+--check-get-- 67 cost 833ns
+smallGet 68
+--get-- 68 cost 80.644958ms
+--read-- 68 cost 335.958µs
+--check-get-- 68 cost 833ns
+smallGet 69
+--get-- 69 cost 81.270958ms
+--read-- 69 cost 320.666µs
+--check-get-- 69 cost 833ns
+smallGet 70
+--get-- 70 cost 74.723041ms
+--read-- 70 cost 319.167µs
+--check-get-- 70 cost 792ns
+smallGet 71
+--get-- 71 cost 85.952584ms
+--read-- 71 cost 304.375µs
+--check-get-- 71 cost 792ns
+smallGet 72
+--get-- 72 cost 78.984583ms
+--read-- 72 cost 343.208µs
+--check-get-- 72 cost 792ns
+smallGet 73
+--get-- 73 cost 74.309917ms
+--read-- 73 cost 352.291µs
+--check-get-- 73 cost 833ns
+smallGet 74
+--get-- 74 cost 83.28875ms
+--read-- 74 cost 355.667µs
+--check-get-- 74 cost 791ns
+smallGet 75
+--get-- 75 cost 82.669042ms
+--read-- 75 cost 339.375µs
+--check-get-- 75 cost 833ns
+smallGet 76
+--get-- 76 cost 75.579083ms
+--read-- 76 cost 336.875µs
+--check-get-- 76 cost 834ns
+smallGet 77
+--get-- 77 cost 79.799083ms
+--read-- 77 cost 322.792µs
+--check-get-- 77 cost 750ns
+smallGet 78
+--get-- 78 cost 86.679583ms
+--read-- 78 cost 359.333µs
+--check-get-- 78 cost 708ns
+smallGet 79
+--get-- 79 cost 81.122958ms
+--read-- 79 cost 335.625µs
+--check-get-- 79 cost 750ns
+smallGet 80
+--get-- 80 cost 77.219167ms
+--read-- 80 cost 278.917µs
+--check-get-- 80 cost 834ns
+smallGet 81
+--get-- 81 cost 75.114583ms
+--read-- 81 cost 224.542µs
+--check-get-- 81 cost 625ns
+smallGet 82
+--get-- 82 cost 78.786666ms
+--read-- 82 cost 342.25µs
+--check-get-- 82 cost 792ns
+smallGet 83
+--get-- 83 cost 75.113291ms
+--read-- 83 cost 354.292µs
+--check-get-- 83 cost 792ns
+smallGet 84
+--get-- 84 cost 87.161458ms
+--read-- 84 cost 334.291µs
+--check-get-- 84 cost 750ns
+smallGet 85
+--get-- 85 cost 79.153666ms
+--read-- 85 cost 278.208µs
+--check-get-- 85 cost 875ns
+smallGet 86
+--get-- 86 cost 83.549875ms
+--read-- 86 cost 333.959µs
+--check-get-- 86 cost 791ns
+smallGet 87
+--get-- 87 cost 80.731917ms
+--read-- 87 cost 291.125µs
+--check-get-- 87 cost 750ns
+smallGet 88
+--get-- 88 cost 97.009458ms
+--read-- 88 cost 259.291µs
+--check-get-- 88 cost 791ns
+smallGet 89
+--get-- 89 cost 86.581208ms
+--read-- 89 cost 4.421625ms
+--check-get-- 89 cost 833ns
+smallGet 90
+--get-- 90 cost 78.456583ms
+--read-- 90 cost 291.875µs
+--check-get-- 90 cost 792ns
+smallGet 91
+--get-- 91 cost 85.205708ms
+--read-- 91 cost 443.75µs
+--check-get-- 91 cost 791ns
+smallGet 92
+--get-- 92 cost 72.869792ms
+--read-- 92 cost 301.791µs
+--check-get-- 92 cost 834ns
+smallGet 93
+--get-- 93 cost 82.410125ms
+--read-- 93 cost 239.583µs
+--check-get-- 93 cost 708ns
+smallGet 94
+--get-- 94 cost 87.393875ms
+--read-- 94 cost 276.958µs
+--check-get-- 94 cost 792ns
+smallGet 95
+--get-- 95 cost 81.493625ms
+--read-- 95 cost 312.458µs
+--check-get-- 95 cost 791ns
+smallGet 96
+--get-- 96 cost 81.28125ms
+--read-- 96 cost 293.916µs
+--check-get-- 96 cost 875ns
+smallGet 97
+--get-- 97 cost 89.1285ms
+--read-- 97 cost 333µs
+--check-get-- 97 cost 833ns
+smallGet 98
+--get-- 98 cost 83.555042ms
+--read-- 98 cost 349.791µs
+--check-get-- 98 cost 750ns
+smallGet 99
+--get-- 99 cost 80.398459ms
+--read-- 99 cost 335µs
+--check-get-- 99 cost 792ns
