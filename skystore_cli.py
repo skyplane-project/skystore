@@ -188,7 +188,6 @@ def exit():
     except Exception as e:
         typer.secho(f"An error occurred during cleanup: {e}", fg="red")
 
-
 @app.command()
 def warmup(
     bucket: str = typer.Option(

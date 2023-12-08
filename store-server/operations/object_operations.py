@@ -44,10 +44,11 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import get_placement_policy
-from operations.policy.transfer_policy import get_transfer_policy
+from operations.policy.placement_policy import get_placement_policy, PlacementPolicy
+from operations.policy.transfer_policy import get_transfer_policy, TransferPolicy
 from operations.bucket_operations import init_region_tags
 import UltraDict as ud
+import pickle as pkl
 
 router = APIRouter()
 
@@ -56,11 +57,11 @@ router = APIRouter()
 # NOTE: we cannot store the class instance directly
 policy_ultra_dict = None
 try:
-    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=None)
-except Exception as _:
-    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
-policy_ultra_dict["get_policy"] = ""
-policy_ultra_dict["put_policy"] = ""
+    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True, buffer_size=10000000)
+except:
+    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False, buffer_size=10000000)
+policy_ultra_dict["get_policy"] = pkl.dumps(TransferPolicy(), -1)
+policy_ultra_dict["put_policy"] = pkl.dumps(PlacementPolicy(), -1)
 
 
 @router.post("/update_policy")
@@ -70,17 +71,17 @@ async def update_policy(
     put_policy_type = request.put_policy
     get_policy_type = request.get_policy
 
-    old_put_policy_type = policy_ultra_dict["put_policy"]
-    old_get_policy_type = policy_ultra_dict["get_policy"]
+    old_put_policy_type = pkl.loads(policy_ultra_dict["put_policy"]).name()
+    old_get_policy_type = pkl.loads(policy_ultra_dict["get_policy"]).name()
 
     if put_policy_type is None and get_policy_type is None:
         raise ValueError("Invalid policy type")
 
     if put_policy_type is not None and put_policy_type != old_put_policy_type:
-        policy_ultra_dict["put_policy"] = put_policy_type
+        policy_ultra_dict["put_policy"] = pkl.dumps(get_placement_policy(put_policy_type, init_region_tags), -1)
 
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
-        policy_ultra_dict["get_policy"] = get_policy_type
+        policy_ultra_dict["get_policy"] = pkl.dumps(get_transfer_policy(get_policy_type), -1)
 
 
 # TODO: when creating new logical object, we need to consider different put policy
@@ -88,6 +89,7 @@ async def update_policy(
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
+    
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -441,7 +443,8 @@ async def locate_object(
 ) -> LocateObjectResponse:
     """Given the logical object information, return one or zero physical object locators."""
 
-    get_policy = get_transfer_policy(policy_ultra_dict["get_policy"])
+    get_policy = pkl.loads(policy_ultra_dict["get_policy"])
+
 
     version_enabled = (
         await db.execute(
@@ -643,7 +646,7 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     # construct the put policy based on the policy name
-    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
+    put_policy = pkl.loads(policy_ultra_dict["put_policy"])
 
     res = (
         (
@@ -979,7 +982,7 @@ async def start_upload(
 async def complete_upload(
     request: PatchUploadIsCompleted, db: Session = Depends(get_session)
 ):
-    put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
+    put_policy = pkl.loads(policy_ultra_dict["put_policy"])
 
     stmt = (
         select(DBPhysicalObjectLocator)
