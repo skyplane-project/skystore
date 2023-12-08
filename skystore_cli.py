@@ -124,9 +124,9 @@ def init(
             env=env,
         )
 
-    # time.sleep(2)
-    # for postgres, need longer time to start
-    time.sleep(10)
+        # time.sleep(2)
+        # for postgres, need longer time to start
+        time.sleep(10)
 
     # Start the s3-proxy
     if os.path.exists(sky_s3_binary_path):
