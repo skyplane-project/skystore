@@ -44,8 +44,8 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import get_placement_policy
-from operations.policy.transfer_policy import get_transfer_policy
+from operations.policy.placement_policy import get_placement_policy, PlacementPolicy
+from operations.policy.transfer_policy import get_transfer_policy, TransferPolicy
 from operations.bucket_operations import init_region_tags
 import UltraDict as ud
 
@@ -53,12 +53,13 @@ router = APIRouter()
 
 # initialize a ultradict to store the policy name in shared memory
 # so that can be used by multiple workers started by uvicorn
-# NOTE: we cannot store the class instance directly
+
 policy_ultra_dict = None
 try:
-    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=None)
-except Exception as _:
+    policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True)
+except Exception as e:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
+
 policy_ultra_dict["get_policy"] = ""
 policy_ultra_dict["put_policy"] = ""
 
@@ -82,12 +83,12 @@ async def update_policy(
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
         policy_ultra_dict["get_policy"] = get_policy_type
 
-
 # TODO: when creating new logical object, we need to consider different put policy
 @router.post("/start_delete_objects")
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
+    
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -215,7 +216,7 @@ async def start_delete_objects(
                     replaced = True
             # For the case adding new objs to the DB, we need to commit first
             # in order to use them in the following traversal
-            if add_obj:
+            if add_obj or replaced:
                 await db.commit()
 
             if len(request.object_identifiers[key]) > 0 and (
@@ -271,6 +272,10 @@ async def start_delete_objects(
             if not add_obj and not replaced:
                 logical_obj.status = Status.pending_deletion
 
+            # for these cases, we only need to deal with the first logical object
+            if replaced or add_obj:
+                break
+            
             try:
                 await db.commit()
             except Exception as e:
@@ -278,10 +283,6 @@ async def start_delete_objects(
                 return Response(status_code=500, content="Error committing changes")
 
             logger.debug(f"start_delete_object: {request} -> {logical_obj}")
-
-            # for these cases, we only need to deal with the first logical object
-            if replaced or add_obj:
-                break
 
         locator_dict[key] = locators
         delete_marker_dict[key] = DeleteMarker(

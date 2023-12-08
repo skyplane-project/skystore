@@ -46,7 +46,7 @@ async def create_database(
             await conn.execute(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE")
         print(f"Database {db_name} truncated successfully.")
         await conn.close()
-    except Exception as _:
+    except Exception as e:
         # the database does not exist
         # connect to the default database, and create the new database we designated
         print(f"Database {db_name} does not exist. Creating...")
@@ -58,46 +58,44 @@ async def create_database(
         await conn.execute(
             f"ALTER DATABASE {db_name} SET DEFAULT_TRANSACTION_ISOLATION TO 'read committed';"
         )
+        # NOTE: these are the optimizations can be applied in VM setup
 
-        # NOTW: these are the optimizations can be applied in VM setup
-
-        # await conn.execute(f"ALTER DATABASE {db_name} SET synchronous_commit TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET wal_level TO minimal;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET fsync TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET full_page_writes TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET autovacuum TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_wal_size TO 1GB;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET wal_keep_segments TO 0;")
-        # #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_timeout TO 3600;")
-        # #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_completion_target TO 0.9;")
-        # #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_warning TO 0;")
-        # #await conn.execute(f"ALTER DATABASE {db_name} SET max_wal_senders TO 0;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_replication_slots TO 0;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET default_statistics_target TO 100;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET random_page_cost TO 1.0;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET effective_cache_size TO 1GB;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET work_mem TO 1GB;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET maintenance_work_mem TO 1GB;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_worker_processes TO 32;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_workers_per_gather TO 32;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_workers TO 32;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_maintenance_workers TO 32;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET parallel_leader_participation TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET max_connections TO 32;")
+        # await conn.execute(f"ALTER SYSTEM SET synchronous_commit TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET wal_level TO minimal;")
+        # await conn.execute(f"ALTER SYSTEM SET fsync TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET full_page_writes TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET autovacuum TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET max_wal_size TO '1GB';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_timeout TO '3600';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_completion_target TO '0.9';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_warning TO '0';")
+        #await conn.execute(f"ALTER SYSTEM SET max_wal_senders TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET max_replication_slots TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET default_statistics_target TO '100';")
+        # await conn.execute(f"ALTER SYSTEM SET random_page_cost TO '1.0';")
+        # await conn.execute(f"ALTER SYSTEM SET effective_cache_size TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET work_mem TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET maintenance_work_mem TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET max_worker_processes TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_workers_per_gather TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_workers TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_maintenance_workers TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET parallel_leader_participation TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET max_connections TO '32';")
         # # change temp buffers
-        # await conn.execute(f"ALTER DATABASE {db_name} SET temp_buffers TO 1GB;")
+        # await conn.execute(f"ALTER SYSTEM SET temp_buffers TO '1GB';")
         # # set shared buffer
-        # await conn.execute(f"ALTER DATABASE {db_name} SET shared_buffers TO 1GB;")
+        # await conn.execute(f"ALTER SYSTEM SET shared_buffers TO '1GB';")
 
         await conn.close()
 
 
 # Define the name of the database you want to create
 database_name = "skystore"
-# user = "postgres"
-# password = "skystore"
-user = "shaopu"
-password = "monkeydog"
+user = "postgres"
+password = "skystore"
+# user = "shaopu"
+# password = "monkeydog"
 
 
 def run_create_database():
@@ -105,17 +103,15 @@ def run_create_database():
 
 
 # we will use the ultradict to store the pid of the process that is creating the database
-
 db_init_log = None
-
 try:
-    db_init_log = UltraDict(name="db_init_log", create=None)
-except Exception as _:
+    db_init_log = UltraDict(name="db_init_log", create=True)
+except Exception as e:
     db_init_log = UltraDict(name="db_init_log", create=False)
 
 with db_init_log.lock_pid_remote:
     if len(db_init_log) == 0:
-        print("db_init_log is empty, creating database...")
+        print("creating database...")
         # read the first line of the file
         db_init_log["pid"] = os.getpid()
         thread = Thread(target=run_create_database)
@@ -129,7 +125,7 @@ engine = create_async_engine(
     echo=LOG_SQL,
     future=True,
     # NOTE: only enable this when you are testing
-    poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
+    # poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
 )
 
 

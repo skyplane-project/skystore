@@ -17,4 +17,4 @@ networkx
 asyncpg
 psycopg2
 sqlalchemy_utils
-filelock
+UltraDict
