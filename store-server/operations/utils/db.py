@@ -105,8 +105,11 @@ def run_create_database():
 
 
 # we will use the ultradict to store the pid of the process that is creating the database
-
-db_init_log = UltraDict(name="db_init_log")
+db_init_log = None
+try:
+    db_init_log = UltraDict(name="db_init_log", create=True)
+except Exception as e:
+    db_init_log = UltraDict(name="db_init_log", create=False)
 
 with db_init_log.lock_pid_remote:
     if len(db_init_log) == 0:
