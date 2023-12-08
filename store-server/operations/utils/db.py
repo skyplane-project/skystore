@@ -46,7 +46,7 @@ async def create_database(
             await conn.execute(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE")
         print(f"Database {db_name} truncated successfully.")
         await conn.close()
-    except Exception as _:
+    except Exception as e:
         # the database does not exist
         # connect to the default database, and create the new database we designated
         print(f"Database {db_name} does not exist. Creating...")
@@ -106,15 +106,11 @@ def run_create_database():
 
 # we will use the ultradict to store the pid of the process that is creating the database
 
-db_init_log = None
-
-try:
-    db_init_log = UltraDict(name="db_init_log", create=True)
-except:
-    db_init_log = UltraDict(name="db_init_log", create=False)
+db_init_log = UltraDict(name="db_init_log")
 
 with db_init_log.lock_pid_remote:
     if len(db_init_log) == 0:
+        print("creating database...")
         # read the first line of the file
         db_init_log["pid"] = os.getpid()
         thread = Thread(target=run_create_database)

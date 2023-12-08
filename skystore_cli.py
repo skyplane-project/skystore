@@ -6,6 +6,7 @@ import os
 import time
 import requests
 from enum import Enum
+from UltraDict import UltraDict
 
 app = typer.Typer(name="skystore")
 env = os.environ.copy()
@@ -107,6 +108,15 @@ def init(
 
     # Start the skystore server
     if start_server:
+        # clean up shared memory
+        try:
+            UltraDict.unlink_by_name('db_init_log')
+        except:
+            print('db_init_log has been deleted.')
+        try:
+            UltraDict.unlink_by_name('policy_ultra_dict')
+        except:
+            print('policy_ultra_dict has been deleted.')
         subprocess.Popen(
             f"cd {DEFAULT_STORE_SERVER_PATH}; "
             "rm skystore.db; python3 -m uvicorn app:app --port 3000 --workers 32",

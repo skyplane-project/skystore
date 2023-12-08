@@ -58,7 +58,7 @@ router = APIRouter()
 policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True, buffer_size=10000000)
-except:
+except Exception as _:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False, buffer_size=10000000)
 policy_ultra_dict["get_policy"] = pkl.dumps(TransferPolicy(), -1)
 policy_ultra_dict["put_policy"] = pkl.dumps(PlacementPolicy(), -1)
