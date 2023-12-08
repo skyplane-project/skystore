@@ -58,36 +58,34 @@ async def create_database(
         await conn.execute(
             f"ALTER DATABASE {db_name} SET DEFAULT_TRANSACTION_ISOLATION TO 'read committed';"
         )
+        # NOTE: these are the optimizations can be applied in VM setup
 
-        # NOTW: these are the optimizations can be applied in VM setup
-
-        # await conn.execute(f"ALTER DATABASE {db_name} SET synchronous_commit TO off;")
-        # await conn.execute(f"ALTER DATABASE {db_name} SET wal_level TO minimal;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET fsync TO off;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET full_page_writes TO off;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET autovacuum TO off;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_wal_size TO 1GB;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET wal_keep_segments TO 0;")
-        #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_timeout TO 3600;")
-        #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_completion_target TO 0.9;")
-        #await conn.execute(f"ALTER DATABASE {db_name} SET checkpoint_warning TO 0;")
-        #await conn.execute(f"ALTER DATABASE {db_name} SET max_wal_senders TO 0;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_replication_slots TO 0;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET default_statistics_target TO 100;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET random_page_cost TO 1.0;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET effective_cache_size TO 1GB;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET work_mem TO 1GB;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET maintenance_work_mem TO 1GB;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_worker_processes TO 32;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_workers_per_gather TO 32;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_workers TO 32;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_parallel_maintenance_workers TO 32;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET parallel_leader_participation TO off;")
-        await conn.execute(f"ALTER DATABASE {db_name} SET max_connections TO 32;")
-        # change temp buffers
-        await conn.execute(f"ALTER DATABASE {db_name} SET temp_buffers TO 1GB;")
-        # set shared buffer
-        await conn.execute(f"ALTER DATABASE {db_name} SET shared_buffers TO 1GB;")
+        # await conn.execute(f"ALTER SYSTEM SET synchronous_commit TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET wal_level TO minimal;")
+        # await conn.execute(f"ALTER SYSTEM SET fsync TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET full_page_writes TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET autovacuum TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET max_wal_size TO '1GB';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_timeout TO '3600';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_completion_target TO '0.9';")
+        #await conn.execute(f"ALTER SYSTEM SET checkpoint_warning TO '0';")
+        #await conn.execute(f"ALTER SYSTEM SET max_wal_senders TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET max_replication_slots TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET default_statistics_target TO '100';")
+        # await conn.execute(f"ALTER SYSTEM SET random_page_cost TO '1.0';")
+        # await conn.execute(f"ALTER SYSTEM SET effective_cache_size TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET work_mem TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET maintenance_work_mem TO '1GB';")
+        # await conn.execute(f"ALTER SYSTEM SET max_worker_processes TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_workers_per_gather TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_workers TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET max_parallel_maintenance_workers TO '32';")
+        # await conn.execute(f"ALTER SYSTEM SET parallel_leader_participation TO off;")
+        # await conn.execute(f"ALTER SYSTEM SET max_connections TO '32';")
+        # # change temp buffers
+        # await conn.execute(f"ALTER SYSTEM SET temp_buffers TO '1GB';")
+        # # set shared buffer
+        # await conn.execute(f"ALTER SYSTEM SET shared_buffers TO '1GB';")
 
         await conn.close()
 
