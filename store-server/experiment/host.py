@@ -162,7 +162,8 @@ def create_instance(
             "sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; \
             (sudo apt-get update && sudo apt-get install python3-pip -y && sudo pip3 install awscli);\
-            sudo apt install python3.9 -y"
+            sudo apt install python3.9 -y; \
+            sudo apt install postgresql -y"
         )
         server.run_command(
             "sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1;\
@@ -179,8 +180,9 @@ def create_instance(
         server.run_command(
             "curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env;\
             git clone https://github.com/shaopu1225/skystore.git; cd skystore/store-server; git switch experiment; \
-            pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
-            nohup python3.9 -m uvicorn app:app --reload --host 0.0.0.0 --port 3000 > control_plane_output 2>&1 &"
+            sudo apt-get install libpq-dev -y; sudo apt-get install python3.9-dev -y; pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
+            sudo -u postgres psql -c \"ALTER USER postgres PASSWORD 'skystore'\"; \
+            nohup python3.9 -m uvicorn app:app --workers 8 --host 0.0.0.0 --port 3000 > control_plane_output 2>&1 &"
         )
 
     do_parallel(setup, instance_list, spinner=True, n=-1, desc="Setup")

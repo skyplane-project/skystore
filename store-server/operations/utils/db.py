@@ -9,6 +9,7 @@ import asyncpg
 import asyncio
 from threading import Thread
 from UltraDict import UltraDict
+import time 
 
 # filelock = FileLock("DATABASE_INIT_LOG.log.lock", timeout=10)
 
@@ -107,6 +108,7 @@ db_init_log = None
 try:
     db_init_log = UltraDict(name="db_init_log", create=True)
 except Exception as e:
+    time.sleep(5)
     db_init_log = UltraDict(name="db_init_log", create=False)
 
 with db_init_log.lock_pid_remote:

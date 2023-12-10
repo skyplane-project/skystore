@@ -156,7 +156,7 @@ def create_instance(
             + [f"ibmcloud:{region}" for region in ibmcloud_region_list],
             "client_from_region": server.region_tag,
             "skystore_bucket_prefix": "skystore",
-            "put_policy": "replicate_all",
+            "put_policy": "copy_on_read",
             "get_policy": "cheapest",
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
@@ -203,6 +203,7 @@ def create_instance(
                 curl -sSL https://install.python-poetry.org | python3 -; \
                 /home/ubuntu/.local/bin/poetry install; python3 -m pip install pip==23.2.1; \
                 export PATH="/home/ubuntu/.local/bin:$PATH"; pip3 install -e .; cd store-server; \
+                sudo apt-get install libpq-dev -y; sudo apt-get install python3.9-dev -y; \
                 pip3 install -r requirements.txt; \
                 cd ../s3-proxy; \
                   /home/ubuntu/.cargo/bin/cargo install --force \
@@ -217,6 +218,7 @@ def create_instance(
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build --release; \
+                nohup python3 send.py > send_output 2>&1 & \
                 nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output 2>&1 &"
         server.run_command(cmd1)
         server.run_command(cmd2)
@@ -229,7 +231,7 @@ def create_instance(
 
 
 def generate_file_on_server(server, size, filename):
-    cmd = f"dd if=/dev/urandom of={filename} bs=1 count={size}"
+    cmd = f"dd if=/dev/urandom of={filename} bs={size} count=1"
     server.run_command(cmd)
 
 
@@ -302,14 +304,19 @@ def issue_requests(trace_file_path: str):
             server_key = issue_region
             server = instances_dict.get(server_key)
             print("server: ", server)
+            
+            print("start time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             if server:
                 if op == "write":
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
+                    print("generate file finish: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     cmd = f"time aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
                     cmd = f"time aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
+                
+                print("execution finish: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
                 print(f"Executing command: {cmd}")
                 stdout, stderr = server.run_command(cmd)

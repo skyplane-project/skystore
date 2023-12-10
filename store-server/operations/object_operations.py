@@ -48,6 +48,7 @@ from operations.policy.placement_policy import get_placement_policy, PlacementPo
 from operations.policy.transfer_policy import get_transfer_policy, TransferPolicy
 from operations.bucket_operations import init_region_tags
 import UltraDict as ud
+import time
 
 router = APIRouter()
 
@@ -58,6 +59,7 @@ policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True)
 except Exception as e:
+    time.sleep(5)
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
 
 policy_ultra_dict["get_policy"] = ""
