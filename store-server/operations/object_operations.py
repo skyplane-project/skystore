@@ -646,6 +646,7 @@ async def start_upload(
     request: StartUploadRequest, db: Session = Depends(get_session)
 ) -> StartUploadResponse:
     # construct the put policy based on the policy name
+
     put_policy = get_placement_policy(policy_ultra_dict["put_policy"], init_region_tags)
 
     res = (
@@ -1003,9 +1004,10 @@ async def complete_upload(
     # TODO: might need to change the if conditions for different policies
     policy_name = put_policy.name()
     if (
-        (policy_name == "push" and physical_locator.is_primary)
+        ((policy_name == "push" or policy_name == "replicate_all") and physical_locator.is_primary)
         or policy_name == "write_local"
         or policy_name == "copy_on_read"
+        or policy_name == "single_region"
     ):
         # NOTE: might not need to update the logical object for consecutive reads for copy_on_read
         # await db.refresh(physical_locator, ["logical_object"])
