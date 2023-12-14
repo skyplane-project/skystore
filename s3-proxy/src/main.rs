@@ -120,7 +120,7 @@ async fn main() {
         .service_fn(move |mut req: hyper::Request<hyper::Body>| {
             let mut s3_service = s3_service.clone();
             let proxy_clone = proxy.clone();
-            if env::var("GET_POLICY").unwrap() == "copy_on_read" {
+            if env::var("PUT_POLICY").unwrap() == "copy_on_read" {
                 req.headers_mut()
                     .insert("X-SKYSTORE-PULL", "copy_on_read".parse().unwrap());
             }
