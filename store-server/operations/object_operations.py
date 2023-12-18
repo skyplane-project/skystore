@@ -839,7 +839,7 @@ async def start_upload(
             primary_write_region != request.client_from_region
         ), "should not be the same region"
     # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-    elif put_policy.name() == "push" or put_policy.name() == "replicate_all":
+    elif put_policy.name() == "replicate_all":
         # Except this case, always set the first-write region of the OBJECT to be primary
         primary_write_region = [
             locator.location_tag
@@ -850,7 +850,7 @@ async def start_upload(
             len(primary_write_region) == 1
         ), "should only have one primary write region"
         primary_write_region = primary_write_region[0]
-    elif put_policy.name() == "single_region":
+    elif put_policy.name() == "single_region" or put_policy.name() == "push":
         primary_write_region = upload_to_region_tags[0]
     else:
         # Write to the local region and set the first-write region of the OBJECT to be primary
