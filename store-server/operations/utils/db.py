@@ -9,7 +9,7 @@ import asyncpg
 import asyncio
 from threading import Thread
 from UltraDict import UltraDict
-import time 
+import time
 
 # filelock = FileLock("DATABASE_INIT_LOG.log.lock", timeout=10)
 
@@ -47,7 +47,7 @@ async def create_database(
             await conn.execute(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE")
         print(f"Database {db_name} truncated successfully.")
         await conn.close()
-    except Exception as e:
+    except Exception as _:
         # the database does not exist
         # connect to the default database, and create the new database we designated
         print(f"Database {db_name} does not exist. Creating...")
@@ -67,10 +67,10 @@ async def create_database(
         # await conn.execute(f"ALTER SYSTEM SET full_page_writes TO off;")
         # await conn.execute(f"ALTER SYSTEM SET autovacuum TO off;")
         # await conn.execute(f"ALTER SYSTEM SET max_wal_size TO '1GB';")
-        #await conn.execute(f"ALTER SYSTEM SET checkpoint_timeout TO '3600';")
-        #await conn.execute(f"ALTER SYSTEM SET checkpoint_completion_target TO '0.9';")
-        #await conn.execute(f"ALTER SYSTEM SET checkpoint_warning TO '0';")
-        #await conn.execute(f"ALTER SYSTEM SET max_wal_senders TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET checkpoint_timeout TO '3600';")
+        # await conn.execute(f"ALTER SYSTEM SET checkpoint_completion_target TO '0.9';")
+        # await conn.execute(f"ALTER SYSTEM SET checkpoint_warning TO '0';")
+        # await conn.execute(f"ALTER SYSTEM SET max_wal_senders TO '0';")
         # await conn.execute(f"ALTER SYSTEM SET max_replication_slots TO '0';")
         # await conn.execute(f"ALTER SYSTEM SET default_statistics_target TO '100';")
         # await conn.execute(f"ALTER SYSTEM SET random_page_cost TO '1.0';")
@@ -107,7 +107,7 @@ def run_create_database():
 db_init_log = None
 try:
     db_init_log = UltraDict(name="db_init_log", create=True)
-except Exception as e:
+except Exception as _:
     time.sleep(5)
     db_init_log = UltraDict(name="db_init_log", create=False)
 

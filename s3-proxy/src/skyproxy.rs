@@ -16,9 +16,9 @@ use skystore_rust_client::apis::default_api as apis;
 use skystore_rust_client::models::{self};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Instant;
 use std::time::SystemTime;
 use tracing::error;
-use std::time::Instant;
 
 pub struct SkyProxy {
     pub store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
@@ -507,7 +507,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListObjectsV2Input>,
     ) -> S3Result<S3Response<ListObjectsV2Output>> {
-
         let start_time = Instant::now();
 
         let resp = apis::list_objects(
@@ -553,7 +552,7 @@ impl S3 for SkyProxy {
                 };
 
                 let duration = start_time.elapsed().as_secs_f32();
-                
+
                 // write to the local file
                 let metrics = SimpleMetrics {
                     latency: duration_cp.to_string() + "," + &duration.to_string(),
@@ -581,7 +580,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<HeadObjectInput>,
     ) -> S3Result<S3Response<HeadObjectOutput>> {
-
         let start_time = Instant::now();
 
         let vid = req.input.version_id.map(|id| id.parse::<i32>().unwrap());
@@ -709,7 +707,6 @@ impl S3 for SkyProxy {
                 .insert("X-SKYSTORE-WARMUP-ETAGS", e_tags_str.parse().unwrap());
         }
 
-
         let duration = start_time.elapsed().as_secs_f32();
 
         // write to the local file
@@ -775,7 +772,7 @@ impl S3 for SkyProxy {
 
         let client_from_region = self.client_from_region.clone();
         let key_clone = key.clone();
-        
+
         match locator {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
@@ -1225,7 +1222,6 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<DeleteObjectsInput>,
     ) -> S3Result<S3Response<DeleteObjectsOutput>> {
-
         let start_time = Instant::now();
 
         // Send start delete objects request
@@ -1312,7 +1308,8 @@ impl S3 for SkyProxy {
 
         let mut duration_cp_1 = start_cp_1_time.elapsed().as_secs_f32();
 
-        let delete_markers_map = Arc::new(tokio::sync::RwLock::new(delete_objects_resp.delete_markers));
+        let delete_markers_map =
+            Arc::new(tokio::sync::RwLock::new(delete_objects_resp.delete_markers));
         let op_type_map = delete_objects_resp.op_type;
 
         // Delete objects in actual storages
@@ -1396,7 +1393,6 @@ impl S3 for SkyProxy {
         // parallel complete delete objects
         let mut tasks = tokio::task::JoinSet::new();
         for (key, results) in key_to_results {
-
             // These are for spawned tasks to access
             let deleted_objects_clone = Arc::clone(&deleted_objects);
             let delete_markers_map_clone = Arc::clone(&delete_markers_map);
@@ -1405,7 +1401,8 @@ impl S3 for SkyProxy {
             let dir_conf_clone = self.dir_conf.clone();
 
             tasks.spawn(async move {
-                let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
+                let (successes, fails): (Vec<_>, Vec<_>) =
+                    results.into_iter().partition(Result::is_ok);
 
                 // complete delete objects
                 let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
@@ -1426,7 +1423,6 @@ impl S3 for SkyProxy {
                     op_types.push(op_type.clone());
                 }
                 if !completed_ids.is_empty() {
-
                     let start_cp_2_time = Instant::now();
 
                     apis::complete_delete_objects(
@@ -1442,7 +1438,6 @@ impl S3 for SkyProxy {
 
                     let duration_cp_2 = start_cp_2_time.elapsed().as_secs_f32();
                     duration_cp_1 += duration_cp_2;
-
                 }
 
                 if version_enable == *"NULL" {
@@ -1513,7 +1508,6 @@ impl S3 for SkyProxy {
                             fails_op_type_vec.push(op_type.clone());
                         }
                         if !fails_ids_vec.is_empty() {
-
                             let start_cp_2_time = Instant::now();
 
                             apis::complete_delete_objects(
@@ -1531,9 +1525,8 @@ impl S3 for SkyProxy {
                             duration_cp_1 += duration_cp_2;
                         }
                     }
-                }                
-            }
-            );
+                }
+            });
         }
 
         while let Some(result) = tasks.join_next().await {
@@ -1550,7 +1543,7 @@ impl S3 for SkyProxy {
 
         let mut delete_objects_vec = Vec::new();
         for obj in deleted_objects.lock().await.iter() {
-            delete_objects_vec.push(DeletedObject{
+            delete_objects_vec.push(DeletedObject {
                 key: obj.key.clone(),
                 delete_marker: obj.delete_marker,
                 delete_marker_version_id: obj.delete_marker_version_id.clone(),
@@ -1588,7 +1581,6 @@ impl S3 for SkyProxy {
         };
 
         write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
-
 
         return Ok(res);
     }

@@ -44,8 +44,8 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import get_placement_policy, PlacementPolicy
-from operations.policy.transfer_policy import get_transfer_policy, TransferPolicy
+from operations.policy.placement_policy import get_placement_policy
+from operations.policy.transfer_policy import get_transfer_policy
 from operations.bucket_operations import init_region_tags
 import UltraDict as ud
 import time
@@ -58,7 +58,7 @@ router = APIRouter()
 policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True)
-except Exception as e:
+except Exception as _:
     time.sleep(5)
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
 
@@ -85,12 +85,12 @@ async def update_policy(
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
         policy_ultra_dict["get_policy"] = get_policy_type
 
+
 # TODO: when creating new logical object, we need to consider different put policy
 @router.post("/start_delete_objects")
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
-    
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -277,7 +277,7 @@ async def start_delete_objects(
             # for these cases, we only need to deal with the first logical object
             if replaced or add_obj:
                 break
-            
+
             try:
                 await db.commit()
             except Exception as e:
@@ -1004,7 +1004,10 @@ async def complete_upload(
     # TODO: might need to change the if conditions for different policies
     policy_name = put_policy.name()
     if (
-        ((policy_name == "push" or policy_name == "replicate_all") and physical_locator.is_primary)
+        (
+            (policy_name == "push" or policy_name == "replicate_all")
+            and physical_locator.is_primary
+        )
         or policy_name == "write_local"
         or policy_name == "copy_on_read"
         or policy_name == "single_region"
