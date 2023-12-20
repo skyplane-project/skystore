@@ -2,6 +2,7 @@ use crate::objstore_client::ObjectStoreClient;
 use crate::utils::stream_utils::split_streaming_blob;
 use crate::utils::type_utils::*;
 
+use aws_config::imds::client;
 use bytes::BytesMut;
 use chrono::Utc;
 use core::panic;
@@ -17,6 +18,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::error;
+use std::time::Instant;
 
 pub struct SkyProxy {
     pub store_clients: HashMap<String, Arc<Box<dyn ObjectStoreClient>>>,
@@ -190,7 +192,7 @@ impl SkyProxy {
                 "http://127.0.0.1:3000".to_string()
             } else {
                 // NOTE: ip address set to be the remote store-server addr
-                "http://54.183.193.192:3000".to_string()
+                "http://54.183.137.182:3000".to_string()
             },
             ..Default::default()
         };
@@ -505,6 +507,9 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<ListObjectsV2Input>,
     ) -> S3Result<S3Response<ListObjectsV2Output>> {
+
+        let start_time = Instant::now();
+
         let resp = apis::list_objects(
             &self.dir_conf,
             models::ListObjectRequest {
@@ -515,6 +520,8 @@ impl S3 for SkyProxy {
             },
         )
         .await;
+
+        let duration_cp = start_time.elapsed().as_secs_f32();
 
         match resp {
             Ok(resp) => {
@@ -544,6 +551,19 @@ impl S3 for SkyProxy {
                     contents: Some(objects),
                     ..Default::default()
                 };
+
+                let duration = start_time.elapsed().as_secs_f32();
+                
+                // write to the local file
+                let metrics = SimpleMetrics {
+                    latency: duration_cp.to_string() + "," + &duration.to_string(),
+                    key: "".to_string(),
+                    size: 0,
+                    op: "LIST".to_string(),
+                };
+
+                write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
+
                 Ok(S3Response::new(output))
             }
             Err(err) => {
@@ -561,10 +581,15 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<HeadObjectInput>,
     ) -> S3Result<S3Response<HeadObjectOutput>> {
+
+        let start_time = Instant::now();
+
         let vid = req.input.version_id.map(|id| id.parse::<i32>().unwrap());
 
         // since we will detect whether we have enabled versioning the the server side,
         // we don't need to check versioning status here
+
+        let start_cp_time = Instant::now();
 
         // Directly call the control plane instead of going through the object store
         let head_resp = apis::head_object(
@@ -576,6 +601,8 @@ impl S3 for SkyProxy {
             },
         )
         .await;
+
+        let duration_cp = start_cp_time.elapsed().as_secs_f32();
 
         let output = match head_resp {
             Ok(resp) => HeadObjectOutput {
@@ -682,6 +709,19 @@ impl S3 for SkyProxy {
                 .insert("X-SKYSTORE-WARMUP-ETAGS", e_tags_str.parse().unwrap());
         }
 
+
+        let duration = start_time.elapsed().as_secs_f32();
+
+        // write to the local file
+        let metrics = SimpleMetrics {
+            latency: duration_cp.to_string() + "," + &duration.to_string(),
+            key: "".to_string(),
+            size: 0,
+            op: "HEAD".to_string(),
+        };
+
+        write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
+
         Ok(head_object_response)
     }
 
@@ -718,6 +758,7 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<GetObjectInput>,
     ) -> S3Result<S3Response<GetObjectOutput>> {
+        let start_time = Instant::now();
         let bucket = req.input.bucket.clone();
         let key = req.input.key.clone();
         let vid = req
@@ -726,8 +767,15 @@ impl S3 for SkyProxy {
             .clone()
             .map(|id| id.parse::<i32>().unwrap());
 
+        let start_cp_time = Instant::now();
+
         let locator = self.locate_object(bucket.clone(), key.clone(), vid).await?;
 
+        let duration_cp = start_cp_time.elapsed().as_secs_f32();
+
+        let client_from_region = self.client_from_region.clone();
+        let key_clone = key.clone();
+        
         match locator {
             Some(location) => {
                 if req.headers.get("X-SKYSTORE-PULL").is_some() {
@@ -987,6 +1035,18 @@ impl S3 for SkyProxy {
                     //     panic!("Error writing metrics to file: {}", e);
                     // }
 
+                    let duration = start_time.elapsed().as_secs_f32();
+
+                    // write to the local file
+                    let metrics = SimpleMetrics {
+                        latency: duration_cp.to_string() + "," + &duration.to_string(),
+                        key: key_clone,
+                        size: res.output.content_length as u64,
+                        op: "GET".to_string(),
+                    };
+
+                    write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
+
                     return Ok(res);
                 }
             }
@@ -1004,7 +1064,8 @@ impl S3 for SkyProxy {
     ) -> S3Result<S3Response<PutObjectOutput>> {
         // Idempotent PUT
 
-        // let start_time = Instant::now();
+        let start_time = Instant::now();
+        let mut duration_complete_upload = 0.0;
 
         if self.version_enable == *"NULL" {
             let locator = self
@@ -1017,6 +1078,8 @@ impl S3 for SkyProxy {
                 }));
             }
         }
+
+        let start_cp_time = Instant::now();
 
         let start_upload_resp = apis::start_upload(
             &self.dir_conf,
@@ -1033,12 +1096,16 @@ impl S3 for SkyProxy {
         .await
         .unwrap();
 
+        let duration_cp = start_cp_time.elapsed().as_secs_f32();
+
         let mut tasks = tokio::task::JoinSet::new();
         let locators = start_upload_resp.locators;
         let request_template = clone_put_object_request(&req.input, None);
         let (input_blobs, sizes) = split_streaming_blob(req.input.body.unwrap(), locators.len());
 
         let vid = locators[0].version.map(|id| id.to_string()); // logical version
+
+        let mut size_to_get = 0;
 
         locators
             .into_iter()
@@ -1059,19 +1126,21 @@ impl S3 for SkyProxy {
                 });
 
                 let content_length = req.input.content_length;
-                let size_to_get = if let Some(content_length) = content_length {
+                size_to_get = if let Some(content_length) = content_length {
                     content_length
                 } else {
                     size
                 };
 
-                // let client_from_region = self.client_from_region.clone();
-                // let key = req.input.key.clone();
+                let client_from_region = self.client_from_region.clone();
+                let key = req.input.key.clone();
 
                 tasks.spawn(async move {
                     let put_resp = client.put_object(req).await.unwrap();
                     let e_tag = put_resp.output.e_tag.unwrap();
                     let last_modified = current_timestamp_string();
+
+                    let start_complete_upload_time = Instant::now();
 
                     apis::complete_upload(
                         &conf,
@@ -1085,6 +1154,14 @@ impl S3 for SkyProxy {
                     )
                     .await
                     .unwrap();
+
+                    // max duration of complete_upload
+                    // since using write_local policy, we only need to wait for the first complete_upload to finish
+                    // no concurrency bug worry
+                    duration_complete_upload = f32::max(
+                        duration_complete_upload,
+                        start_complete_upload_time.elapsed().as_secs_f32(),
+                    );
 
                     // let put_latency = start_time.elapsed().as_secs_f32();
                     // let system_time: SystemTime = Utc::now().into();
@@ -1115,15 +1192,30 @@ impl S3 for SkyProxy {
             });
 
         let mut e_tags = Vec::new();
+
         while let Some(Ok(e_tag)) = tasks.join_next().await {
             e_tags.push(e_tag);
         }
+
+        let duration_cp_total = duration_cp + duration_complete_upload;
 
         let res = Ok(S3Response::new(PutObjectOutput {
             e_tag: e_tags.pop(),
             version_id: vid, // logical version
             ..Default::default()
         }));
+
+        let duration = start_time.elapsed().as_secs_f32();
+
+        // write to the local file
+        let metrics = SimpleMetrics {
+            latency: duration_cp_total.to_string() + "," + &duration.to_string(),
+            key: req.input.key.clone(),
+            size: size_to_get as u64,
+            op: "PUT".to_string(),
+        };
+
+        write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
 
         return res;
     }
@@ -1133,6 +1225,9 @@ impl S3 for SkyProxy {
         &self,
         req: S3Request<DeleteObjectsInput>,
     ) -> S3Result<S3Response<DeleteObjectsOutput>> {
+
+        let start_time = Instant::now();
+
         // Send start delete objects request
         let object_identifiers: Vec<_> = req
             .input
@@ -1174,6 +1269,8 @@ impl S3 for SkyProxy {
             }
         }
 
+        let start_cp_1_time = Instant::now();
+
         let delete_objects_resp = match apis::start_delete_objects(
             &self.dir_conf,
             models::DeleteObjectsRequest {
@@ -1213,7 +1310,9 @@ impl S3 for SkyProxy {
             }
         };
 
-        let delete_markers_map = delete_objects_resp.delete_markers;
+        let mut duration_cp_1 = start_cp_1_time.elapsed().as_secs_f32();
+
+        let delete_markers_map = Arc::new(tokio::sync::RwLock::new(delete_objects_resp.delete_markers));
         let op_type_map = delete_objects_resp.op_type;
 
         // Delete objects in actual storages
@@ -1290,131 +1389,208 @@ impl S3 for SkyProxy {
             }
         }
 
-        let mut deleted_objects = DeletedObjects::default();
-        let mut errors = Errors::default();
+        let deleted_objects = Arc::new(tokio::sync::Mutex::new(DeletedObjects::default()));
+        // let deleted_objects_clone = deleted_objects.clone();
+        let errors = Arc::new(tokio::sync::Mutex::new(Errors::default()));
 
+        // parallel complete delete objects
+        let mut tasks = tokio::task::JoinSet::new();
         for (key, results) in key_to_results {
-            let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
 
-            // complete delete objects
-            let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
-            // we might need to deal with fails ids
-            let fails_empty = fails.is_empty();
-            let fails_ids: Vec<_> = fails.into_iter().filter_map(Result::err).collect();
-            let err_msg = fails_ids
-                .iter()
-                .map(|fail| fail.3.clone())
-                .collect::<Vec<String>>()
-                .join(",");
-            let mut ids = Vec::new();
-            let mut versions = Vec::new();
-            let mut op_types = Vec::new();
-            for (id, version, op_type) in &completed_ids {
-                ids.push(*id);
-                versions.push(version.clone());
-                op_types.push(op_type.clone());
-            }
-            if !completed_ids.is_empty() {
-                apis::complete_delete_objects(
-                    &self.dir_conf,
-                    models::DeleteObjectsIsCompleted {
-                        ids,
-                        multipart_upload_ids: None,
-                        op_type: op_types,
-                    },
-                )
-                .await
-                .unwrap();
-            }
+            // These are for spawned tasks to access
+            let deleted_objects_clone = Arc::clone(&deleted_objects);
+            let delete_markers_map_clone = Arc::clone(&delete_markers_map);
+            let errors_clone = Arc::clone(&errors);
+            let version_enable = self.version_enable.clone();
+            let dir_conf_clone = self.dir_conf.clone();
 
-            if self.version_enable == *"NULL" {
-                if fails_empty {
-                    // if version is not enabled, the version vector must be empty
-                    deleted_objects.push(DeletedObject {
-                        key: Some(key.clone()),
-                        delete_marker: false,
-                        ..Default::default()
-                    });
-                } else {
-                    errors.push(Error {
-                        key: Some(key),
-                        code: Some("InternalError".to_string()),
-                        message: Some(err_msg),
-                        ..Default::default()
-                    });
+            tasks.spawn(async move {
+                let (successes, fails): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
+
+                // complete delete objects
+                let completed_ids: Vec<_> = successes.into_iter().filter_map(Result::ok).collect();
+                // we might need to deal with fails ids
+                let fails_empty = fails.is_empty();
+                let fails_ids: Vec<_> = fails.into_iter().filter_map(Result::err).collect();
+                let err_msg = fails_ids
+                    .iter()
+                    .map(|fail| fail.3.clone())
+                    .collect::<Vec<String>>()
+                    .join(",");
+                let mut ids = Vec::new();
+                let mut versions = Vec::new();
+                let mut op_types = Vec::new();
+                for (id, version, op_type) in &completed_ids {
+                    ids.push(*id);
+                    versions.push(version.clone());
+                    op_types.push(op_type.clone());
                 }
-            } else {
-                // if we failed to delete the logical object, and this object is not a delete marker,
-                // we need to add it to the errors vector
-                if !fails_empty && !delete_markers_map[&key].delete_marker {
-                    errors.push(Error {
-                        key: Some(key),
-                        code: Some("InternalError".to_string()),
-                        message: Some(err_msg),
-                        ..Default::default()
-                    });
-                } else {
-                    // now the version vector can be empty or not
-                    // first dealing with the success vector
-                    if versions.is_empty() {
-                        deleted_objects.push(DeletedObject {
+                if !completed_ids.is_empty() {
+
+                    let start_cp_2_time = Instant::now();
+
+                    apis::complete_delete_objects(
+                        &dir_conf_clone,
+                        models::DeleteObjectsIsCompleted {
+                            ids,
+                            multipart_upload_ids: None,
+                            op_type: op_types,
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                    let duration_cp_2 = start_cp_2_time.elapsed().as_secs_f32();
+                    duration_cp_1 += duration_cp_2;
+
+                }
+
+                if version_enable == *"NULL" {
+                    if fails_empty {
+                        // if version is not enabled, the version vector must be empty
+                        // deleted_objects_clone.lock().await;
+                        deleted_objects_clone.lock().await.push(DeletedObject {
                             key: Some(key.clone()),
-                            delete_marker: true,
-                            delete_marker_version_id: delete_markers_map[&key]
-                                .version_id
-                                .as_ref()
-                                .map(|id| id.to_string()), // logical version
-                            version_id: None,
+                            delete_marker: false,
+                            ..Default::default()
                         });
                     } else {
-                        for version in &versions {
-                            deleted_objects.push(DeletedObject {
+                        errors_clone.lock().await.push(Error {
+                            key: Some(key),
+                            code: Some("InternalError".to_string()),
+                            message: Some(err_msg),
+                            ..Default::default()
+                        });
+                    }
+                } else {
+                    // if we failed to delete the logical object, and this object is not a delete marker,
+                    // we need to add it to the errors vector
+                    let delete_markers_map_key = &delete_markers_map_clone.read().await[&key];
+                    if !fails_empty && !delete_markers_map_key.delete_marker {
+                        errors_clone.lock().await.push(Error {
+                            key: Some(key),
+                            code: Some("InternalError".to_string()),
+                            message: Some(err_msg),
+                            ..Default::default()
+                        });
+                    } else {
+                        // now the version vector can be empty or not
+                        // first dealing with the success vector
+                        if versions.is_empty() {
+                            //let deleted_objects_clone = Arc::clone(&deleted_objects);
+                            deleted_objects_clone.lock().await.push(DeletedObject {
                                 key: Some(key.clone()),
                                 delete_marker: true,
-                                delete_marker_version_id: delete_markers_map[&key]
+                                delete_marker_version_id: delete_markers_map_key
                                     .version_id
                                     .as_ref()
                                     .map(|id| id.to_string()), // logical version
-                                version_id: version.clone(),
+                                version_id: None,
                             });
+                        } else {
+                            for version in &versions {
+                                //let deleted_objects_clone = Arc::clone(&deleted_objects);
+                                deleted_objects_clone.lock().await.push(DeletedObject {
+                                    key: Some(key.clone()),
+                                    delete_marker: true,
+                                    delete_marker_version_id: delete_markers_map_key
+                                        .version_id
+                                        .as_ref()
+                                        .map(|id| id.to_string()), // logical version
+                                    version_id: version.clone(),
+                                });
+                            }
+                        }
+
+                        let mut fails_ids_vec = Vec::new();
+                        // let mut fails_version_vec = Vec::new();
+                        let mut fails_op_type_vec = Vec::new();
+
+                        // deal with fails vector, fails_ids vector might be empty
+                        for (id, _, op_type, _) in &fails_ids {
+                            fails_ids_vec.push(*id);
+                            // fails_version_vec.push(version);
+                            fails_op_type_vec.push(op_type.clone());
+                        }
+                        if !fails_ids_vec.is_empty() {
+
+                            let start_cp_2_time = Instant::now();
+
+                            apis::complete_delete_objects(
+                                &dir_conf_clone,
+                                models::DeleteObjectsIsCompleted {
+                                    ids: fails_ids_vec,
+                                    multipart_upload_ids: None,
+                                    op_type: fails_op_type_vec,
+                                },
+                            )
+                            .await
+                            .unwrap();
+
+                            let duration_cp_2 = start_cp_2_time.elapsed().as_secs_f32();
+                            duration_cp_1 += duration_cp_2;
                         }
                     }
+                }                
+            }
+            );
+        }
 
-                    let mut fails_ids_vec = Vec::new();
-                    // let mut fails_version_vec = Vec::new();
-                    let mut fails_op_type_vec = Vec::new();
-
-                    // deal with fails vector, fails_ids vector might be empty
-                    for (id, _, op_type, _) in &fails_ids {
-                        fails_ids_vec.push(*id);
-                        // fails_version_vec.push(version);
-                        fails_op_type_vec.push(op_type.clone());
-                    }
-                    if !fails_ids_vec.is_empty() {
-                        apis::complete_delete_objects(
-                            &self.dir_conf,
-                            models::DeleteObjectsIsCompleted {
-                                ids: fails_ids_vec,
-                                multipart_upload_ids: None,
-                                op_type: fails_op_type_vec,
-                            },
-                        )
-                        .await
-                        .unwrap();
-                    }
+        while let Some(result) = tasks.join_next().await {
+            match result {
+                Ok(_) => {}
+                Err(err) => {
+                    return Err(s3s::S3Error::with_message(
+                        s3s::S3ErrorCode::InternalError,
+                        format!("Error deleting objects: {}", err),
+                    ));
                 }
             }
         }
 
-        Ok(S3Response::new(DeleteObjectsOutput {
-            deleted: Some(deleted_objects),
-            errors: if errors.is_empty() {
+        let mut delete_objects_vec = Vec::new();
+        for obj in deleted_objects.lock().await.iter() {
+            delete_objects_vec.push(DeletedObject{
+                key: obj.key.clone(),
+                delete_marker: obj.delete_marker,
+                delete_marker_version_id: obj.delete_marker_version_id.clone(),
+                version_id: obj.version_id.clone(),
+            });
+        }
+
+        let mut errors_vec = Vec::new();
+        let res = S3Response::new(DeleteObjectsOutput {
+            deleted: Some(delete_objects_vec),
+            errors: if errors.lock().await.is_empty() {
                 None
             } else {
-                Some(errors)
+                for err in errors.lock().await.iter() {
+                    errors_vec.push(Error {
+                        key: err.key.clone(),
+                        code: err.code.clone(),
+                        message: err.message.clone(),
+                        version_id: err.version_id.clone(),
+                    });
+                }
+                Some(errors_vec)
             },
             ..Default::default()
-        }))
+        });
+
+        let duration = start_time.elapsed().as_secs_f32();
+
+        // write to the local file
+        let metrics = SimpleMetrics {
+            latency: duration_cp_1.to_string() + "," + &duration.to_string(),
+            key: "".to_string(),
+            size: 0,
+            op: "DELETE".to_string(),
+        };
+
+        write_metrics_to_file(serde_json::to_string(&metrics).unwrap(), "metrics.json");
+
+
+        return Ok(res);
     }
 
     #[tracing::instrument(level = "info")]
