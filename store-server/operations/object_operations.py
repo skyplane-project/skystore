@@ -59,7 +59,7 @@ policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True)
 except Exception as _:
-    time.sleep(5)
+    time.sleep(3)
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
 
 policy_ultra_dict["get_policy"] = ""
@@ -226,10 +226,7 @@ async def start_delete_objects(
             ):
                 continue  # skip if the version_id is not in the request
 
-            for physical_locator, pre_physical_locator in zip_longest(
-                logical_obj.physical_object_locators,
-                pre_logical_obj.physical_object_locators if pre_logical_obj else [],
-            ):
+            for physical_locator in logical_obj.physical_object_locators:
                 await db.refresh(physical_locator, ["logical_object"])
 
                 if (
@@ -263,8 +260,8 @@ async def start_delete_objects(
                         # the version_id should be the one that we want the client to operate on
                         # so when we add objects into the DB, we still want the client to cope with the previous version
                         version_id=physical_locator.version_id
-                        if pre_physical_locator is None
-                        else pre_physical_locator.version_id,
+                        if version_enabled is not None
+                        else None,
                         version=physical_locator.logical_object.id
                         if version_enabled is not None
                         else None,
@@ -504,7 +501,9 @@ async def locate_object(
         size=locators.size,
         last_modified=locators.last_modified,
         etag=locators.etag,
-        version_id=chosen_locator.version_id,  # here must use the physical version
+        version_id=chosen_locator.version_id
+        if version_enabled is not None
+        else None,  # here must use the physical version
         version=locators.id if version_enabled is not None else None,
     )
 
@@ -835,11 +834,11 @@ async def start_upload(
 
         # but we can choose wheatever idx in the primary_write_region list
         primary_write_region = primary_write_region[0]
-        assert (
-            primary_write_region != request.client_from_region
-        ), "should not be the same region"
+        # assert (
+        #     primary_write_region != request.client_from_region
+        # ), "should not be the same region"
     # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-    elif put_policy.name() == "replicate_all":
+    elif put_policy.name() == "push" or put_policy.name() == "replicate_all":
         # Except this case, always set the first-write region of the OBJECT to be primary
         primary_write_region = [
             locator.location_tag
@@ -850,7 +849,7 @@ async def start_upload(
             len(primary_write_region) == 1
         ), "should only have one primary write region"
         primary_write_region = primary_write_region[0]
-    elif put_policy.name() == "single_region" or put_policy.name() == "push":
+    elif put_policy.name() == "single_region":
         primary_write_region = upload_to_region_tags[0]
     else:
         # Write to the local region and set the first-write region of the OBJECT to be primary

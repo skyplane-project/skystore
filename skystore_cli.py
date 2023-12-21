@@ -111,11 +111,11 @@ def init(
         # clean up shared memory
         try:
             UltraDict.unlink_by_name("db_init_log")
-        except:
+        except Exception as _:
             print("db_init_log has been deleted.")
         try:
             UltraDict.unlink_by_name("policy_ultra_dict")
-        except:
+        except Exception as _:
             print("policy_ultra_dict has been deleted.")
         subprocess.Popen(
             f"cd {DEFAULT_STORE_SERVER_PATH}; "

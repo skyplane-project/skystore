@@ -3,6 +3,7 @@ use crate::utils::stream_utils::split_streaming_blob;
 use crate::utils::type_utils::*;
 
 use aws_config::imds::client;
+use azure_storage_blobs::container::operations::delete;
 use bytes::BytesMut;
 use chrono::Utc;
 use core::panic;
@@ -192,7 +193,7 @@ impl SkyProxy {
                 "http://127.0.0.1:3000".to_string()
             } else {
                 // NOTE: ip address set to be the remote store-server addr
-                "http://54.183.137.182:3000".to_string()
+                "http://54.67.80.157:3000".to_string()
             },
             ..Default::default()
         };
@@ -1225,13 +1226,7 @@ impl S3 for SkyProxy {
         let start_time = Instant::now();
 
         // Send start delete objects request
-        let object_identifiers: Vec<_> = req
-            .input
-            .delete
-            .objects
-            .iter()
-            // .map(|obj| obj.key.clone())
-            .collect();
+        let object_identifiers: Vec<_> = req.input.delete.objects.iter().collect();
 
         if self.version_enable == *"NULL"
             && req
@@ -1308,8 +1303,7 @@ impl S3 for SkyProxy {
 
         let mut duration_cp_1 = start_cp_1_time.elapsed().as_secs_f32();
 
-        let delete_markers_map =
-            Arc::new(tokio::sync::RwLock::new(delete_objects_resp.delete_markers));
+        let delete_markers_map = Arc::new(delete_objects_resp.delete_markers);
         let op_type_map = delete_objects_resp.op_type;
 
         // Delete objects in actual storages
@@ -1386,21 +1380,18 @@ impl S3 for SkyProxy {
             }
         }
 
-        let deleted_objects = Arc::new(tokio::sync::Mutex::new(DeletedObjects::default()));
-        // let deleted_objects_clone = deleted_objects.clone();
-        let errors = Arc::new(tokio::sync::Mutex::new(Errors::default()));
-
         // parallel complete delete objects
         let mut tasks = tokio::task::JoinSet::new();
         for (key, results) in key_to_results {
             // These are for spawned tasks to access
-            let deleted_objects_clone = Arc::clone(&deleted_objects);
             let delete_markers_map_clone = Arc::clone(&delete_markers_map);
-            let errors_clone = Arc::clone(&errors);
             let version_enable = self.version_enable.clone();
             let dir_conf_clone = self.dir_conf.clone();
 
             tasks.spawn(async move {
+                let mut deleted_objects = DeletedObjects::default();
+                let mut errors = Errors::default();
+
                 let (successes, fails): (Vec<_>, Vec<_>) =
                     results.into_iter().partition(Result::is_ok);
 
@@ -1437,20 +1428,22 @@ impl S3 for SkyProxy {
                     .unwrap();
 
                     let duration_cp_2 = start_cp_2_time.elapsed().as_secs_f32();
+                    // NOTE: This metrics measurement method here can nonly be used on single-region/copy-on-read/write-local ones
+                    // since when replicating all, we will perform these operations on all regions by parallel
+                    // then we should choose the one with largest latency
                     duration_cp_1 += duration_cp_2;
                 }
 
                 if version_enable == *"NULL" {
                     if fails_empty {
                         // if version is not enabled, the version vector must be empty
-                        // deleted_objects_clone.lock().await;
-                        deleted_objects_clone.lock().await.push(DeletedObject {
+                        deleted_objects.push(DeletedObject {
                             key: Some(key.clone()),
                             delete_marker: false,
                             ..Default::default()
                         });
                     } else {
-                        errors_clone.lock().await.push(Error {
+                        errors.push(Error {
                             key: Some(key),
                             code: Some("InternalError".to_string()),
                             message: Some(err_msg),
@@ -1460,41 +1453,26 @@ impl S3 for SkyProxy {
                 } else {
                     // if we failed to delete the logical object, and this object is not a delete marker,
                     // we need to add it to the errors vector
-                    let delete_markers_map_key = &delete_markers_map_clone.read().await[&key];
+                    let delete_markers_map_key = &delete_markers_map_clone[&key];
                     if !fails_empty && !delete_markers_map_key.delete_marker {
-                        errors_clone.lock().await.push(Error {
+                        errors.push(Error {
                             key: Some(key),
                             code: Some("InternalError".to_string()),
                             message: Some(err_msg),
                             ..Default::default()
                         });
                     } else {
-                        // now the version vector can be empty or not
-                        // first dealing with the success vector
-                        if versions.is_empty() {
+                        for version in &versions {
                             //let deleted_objects_clone = Arc::clone(&deleted_objects);
-                            deleted_objects_clone.lock().await.push(DeletedObject {
+                            deleted_objects.push(DeletedObject {
                                 key: Some(key.clone()),
                                 delete_marker: true,
                                 delete_marker_version_id: delete_markers_map_key
                                     .version_id
                                     .as_ref()
                                     .map(|id| id.to_string()), // logical version
-                                version_id: None,
+                                version_id: version.clone(),
                             });
-                        } else {
-                            for version in &versions {
-                                //let deleted_objects_clone = Arc::clone(&deleted_objects);
-                                deleted_objects_clone.lock().await.push(DeletedObject {
-                                    key: Some(key.clone()),
-                                    delete_marker: true,
-                                    delete_marker_version_id: delete_markers_map_key
-                                        .version_id
-                                        .as_ref()
-                                        .map(|id| id.to_string()), // logical version
-                                    version_id: version.clone(),
-                                });
-                            }
                         }
 
                         let mut fails_ids_vec = Vec::new();
@@ -1526,12 +1504,21 @@ impl S3 for SkyProxy {
                         }
                     }
                 }
+
+                (deleted_objects, errors) // return
             });
         }
 
+        let mut deleted_objects = DeletedObjects::default();
+        let mut errors = Errors::default();
+
         while let Some(result) = tasks.join_next().await {
             match result {
-                Ok(_) => {}
+                Ok(result) => {
+                    let (mut deleted_objects_clone, mut errors_clone) = result;
+                    deleted_objects.append(&mut deleted_objects_clone);
+                    errors.append(&mut errors_clone);
+                }
                 Err(err) => {
                     return Err(s3s::S3Error::with_message(
                         s3s::S3ErrorCode::InternalError,
@@ -1541,31 +1528,13 @@ impl S3 for SkyProxy {
             }
         }
 
-        let mut delete_objects_vec = Vec::new();
-        for obj in deleted_objects.lock().await.iter() {
-            delete_objects_vec.push(DeletedObject {
-                key: obj.key.clone(),
-                delete_marker: obj.delete_marker,
-                delete_marker_version_id: obj.delete_marker_version_id.clone(),
-                version_id: obj.version_id.clone(),
-            });
-        }
-
-        let mut errors_vec = Vec::new();
+        // let mut errors_vec = Vec::new();
         let res = S3Response::new(DeleteObjectsOutput {
-            deleted: Some(delete_objects_vec),
-            errors: if errors.lock().await.is_empty() {
+            deleted: Some(deleted_objects),
+            errors: if errors.is_empty() {
                 None
             } else {
-                for err in errors.lock().await.iter() {
-                    errors_vec.push(Error {
-                        key: err.key.clone(),
-                        code: err.code.clone(),
-                        message: err.message.clone(),
-                        version_id: err.version_id.clone(),
-                    });
-                }
-                Some(errors_vec)
+                Some(errors)
             },
             ..Default::default()
         });
