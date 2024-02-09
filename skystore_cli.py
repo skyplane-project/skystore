@@ -133,7 +133,7 @@ def register(
     else:
         # backward compatible
         # server_addr = "SERVER IP"
-        pass;
+        pass
 
     try:
         with open(register_config, "r") as f:

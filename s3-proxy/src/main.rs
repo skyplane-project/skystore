@@ -61,8 +61,7 @@ async fn main() {
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
 
-    let server_addr: String =
-        env::var("SERVER_ADDR").expect("SERVER ADDRESS is missing");
+    let server_addr: String = env::var("SERVER_ADDR").expect("SERVER ADDRESS is missing");
 
     let policy: String = env::var("POLICY").expect("POLICY for placement must be set");
 
