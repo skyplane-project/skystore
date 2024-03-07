@@ -43,6 +43,11 @@ def init(
     policy: Policy = typer.Option(
         Policy.write_local, "--policy", help="Policy to use for data placement"
     ),
+
+    server_addr: str = typer.Option(
+        "localhost", "--server_addr", help="IP address of the SkyStore metadata server"
+    ),
+
 ):
     with open(config_file, "r") as f:
         config = json.load(f)
@@ -65,6 +70,7 @@ def init(
         "LOCAL_SERVER": str(start_server).lower(),
         "POLICY": policy,
         "SKYSTORE_BUCKET_PREFIX": skystore_bucket_prefix,
+        "SERVER_ADDR": server_addr,
     }
     env = {k: v for k, v in env.items() if v is not None}
 
@@ -116,13 +122,18 @@ def register(
     local_test: bool = typer.Option(
         False, "--local", help="Whether it is a local test or not"
     ),
+    server_addr: str = typer.Option(
+        "localhost", "--server_addr", help="IP address of the SkyStore metadata server"
+    ),
+
 ):
     # read from LOCAL_SERVER environmental variable instead
     if local_test:
         server_addr = "localhost"
     else:
-        # NOTE: ip address set to be the remote store-server addr
-        server_addr = "54.183.123.82"
+        # backward compatible
+        # server_addr = "SERVER IP"
+        pass
 
     try:
         with open(register_config, "r") as f:

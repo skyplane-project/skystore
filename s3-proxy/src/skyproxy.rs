@@ -22,6 +22,7 @@ pub struct SkyProxy {
     pub client_from_region: String,
     pub policy: String,
     pub skystore_bucket_prefix: String,
+    pub server_addr: String,
 }
 
 impl SkyProxy {
@@ -32,6 +33,7 @@ impl SkyProxy {
         local_server: bool,
         policy: String,
         skystore_bucket_prefix: String,
+        server_addr: String,
     ) -> Self {
         let mut store_clients = HashMap::new();
 
@@ -147,7 +149,8 @@ impl SkyProxy {
                 "http://127.0.0.1:3000".to_string()
             } else {
                 // NOTE: ip address set to be the remote store-server addr
-                "http://54.183.123.82:3000".to_string()
+                //"http://54.183.123.82:3000".to_string()
+                format!("http://{}:3000", server_addr).to_string()
             },
             ..Default::default()
         };
@@ -162,6 +165,7 @@ impl SkyProxy {
             client_from_region,
             policy,
             skystore_bucket_prefix,
+            server_addr,
         }
     }
 }
@@ -174,6 +178,7 @@ impl Clone for SkyProxy {
             client_from_region: self.client_from_region.clone(),
             skystore_bucket_prefix: self.skystore_bucket_prefix.clone(),
             policy: self.policy.clone(),
+            server_addr: self.server_addr.clone(),
         }
     }
 }
@@ -271,7 +276,6 @@ impl S3 for SkyProxy {
         )
         .await
         .unwrap();
-
         // Create bucket in actual storages
         let mut tasks = tokio::task::JoinSet::new();
         let locators = create_bucket_resp.locators;

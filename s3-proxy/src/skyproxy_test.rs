@@ -33,6 +33,7 @@ mod tests {
             true,
             "push".to_string(),
             "skystore".to_string(),
+            "localhost".to_string(),
         )
         .await
     }

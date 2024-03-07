@@ -704,18 +704,20 @@ async def continue_upload(
             region=locator.region,
             key=locator.key,
             multipart_upload_id=locator.multipart_upload_id,
-            parts=[
-                ContinueUploadPhysicalPart(
-                    part_number=part.part_number,
-                    etag=part.etag,
-                )
-                for part in locator.multipart_upload_parts
-            ]
-            if request.do_list_parts
-            else None,
-            copy_src_bucket=copy_src_buckets[i]
-            if request.copy_src_bucket is not None
-            else None,
+            parts=(
+                [
+                    ContinueUploadPhysicalPart(
+                        part_number=part.part_number,
+                        etag=part.etag,
+                    )
+                    for part in locator.multipart_upload_parts
+                ]
+                if request.do_list_parts
+                else None
+            ),
+            copy_src_bucket=(
+                copy_src_buckets[i] if request.copy_src_bucket is not None else None
+            ),
             copy_src_key=copy_src_keys[i] if request.copy_src_key is not None else None,
         )
         for i, locator in enumerate(locators)
