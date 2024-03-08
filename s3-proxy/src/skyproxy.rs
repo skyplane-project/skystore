@@ -1,9 +1,6 @@
 use crate::objstore_client::ObjectStoreClient;
 use crate::utils::stream_utils::split_streaming_blob;
 use crate::utils::type_utils::*;
-
-use aws_config::imds::client;
-use azure_storage_blobs::container::operations::delete;
 use bytes::BytesMut;
 use chrono::Utc;
 use core::panic;
