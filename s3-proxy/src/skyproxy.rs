@@ -5,6 +5,7 @@ use bytes::BytesMut;
 use chrono::Utc;
 use core::panic;
 use futures::StreamExt;
+use hyper::server;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use s3s::stream::ByteStream;
 use s3s::{dto::*, Body};
@@ -26,6 +27,7 @@ pub struct SkyProxy {
     pub put_policy: String,
     pub skystore_bucket_prefix: String,
     pub version_enable: String,
+    pub server_addr: String,
 }
 
 impl SkyProxy {
@@ -37,6 +39,7 @@ impl SkyProxy {
         policy: (String, String),
         skystore_bucket_prefix: String,
         version_enable: String,
+        server_addr: String,
     ) -> Self {
         let mut store_clients = HashMap::new();
 
@@ -190,7 +193,7 @@ impl SkyProxy {
                 "http://127.0.0.1:3000".to_string()
             } else {
                 // NOTE: ip address set to be the remote store-server addr
-                "http://54.67.80.157:3000".to_string()
+                format!("http://{}:3000", server_addr).to_string()
             },
             ..Default::default()
         };
@@ -218,6 +221,7 @@ impl SkyProxy {
             put_policy: policy.1,
             skystore_bucket_prefix,
             version_enable,
+            server_addr,
         }
     }
 }
@@ -232,6 +236,7 @@ impl Clone for SkyProxy {
             get_policy: self.get_policy.clone(),
             put_policy: self.put_policy.clone(),
             version_enable: self.version_enable.clone(),
+            server_addr: self.server_addr.clone(),
         }
     }
 }

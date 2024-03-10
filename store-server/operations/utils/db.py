@@ -93,10 +93,10 @@ async def create_database(
 
 # Define the name of the database you want to create
 database_name = "skystore"
-user = "postgres"
-password = "skystore"
-# user = "shaopu"
-# password = "monkeydog"
+# user = "postgres"
+# password = "skystore"
+user = "shaopu_1"
+password = "monkeydog"
 
 
 def run_create_database():
@@ -127,7 +127,7 @@ engine = create_async_engine(
     echo=LOG_SQL,
     future=True,
     # NOTE: only enable this when you are testing
-    # poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
+    poolclass=NullPool,  # NOTE: this is to avoid the "database is being accessed by other users" error
 )
 
 
