@@ -131,6 +131,7 @@ async def shutdown_event():
 
 @app.on_event("startup")
 async def startup():
+    startup_time = 0
     while True:
         try:
             async with engine.begin() as conn:
@@ -141,6 +142,10 @@ async def startup():
         except Exception as _:
             print("Database still creating, waiting for 5 seconds...")
             await asyncio.sleep(5)
+            startup_time += 5
+            if startup_time > 10:
+                print("Database creation TIMEOUT! Exiting...")
+                break
 
     task = asyncio.create_task(rm_lock_on_timeout())
     background_tasks.add(task)

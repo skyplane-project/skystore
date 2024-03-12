@@ -61,6 +61,8 @@ async fn main() {
         .map(|s| s.parse::<bool>().unwrap())
         .unwrap_or(true);
 
+    let server_addr: String = env::var("SERVER_ADDR").expect("SERVER ADDRESS is missing");
+
     let get_policy: String = env::var("GET_POLICY").expect("POLICY for data transfer must be set");
 
     let put_policy: String = env::var("PUT_POLICY").expect("POLICY for data placement must be set");
@@ -75,6 +77,7 @@ async fn main() {
         (get_policy, put_policy),
         skystore_bucket_prefix,
         version_enable,
+        server_addr,
     )
     .await;
 

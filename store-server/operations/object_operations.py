@@ -44,8 +44,8 @@ from operations.utils.db import get_session, logger
 from typing import List
 from datetime import datetime
 from itertools import chain
-from operations.policy.placement_policy import get_placement_policy, PlacementPolicy
-from operations.policy.transfer_policy import get_transfer_policy, TransferPolicy
+from operations.policy.placement_policy import get_placement_policy
+from operations.policy.transfer_policy import get_transfer_policy
 from operations.bucket_operations import init_region_tags
 import UltraDict as ud
 import time
@@ -58,8 +58,8 @@ router = APIRouter()
 policy_ultra_dict = None
 try:
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=True)
-except Exception as e:
-    time.sleep(5)
+except Exception as _:
+    time.sleep(3)
     policy_ultra_dict = ud.UltraDict(name="policy_ultra_dict", create=False)
 
 policy_ultra_dict["get_policy"] = ""
@@ -85,12 +85,12 @@ async def update_policy(
     if get_policy_type is not None and get_policy_type != old_get_policy_type:
         policy_ultra_dict["get_policy"] = get_policy_type
 
+
 # TODO: when creating new logical object, we need to consider different put policy
 @router.post("/start_delete_objects")
 async def start_delete_objects(
     request: DeleteObjectsRequest, db: Session = Depends(get_session)
 ) -> DeleteObjectsResponse:
-    
     version_enabled = (
         await db.execute(
             select(DBLogicalBucket.version_enabled).where(
@@ -226,10 +226,7 @@ async def start_delete_objects(
             ):
                 continue  # skip if the version_id is not in the request
 
-            for physical_locator, pre_physical_locator in zip_longest(
-                logical_obj.physical_object_locators,
-                pre_logical_obj.physical_object_locators if pre_logical_obj else [],
-            ):
+            for physical_locator in logical_obj.physical_object_locators:
                 await db.refresh(physical_locator, ["logical_object"])
 
                 if (
@@ -263,8 +260,8 @@ async def start_delete_objects(
                         # the version_id should be the one that we want the client to operate on
                         # so when we add objects into the DB, we still want the client to cope with the previous version
                         version_id=physical_locator.version_id
-                        if pre_physical_locator is None
-                        else pre_physical_locator.version_id,
+                        if version_enabled is not None
+                        else None,
                         version=physical_locator.logical_object.id
                         if version_enabled is not None
                         else None,
@@ -277,7 +274,7 @@ async def start_delete_objects(
             # for these cases, we only need to deal with the first logical object
             if replaced or add_obj:
                 break
-            
+
             try:
                 await db.commit()
             except Exception as e:
@@ -504,7 +501,9 @@ async def locate_object(
         size=locators.size,
         last_modified=locators.last_modified,
         etag=locators.etag,
-        version_id=chosen_locator.version_id,  # here must use the physical version
+        version_id=chosen_locator.version_id
+        if version_enabled is not None
+        else None,  # here must use the physical version
         version=locators.id if version_enabled is not None else None,
     )
 
@@ -835,11 +834,11 @@ async def start_upload(
 
         # but we can choose wheatever idx in the primary_write_region list
         primary_write_region = primary_write_region[0]
-        assert (
-            primary_write_region != request.client_from_region
-        ), "should not be the same region"
+        # assert (
+        #     primary_write_region != request.client_from_region
+        # ), "should not be the same region"
     # NOTE: Push-based: upload to primary region and broadcast to other regions marked with need_warmup
-    elif put_policy.name() == "replicate_all":
+    elif put_policy.name() == "push" or put_policy.name() == "replicate_all":
         # Except this case, always set the first-write region of the OBJECT to be primary
         primary_write_region = [
             locator.location_tag
@@ -850,7 +849,7 @@ async def start_upload(
             len(primary_write_region) == 1
         ), "should only have one primary write region"
         primary_write_region = primary_write_region[0]
-    elif put_policy.name() == "single_region" or put_policy.name() == "push":
+    elif put_policy.name() == "single_region":
         primary_write_region = upload_to_region_tags[0]
     else:
         # Write to the local region and set the first-write region of the OBJECT to be primary
@@ -1004,7 +1003,10 @@ async def complete_upload(
     # TODO: might need to change the if conditions for different policies
     policy_name = put_policy.name()
     if (
-        ((policy_name == "push" or policy_name == "replicate_all") and physical_locator.is_primary)
+        (
+            (policy_name == "push" or policy_name == "replicate_all")
+            and physical_locator.is_primary
+        )
         or policy_name == "write_local"
         or policy_name == "copy_on_read"
         or policy_name == "single_region"
@@ -1206,18 +1208,20 @@ async def continue_upload(
             multipart_upload_id=locator.multipart_upload_id,
             # version=locator.logical_object.id if version_enabled is not None else None,
             version_id=locator.version_id,
-            parts=[
-                ContinueUploadPhysicalPart(
-                    part_number=part.part_number,
-                    etag=part.etag,
-                )
-                for part in locator.multipart_upload_parts
-            ]
-            if request.do_list_parts
-            else None,
-            copy_src_bucket=copy_src_buckets[i]
-            if request.copy_src_bucket is not None
-            else None,
+            parts=(
+                [
+                    ContinueUploadPhysicalPart(
+                        part_number=part.part_number,
+                        etag=part.etag,
+                    )
+                    for part in locator.multipart_upload_parts
+                ]
+                if request.do_list_parts
+                else None
+            ),
+            copy_src_bucket=(
+                copy_src_buckets[i] if request.copy_src_bucket is not None else None
+            ),
             copy_src_key=copy_src_keys[i] if request.copy_src_key is not None else None,
         )
         for i, locator in enumerate(locators)

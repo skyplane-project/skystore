@@ -20,6 +20,14 @@ pub struct OpMetrics {
     pub op: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SimpleMetrics {
+    pub latency: String,
+    pub key: String,
+    pub size: u64,
+    pub op: String,
+}
+
 #[allow(dead_code)]
 pub fn new_create_bucket_request(bucket: String, region: Option<String>) -> CreateBucketInput {
     let mut builder = CreateBucketInput::builder();

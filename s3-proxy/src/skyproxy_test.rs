@@ -28,7 +28,7 @@ mod tests {
             "physical_multipart_upload_parts".to_string(),
             "metrics".to_string()
         ];
-        static ref USER: String = "shaopu".to_string();
+        static ref USER: String = "skystore".to_string();
         static ref DABNAME: String = "skystore".to_string();
     }
 
@@ -66,6 +66,7 @@ mod tests {
             ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "NULL".to_string(),
+            "localhost".to_string(),
         )
         .await
     }
@@ -79,6 +80,7 @@ mod tests {
             ("cheapest".to_string(), "push".to_string()),
             "skystore".to_string(),
             "Enabled".to_string(),
+            "localhost".to_string(),
         )
         .await
     }

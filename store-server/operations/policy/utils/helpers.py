@@ -133,9 +133,11 @@ def make_nx_graph(
             ingress_limit = (
                 aws_instance_throughput_limit[1]
                 if node.startswith("aws")
-                else gcp_instance_throughput_limit[1]
-                if node.startswith("gcp")
-                else azure_instance_throughput_limit[1]
+                else (
+                    gcp_instance_throughput_limit[1]
+                    if node.startswith("gcp")
+                    else azure_instance_throughput_limit[1]
+                )
             )
             G.add_edge(
                 node, node, cost=0, throughput=num_vms * ingress_limit, latency=40

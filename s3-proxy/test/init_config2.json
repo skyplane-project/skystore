@@ -4,5 +4,6 @@
         "aws:us-east-2"
     ],
     "client_from_region": "aws:us-east-2",
-    "skystore_bucket_prefix" : "skystore"
+    "skystore_bucket_prefix" : "skystore",
+    "server_addr": "127.0.0.1"
 }

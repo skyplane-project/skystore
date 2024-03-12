@@ -68,7 +68,7 @@ def create_instance(
         "aws:ap-southeast-3",
         "aws:me-south-1",
         "aws:us-east-2",
-        "aws:eu-west-3"
+        "aws:eu-west-3",
     ]
     skystore_bucket_prefix = "skystore"
 

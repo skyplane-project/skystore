@@ -304,19 +304,24 @@ def issue_requests(trace_file_path: str):
             server_key = issue_region
             server = instances_dict.get(server_key)
             print("server: ", server)
-            
+
             print("start time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             if server:
                 if op == "write":
                     filename = f"{data_id}.data"
                     generate_file_on_server(server, size, filename)
-                    print("generate file finish: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    print(
+                        "generate file finish: ",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    )
                     cmd = f"time aws s3api {s3_args} put-object --bucket default-skybucket --key {data_id} --body {filename}"
                 elif op == "read":
                     cmd = f"time aws s3api {s3_args} get-object --bucket default-skybucket --key {data_id} {data_id}"
-                
-                print("execution finish: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+                print(
+                    "execution finish: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                )
 
                 print(f"Executing command: {cmd}")
                 stdout, stderr = server.run_command(cmd)

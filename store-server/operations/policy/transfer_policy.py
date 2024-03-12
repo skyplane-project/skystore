@@ -11,6 +11,7 @@ class DataTransferGraph:
     A singleton class representing the graph used for data transfer calculations.
     This ensures that only one instance of the graph is created and used throughout the application.
     """
+
     _instance = None
 
     @classmethod
