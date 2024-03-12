@@ -93,10 +93,8 @@ async def create_database(
 
 # Define the name of the database you want to create
 database_name = "skystore"
-# user = "postgres"
-# password = "skystore"
-user = "shaopu_1"
-password = "monkeydog"
+user = "postgres"
+password = "skystore"
 
 
 def run_create_database():
