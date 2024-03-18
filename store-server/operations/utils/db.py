@@ -93,7 +93,7 @@ async def create_database(
 
 # Define the name of the database you want to create
 database_name = "skystore"
-user = "postgres"
+user = "ubuntu"
 password = "skystore"
 
 
