@@ -158,7 +158,7 @@ def create_instance(
             "skystore_bucket_prefix": "skystore",
             "put_policy": "replicate_all",
             "get_policy": "closest",
-            "server_addr": "localhost", # TODO: change this to the actual server address
+            "server_addr": "localhost",  # NOTE: change this to the actual server address
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(
