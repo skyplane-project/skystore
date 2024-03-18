@@ -77,6 +77,10 @@ def init(
         if "skystore_bucket_prefix" in config
         else "skystore"
     )
+    
+    if "server_addr" in config:
+        server_addr = config["server_addr"]
+    
     env = {
         **os.environ,
         "INIT_REGIONS": init_regions_str,
