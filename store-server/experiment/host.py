@@ -59,16 +59,8 @@ def create_instance(
     # validate arguments
     aws_region_list = ["us-west-1"]
     init_regions_list = [
-        "aws:ap-south-1",
-        "aws:sa-east-1",
-        "aws:eu-south-2",
-        "aws:ap-southeast-1",
-        "aws:eu-north-1",
-        "aws:ap-northeast-1",
-        "aws:ap-southeast-3",
-        "aws:me-south-1",
-        "aws:us-east-2",
-        "aws:eu-west-3",
+        "aws:eu-south-1",
+        "aws:eu-nouth-1",
     ]
     skystore_bucket_prefix = "skystore"
 
@@ -192,9 +184,9 @@ def create_instance(
         # install cargo
         server.run_command(
             f"curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env; \
-            git clone https://github.com/shaopu1225/skystore.git; cd skystore/store-server; git switch experiment; \
+            git clone https://github.com/skyplane-project/skystore.git; cd skystore/store-server; git switch experiments; \
             sudo apt-get install libpq-dev -y; sudo apt-get install python3.9-dev -y; pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
-            sudo -u postgres psql -c \"ALTER USER postgres PASSWORD 'skystore'\"; \
+            sudo -u postgres psql -c \"CREATE ROLE ubuntu WITH LOGIN PASSWORD 'skystore';ALTER ROLE ubuntu WITH SUPERUSER\"; \
             export INIT_REGIONS={','.join(init_regions_list)}; \
             export SKYSTORE_BUCKET_PREFIX={skystore_bucket_prefix}; \
             nohup python3.9 -m uvicorn app:app --host 0.0.0.0 --port 3000 > control_plane_output 2>&1 &"

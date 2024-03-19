@@ -3,11 +3,17 @@
     "config": {
         "physical_locations": [
             {
-                "name": "aws:us-west-1",
+                "name": "aws:eu-south-1",
                 "cloud": "aws",
-                "region": "us-west-1",
-                "bucket": "my-sky-bucket-1",
+                "region": "eu-south-1",
+                "bucket": "skystore-eu-south-1",
                 "is_primary": true
+            },
+            {
+                "name": "aws:eu-nouth-1",
+                "cloud": "aws",
+                "region": "eu-nouth-1",
+                "bucket": "skystore-eu-nouth-1"
             }
         ]
     },

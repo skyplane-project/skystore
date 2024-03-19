@@ -158,6 +158,7 @@ def create_instance(
             "skystore_bucket_prefix": "skystore",
             "put_policy": "replicate_all",
             "get_policy": "closest",
+            "server_addr": "localhost",  # NOTE: change this to the actual server address
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(
@@ -187,8 +188,8 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/shaopu1225/skystore.git"
-        clone_cmd = f"git clone {url}; cd skystore; git switch experiment; "
+        url = "https://github.com/skyplane-project/skystore.git"
+        clone_cmd = f"git clone {url}; cd skystore; git switch experiments; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \
                 sudo apt install python3.9 -y; sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; \
