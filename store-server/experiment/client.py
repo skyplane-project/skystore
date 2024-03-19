@@ -188,7 +188,7 @@ def create_instance(
         )
 
         # Set up other stuff
-        url = "https://github.com/shaopu1225/skystore.git"
+        url = "https://github.com/skyplane-project/skystore"
         clone_cmd = f"git clone {url}; cd skystore; git switch experiments; "
         cmd1 = f"sudo apt remove python3-apt -y; sudo apt autoremove -y; \
                 sudo apt autoclean; sudo apt install python3-apt -y; sudo apt-get update; \

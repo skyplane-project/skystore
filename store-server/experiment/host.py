@@ -184,7 +184,7 @@ def create_instance(
         # install cargo
         server.run_command(
             f"curl https://sh.rustup.rs -sSf | sh -s -- -y; source $HOME/.cargo/env; \
-            git clone https://github.com/shaopu1225/skystore.git; cd skystore/store-server; git switch experiments; \
+            git clone https://github.com/skyplane-project/skystore; cd skystore/store-server; git switch experiments; \
             sudo apt-get install libpq-dev -y; sudo apt-get install python3.9-dev -y; pip3 install -r requirements.txt; /home/ubuntu/.cargo/bin/cargo install just --force; \
             sudo -u postgres psql -c \"CREATE ROLE ubuntu WITH LOGIN PASSWORD 'skystore';ALTER ROLE ubuntu WITH SUPERUSER\"; \
             export INIT_REGIONS={','.join(init_regions_list)}; \
