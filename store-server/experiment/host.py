@@ -60,7 +60,7 @@ def create_instance(
     aws_region_list = ["us-west-1"]
     init_regions_list = [
         "aws:eu-south-1",
-        "aws:eu-nouth-1",
+        "aws:eu-north-1",
     ]
     skystore_bucket_prefix = "skystore"
 

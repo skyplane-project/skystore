@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import httpx
 import json
 import asyncio
+import argparse
 
 app = FastAPI()
 
@@ -29,7 +30,7 @@ def read_metrics():
     return metrics
 
 
-async def main():
+async def main(server_addr):
     last_file_line = 0
     sleep_time = 0
     while True:
@@ -50,9 +51,16 @@ async def main():
                     "size": metric["size"],
                     "op": metric["op"],
                 },
-                "54.215.122.16",
+                server_addr,
             )
         last_file_line = len(metrics)
 
+# Initialize parser
+parser = argparse.ArgumentParser()
+ 
+# Adding optional argument
+parser.add_argument("--server_addr", help = "ip address of the server")
 
-asyncio.run(main())
+args = parser.parse_args()
+
+asyncio.run(main(args.server_addr))

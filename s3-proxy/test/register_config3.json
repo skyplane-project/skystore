@@ -10,10 +10,10 @@
                 "is_primary": true
             },
             {
-                "name": "aws:eu-nouth-1",
+                "name": "aws:eu-north-1",
                 "cloud": "aws",
-                "region": "eu-nouth-1",
-                "bucket": "skystore-eu-nouth-1"
+                "region": "eu-north-1",
+                "bucket": "skystore-eu-north-1"
             }
         ]
     },

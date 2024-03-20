@@ -158,7 +158,7 @@ def create_instance(
             "skystore_bucket_prefix": "skystore",
             "put_policy": "replicate_all",
             "get_policy": "closest",
-            "server_addr": "localhost",  # NOTE: change this to the actual server address
+            "server_addr": "18.144.37.206",  # NOTE: change this to the actual server address
         }
         config_file_path = f"/tmp/init_config_{server.region_tag}.json"
         check_stderr(
@@ -219,13 +219,12 @@ def create_instance(
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build --release; \
-                nohup python3 send.py > send_output 2>&1 & \
+                nohup python3 send.py --server_addr 127.0.0.1 > send_output 2>&1 & \ 
                 nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output 2>&1 &"
         server.run_command(cmd1)
         server.run_command(cmd2)
+        # NOTE: change the sending address to the actual server address
         server.run_command(cmd3)
-
-        # server.run_command(f"rm {config_file_path}")
 
     do_parallel(setup, list(instances_dict.values()), spinner=True, n=-1, desc="Setup")
     return instances_dict
@@ -277,7 +276,7 @@ def issue_requests(trace_file_path: str):
         enable_gcp=enable_gcp,
         enable_gcp_standard=enable_gcp,
         enable_ibmcloud=False,
-        aws_instance_class="m5.8xlarge",
+        aws_instance_class="m5d.8xlarge",
         azure_instance_class="Standard_D32_v5",
         gcp_instance_class="n2-standard-32",
     )
