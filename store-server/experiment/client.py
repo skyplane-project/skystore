@@ -219,7 +219,7 @@ def create_instance(
                 export AWS_ACCESS_KEY_ID={aws_credentials()[0]}; \
                 export AWS_SECRET_ACCESS_KEY={aws_credentials()[1]}; \
                 /home/ubuntu/.cargo/bin/cargo build --release; \
-                nohup python3 send.py --server_addr 127.0.0.1 > send_output 2>&1 & \ 
+                nohup python3 send.py --server_addr 127.0.0.1 > send_output 2>&1 & \
                 nohup /home/ubuntu/.local/bin/skystore init --config {config_file_path} > data_plane_output 2>&1 &"
         server.run_command(cmd1)
         server.run_command(cmd2)
